@@ -1,0 +1,49 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Contact data
+contacts.csv
+contacts-*.csv
+!contacts-template.csv
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# N8N data
+n8n-data/
+.n8n/
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production
+build/
+dist/
+.next/
+out/
+
+# Misc
+.DS_Store
+*.pem
+.vscode/
+.idea/
+
+# Credentials
+credentials.json
+token.json
+*.key
+*.pem
+
+# Outreach data
+outreach-log.csv
+responses/
+analytics/

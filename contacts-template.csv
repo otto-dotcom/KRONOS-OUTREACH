@@ -1,0 +1,4 @@
+email,firstName,lastName,company,position,industry,customField1,fromEmail
+john.doe@example.com,John,Doe,Acme Corp,CEO,Technology,recently raised Series A funding,your-email@domain.com
+jane.smith@example.com,Jane,Smith,Tech Innovations,CTO,SaaS,launched new product last month,your-email@domain.com
+bob.wilson@example.com,Bob,Wilson,Growth Co,VP Marketing,E-commerce,expanded to 3 new markets,your-email@domain.com

@@ -1,0 +1,449 @@
+{
+  "name": "KRONOS Outreach Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kronos-outreach",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "kronos-outreach-webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "options": {
+          "continue": true
+        }
+      },
+      "id": "google-sheets-input",
+      "name": "Google Sheets - Contacts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [250, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-contacts",
+      "name": "Merge Contact Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.email }}",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json.firstName }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "validate-contacts",
+      "name": "Validate Contact Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Personalization Engine\nfor (const item of $input.all()) {\n  const firstName = item.json.firstName || 'there';\n  const lastName = item.json.lastName || '';\n  const company = item.json.company || 'your company';\n  const position = item.json.position || 'your role';\n  const industry = item.json.industry || 'your industry';\n  const customField1 = item.json.customField1 || '';\n  \n  // Generate personalized subject line\n  const subjectTemplates = [\n    `Quick question about ${company}`,\n    `${firstName}, thoughts on improving ${industry}?`,\n    `Helping ${company} with [specific problem]`,\n    `${firstName} - partnership opportunity`\n  ];\n  \n  const randomSubject = subjectTemplates[Math.floor(Math.random() * subjectTemplates.length)];\n  \n  // Generate personalized email body\n  const emailBody = `Hi ${firstName},\n\nI noticed you're ${position} at ${company} and wanted to reach out.\n\n${customField1 ? `I saw that ${customField1} - that's impressive!` : ''}\n\nI've been helping companies in ${industry} with [YOUR VALUE PROPOSITION].\n\nWould you be open to a quick 15-minute call to explore if we could help ${company} achieve similar results?\n\nBest regards,\n[YOUR NAME]\n[YOUR SIGNATURE]`;\n\n  // Add personalized fields to item\n  item.json.personalizedSubject = randomSubject;\n  item.json.personalizedBody = emailBody;\n  item.json.fullName = `${firstName} ${lastName}`.trim();\n  item.json.outreachDate = new Date().toISOString();\n  item.json.campaignId = 'KRONOS-001';\n  item.json.status = 'ready_to_send';\n}\n\nreturn $input.all();"
+      },
+      "id": "personalization-engine",
+      "name": "Personalization Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, 400]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "nodeCredentialType": "smtpApi",
+        "fromEmail": "={{ $json.fromEmail || 'your-email@domain.com' }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.personalizedSubject }}",
+        "emailType": "text",
+        "message": "={{ $json.personalizedBody }}",
+        "options": {
+          "allowUnauthorizedCerts": false,
+          "replyTo": "={{ $json.fromEmail || 'your-email@domain.com' }}"
+        }
+      },
+      "id": "send-email",
+      "name": "Send Outreach Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1200, 400],
+      "credentials": {
+        "smtp": {
+          "id": "2",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "seconds"
+      },
+      "id": "rate-limiter",
+      "name": "Rate Limiter",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Outreach Log",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.email }}",
+            "firstName": "={{ $json.firstName }}",
+            "lastName": "={{ $json.lastName }}",
+            "company": "={{ $json.company }}",
+            "status": "={{ $json.status }}",
+            "sentDate": "={{ $json.outreachDate }}",
+            "campaignId": "={{ $json.campaignId }}",
+            "subject": "={{ $json.personalizedSubject }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-to-sheets",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1450, 400],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "daily-trigger",
+      "name": "Daily Trigger (9 AM Weekdays)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 700]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Outreach Log",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-followups",
+      "name": "Check for Follow-ups",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [500, 700],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Follow-up Logic\nconst now = new Date();\nconst followupItems = [];\n\nfor (const item of $input.all()) {\n  const sentDate = new Date(item.json.sentDate);\n  const daysSinceSent = Math.floor((now - sentDate) / (1000 * 60 * 60 * 24));\n  \n  // Send follow-up after 3 days if no response\n  if (daysSinceSent >= 3 && daysSinceSent <= 4 && item.json.status === 'sent') {\n    item.json.followupSubject = `Re: ${item.json.subject}`;\n    item.json.followupBody = `Hi ${item.json.firstName},\\n\\nJust following up on my previous email.\\n\\nI understand you're busy, but I genuinely think we could help ${item.json.company} with [specific benefit].\\n\\nWould you have 10 minutes this week for a quick call?\\n\\nBest,\\n[YOUR NAME]`;\n    item.json.isFollowup = true;\n    followupItems.push(item);\n  }\n}\n\nreturn followupItems;"
+      },
+      "id": "followup-logic",
+      "name": "Follow-up Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 700]
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "nodeCredentialType": "smtpApi",
+        "fromEmail": "={{ $json.fromEmail || 'your-email@domain.com' }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.followupSubject }}",
+        "emailType": "text",
+        "message": "={{ $json.followupBody }}",
+        "options": {}
+      },
+      "id": "send-followup",
+      "name": "Send Follow-up Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1000, 700],
+      "credentials": {
+        "smtp": {
+          "id": "2",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Outreach Log",
+          "mode": "list",
+          "cachedResultName": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.email }}",
+            "status": "followup_sent",
+            "lastFollowupDate": "={{ $now.toISO() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "update-followup-status",
+      "name": "Update Follow-up Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1250, 700],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Merge Contact Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Contacts": {
+      "main": [
+        [
+          {
+            "node": "Merge Contact Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Contact Sources": {
+      "main": [
+        [
+          {
+            "node": "Validate Contact Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Contact Data": {
+      "main": [
+        [
+          {
+            "node": "Personalization Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personalization Engine": {
+      "main": [
+        [
+          {
+            "node": "Rate Limiter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limiter": {
+      "main": [
+        [
+          {
+            "node": "Send Outreach Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Outreach Email": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Trigger (9 AM Weekdays)": {
+      "main": [
+        [
+          {
+            "node": "Check for Follow-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Follow-ups": {
+      "main": [
+        [
+          {
+            "node": "Follow-up Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-up Logic": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-up Email": {
+      "main": [
+        [
+          {
+            "node": "Update Follow-up Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-12-20T00:00:00.000Z",
+  "versionId": "1"
+}
