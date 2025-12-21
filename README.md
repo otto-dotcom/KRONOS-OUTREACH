@@ -53,9 +53,10 @@ After we perfect the N8N workflow, we'll build a full web app with:
 
 ## 📁 Files
 
-- `kronos-outreach-workflow.json` - N8N workflow configuration
+- `kronos-outreach-workflow.json` - N8N workflow configuration with Airtable field support
 - `N8N-SETUP-GUIDE.md` - Complete setup instructions
-- `contacts-template.csv` - Sample contact list format
+- `contacts-template.csv` - Airtable-compatible contact list format
+- `AIRTABLE-FIELD-MAPPING.md` - Complete guide to Airtable field usage
 - `.env.template` - Configuration template
 
 ## 🎨 Features
@@ -100,19 +101,35 @@ Key settings:
 - Follow-up timing
 - Personalization variables
 
-## 📊 Contact Data Format
+## 📊 Airtable Integration
 
-Your contacts should include:
-- `email` - Contact email (required)
-- `firstName` - First name (required)
-- `lastName` - Last name
-- `company` - Company name
-- `position` - Job title
-- `industry` - Industry/sector
-- `customField1` - Custom data for personalization
-- `fromEmail` - Sender email address
+KRONOS is optimized for Airtable data! The workflow uses rich company and contact data for hyper-personalized outreach.
 
-See `contacts-template.csv` for examples.
+### Required Fields:
+- `EMAIL` or `CONTACT` - Contact email address
+- `FULL NAME` - Contact's full name
+- `company name` - Company name
+
+### High-Impact Fields (Recommended):
+- `JOB TITLE` - Role-specific messaging
+- `HEADLINE` - LinkedIn headline for personalization
+- `COMPANY DESCRIPTION` - Context about their business
+- `TECHNOLOGY` - Tech stack they use
+- `SECTOR` - Industry targeting
+- `SENIORITY` - C-Level, VP, Director, etc.
+- `REVENUE` - Company size context
+- `COMPANY SIZE` - Number of employees
+- `LINKEDIN` - Profile URL
+- `City`, `State` - Location-based messaging
+
+📖 **See [AIRTABLE-FIELD-MAPPING.md](./AIRTABLE-FIELD-MAPPING.md) for complete field guide and personalization examples**
+
+### Quick Start with Airtable:
+1. Export your Airtable base to CSV
+2. Import to Google Sheets or use webhook
+3. Watch the magic happen!
+
+The more fields you provide, the better the personalization. See `contacts-template.csv` for format.
 
 ## 🧪 Testing
 
