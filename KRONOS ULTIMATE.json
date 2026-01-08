@@ -73,8 +73,8 @@
     {
       "parameters": {
         "from": "={{ $('Workflow Configuration1').first().json.twilioFromNumber }}",
-        "to": "={{ $item(\"0\").$node[\"Parse AI Output1\"].json[\"Phone\"] }}",
-        "message": "={{ $('Parse AI Output1').item.json.aiOutput.output.smsText }}",
+        "to": "={{ $('Parse AI Output1').item.json.Phone }}",
+        "message": "={{ $('Parse AI Output1').item.json.smsText }}",
         "options": {}
       },
       "id": "f4b401bf-02bd-4056-acaf-b26f669d61b4",
@@ -162,7 +162,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Parse AI agent SMS output and extract smsText field\nconst aiOutput = $input.item.json;\nconst leadData = $('Split Leads1').item.json;\n\n// Extract the SMS text from AI output\nlet smsText = '';\nif (aiOutput.output && typeof aiOutput.output === 'string') {\n  try {\n    const parsed = JSON.parse(aiOutput.output);\n    smsText = parsed.smsText || '';\n  } catch (e) {\n    smsText = aiOutput.output;\n  }\n} else if (aiOutput.smsText) {\n  smsText = aiOutput.smsText;\n}\n\n// Merge with all lead data from Split Leads node\nreturn {\n  ...leadData,\n  smsText: smsText,\n  aiOutput: aiOutput\n};"
+        "jsCode": "// Parse AI agent SMS output and extract smsText field\nconst aiOutput = $input.item.json;\nconst leadData = $('Split Leads1').item.json;\n\n// Extract the SMS text from AI output\nlet smsText = '';\nif (aiOutput.output && typeof aiOutput.output === 'string') {\n  try {\n    const parsed = JSON.parse(aiOutput.output);\n    smsText = parsed.smsText || '';\n  } catch (e) {\n    smsText = aiOutput.output;\n  }\n} else if (aiOutput.smsText) {\n  smsText = aiOutput.smsText;\n}\n\n// Validate SMS length (160 character limit)\nif (smsText.length > 160) {\n  smsText = smsText.substring(0, 157) + '...';\n}\n\n// Validate that smsText is not empty\nif (!smsText || smsText.trim() === '') {\n  throw new Error('AI generated empty SMS text for lead: ' + leadData['FULL NAME']);\n}\n\n// Convert phone to international format for Twilio\nlet phoneNumber = leadData.Phone || '';\nphoneNumber = phoneNumber.replace(/\\s/g, ''); // Remove spaces\n\n// Convert Swiss local format (0XX) to international (+41XX)\nif (phoneNumber.startsWith('0') && !phoneNumber.startsWith('00')) {\n  phoneNumber = '+41' + phoneNumber.substring(1);\n}\n// If already has +41, keep it\nelse if (!phoneNumber.startsWith('+')) {\n  // Assume it's missing the +\n  if (phoneNumber.startsWith('41')) {\n    phoneNumber = '+' + phoneNumber;\n  }\n}\n\n// Merge with all lead data from Split Leads node\nreturn {\n  ...leadData,\n  Phone: phoneNumber,\n  smsText: smsText,\n  aiOutput: aiOutput\n};"
       },
       "id": "df9b9ff8-402d-43a9-b888-8bdfb634b44f",
       "name": "Parse AI Output1",
@@ -195,6 +195,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "KRONOS APP",
+        "authentication": "headerAuth",
         "responseMode": "lastNode",
         "options": {}
       },
@@ -206,7 +207,13 @@
       ],
       "id": "dbbb4a12-676b-4726-89a1-4c7f2d808952",
       "name": "Webhook",
-      "webhookId": "b9354503-1516-452a-a98f-2a7013be8f93"
+      "webhookId": "b9354503-1516-452a-a98f-2a7013be8f93",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER_WEBHOOK_AUTH",
+          "name": "Webhook API Key"
+        }
+      }
     },
     {
       "parameters": {
@@ -220,7 +227,7 @@
           "conditions": [
             {
               "id": "id-1",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone }}",
               "operator": {
                 "type": "string",
                 "operation": "notEmpty"
@@ -228,7 +235,7 @@
             },
             {
               "id": "id-2",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '') }}",
               "rightValue": "0800",
               "operator": {
                 "type": "string",
@@ -237,7 +244,7 @@
             },
             {
               "id": "id-3",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '') }}",
               "rightValue": "0900",
               "operator": {
                 "type": "string",
@@ -246,8 +253,8 @@
             },
             {
               "id": "id-4",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "02",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '') }}",
+              "rightValue": "+41800",
               "operator": {
                 "type": "string",
                 "operation": "notStartsWith"
@@ -255,224 +262,8 @@
             },
             {
               "id": "id-5",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "03",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-6",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "04",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-7",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "05",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-8",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "061",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-9",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "062",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-10",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "063",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-11",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "064",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-12",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "065",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-13",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "066",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-14",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "067",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-15",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "071",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-16",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "072",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-17",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "073",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-18",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "074",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-19",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "075",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-20",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "076",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-21",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "077",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-22",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "078",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-23",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "079",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-24",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "080",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-25",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "081",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-26",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "091",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-27",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "092",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-28",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "093",
-              "operator": {
-                "type": "string",
-                "operation": "notStartsWith"
-              }
-            },
-            {
-              "id": "id-29",
-              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
-              "rightValue": "094",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '') }}",
+              "rightValue": "+41900",
               "operator": {
                 "type": "string",
                 "operation": "notStartsWith"
@@ -481,6 +272,7 @@
           ],
           "combinator": "and"
         },
+        "includeOtherFields": false,
         "options": {}
       },
       "id": "56827a7b-f2ba-44df-9017-98ec8bd509da",
@@ -578,7 +370,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const aiOutput = $input.item.json;\nconst leadData = $('Split Leads1').item.json;\n\nlet subject = '';\nlet emailBody = '';\n\n// The AI output has the data nested under 'output'\nif (aiOutput.output) {\n  if (typeof aiOutput.output === 'object') {\n    // Direct object access\n    subject = aiOutput.output.subject || '';\n    emailBody = aiOutput.output.emailBody || '';\n  } else if (typeof aiOutput.output === 'string') {\n    // Try parsing if it's a string\n    try {\n      const parsed = JSON.parse(aiOutput.output);\n      subject = parsed.subject || '';\n      emailBody = parsed.emailBody || '';\n    } catch (e) {\n      // Fallback\n      subject = '';\n      emailBody = '';\n    }\n  }\n}\n\nreturn {\n  ...leadData,\n  subject: subject,\n  emailBody: emailBody,\n  aiOutput: aiOutput\n};"
+        "jsCode": "const aiOutput = $input.item.json;\nconst leadData = $('Split Leads1').item.json;\n\nlet subject = '';\nlet emailBody = '';\n\n// The AI output has the data nested under 'output'\nif (aiOutput.output) {\n  if (typeof aiOutput.output === 'object') {\n    // Direct object access\n    subject = aiOutput.output.subject || '';\n    emailBody = aiOutput.output.emailBody || '';\n  } else if (typeof aiOutput.output === 'string') {\n    // Try parsing if it's a string\n    try {\n      const parsed = JSON.parse(aiOutput.output);\n      subject = parsed.subject || '';\n      emailBody = parsed.emailBody || '';\n    } catch (e) {\n      // Fallback\n      subject = '';\n      emailBody = '';\n    }\n  }\n}\n\n// Validate that email content is not empty\nif (!subject || subject.trim() === '') {\n  throw new Error('AI generated empty email subject for lead: ' + leadData['FULL NAME']);\n}\n\nif (!emailBody || emailBody.trim() === '') {\n  throw new Error('AI generated empty email body for lead: ' + leadData['FULL NAME']);\n}\n\n// Enforce subject line character limit (60 chars)\nif (subject.length > 60) {\n  subject = subject.substring(0, 57) + '...';\n}\n\nreturn {\n  ...leadData,\n  subject: subject,\n  emailBody: emailBody,\n  aiOutput: aiOutput\n};"
       },
       "id": "38edd806-c71e-4660-8cd6-4ef709d5d729",
       "name": "Parse Email AI Output",
@@ -821,11 +613,6 @@
           "value": {
             "id": "={{ $('Split Leads1').item.json.id }}",
             "SENT MAIL": "={{ $('Parse Email AI Output').item.json.emailBody }}",
-            "Rank": 0,
-            "REVENUE copy": 0,
-            "REVENUE copy 2": 0,
-            "REVENUE": 0,
-            "COMPANY SIZE": 0,
             "EMAIL STATUS": "SENT"
           },
           "matchingColumns": [
