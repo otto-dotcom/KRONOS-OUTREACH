@@ -1,0 +1,2715 @@
+{
+  "name": "KRONOS ULTIMATE",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-4",
+              "name": "companyName",
+              "value": "KRONOS Automations",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "twilioFromNumber",
+              "value": "+12135836915",
+              "type": "string"
+            },
+            {
+              "id": "id-8",
+              "name": "airtableBaseId",
+              "value": "appLriEwWldpPTMPg",
+              "type": "string"
+            },
+            {
+              "id": "id-9",
+              "name": "airtableTableId",
+              "value": "tblLZkFo7Th7uyfWB",
+              "type": "string"
+            },
+            {
+              "id": "id-10",
+              "name": "leadLimit",
+              "value": "={{ $json.body.leadLimit || 10 }}",
+              "type": "number"
+            },
+            {
+              "id": "id-11",
+              "name": "contactMethod",
+              "value": "={{ $json.body.contactMethod || 'both' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "bd8e0880-ca0f-4549-a66c-98aa2fbd160d",
+      "name": "Workflow Configuration1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        6752
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "id",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "id": "02e0f1c3-a474-4561-89b6-2692e4da5858",
+      "name": "Split Leads1",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        6752
+      ]
+    },
+    {
+      "parameters": {
+        "from": "={{ $('Workflow Configuration1').first().json.twilioFromNumber }}",
+        "to": "={{ $item(\"0\").$node[\"Parse AI Output1\"].json[\"Phone\"] }}",
+        "message": "={{ $('Parse AI Output1').item.json.aiOutput.output.smsText }}",
+        "options": {}
+      },
+      "id": "f4b401bf-02bd-4056-acaf-b26f669d61b4",
+      "name": "Send SMS via Twilio1",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        2896,
+        7200
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "lJyj0n2gQvrxP79f",
+          "name": "Twilio account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+        },
+        "filterByFormula": "=AND(OR({EMAIL STATUS} = BLANK(), NOT({EMAIL STATUS} = \"sent\")), OR({sms status} = BLANK(), NOT({sms status} = \"sent\")))",
+        "returnAll": false,
+        "limit": "={{ $('Workflow Configuration1').first().json.leadLimit }}",
+        "options": {}
+      },
+      "id": "a159c370-187b-4536-8f76-d6e3af339666",
+      "name": "Get Leads from Airtable1",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1488,
+        6752
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "id": "6e997ef6-ce2a-40c9-95d2-bec49a1f1b10",
+      "name": "OpenRouter Model for SMS1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        7424
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "k7UXNygZGVaG7gED",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"smsText\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"Personalized SMS message (max 160 characters)\"\n\t\t}\n\t}\n}"
+      },
+      "id": "a61107fe-ee53-411e-a275-64e879282abe",
+      "name": "SMS Output Parser1",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2304,
+        7424
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse AI agent SMS output and extract smsText field\nconst aiOutput = $input.item.json;\nconst leadData = $('Split Leads1').item.json;\n\n// Extract the SMS text from AI output\nlet smsText = '';\nif (aiOutput.output && typeof aiOutput.output === 'string') {\n  try {\n    const parsed = JSON.parse(aiOutput.output);\n    smsText = parsed.smsText || '';\n  } catch (e) {\n    smsText = aiOutput.output;\n  }\n} else if (aiOutput.smsText) {\n  smsText = aiOutput.smsText;\n}\n\n// Merge with all lead data from Split Leads node\nreturn {\n  ...leadData,\n  smsText: smsText,\n  aiOutput: aiOutput\n};"
+      },
+      "id": "df9b9ff8-402d-43a9-b888-8bdfb634b44f",
+      "name": "Parse AI Output1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        7200
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=we are kronosautomations.it\nalways CTA to the website or to our mail\n\nLead Information:\nFull Name:{{ $json[\"FULL NAME\"] }}\nContact: {{ $json.Phone }}\nCompany:{{ $json[\"company name\"] }}\nJob Title: {{ $json[\"JOB TITLE\"] }}\nseniority: {{ $json.SENIORITY }}\nCompany Description: {{ $json[\"COMPANY DESCRIPTION\"] }}\nCompany Size:{{ $json[\"COMPANY SIZE\"] }}\nSector: {{ $json.KEYWORDS }}\nCity: {{ $json.City }}\nKeywords:{{ $json.KEYWORDS }}\nurl: {{ $json.URL }}\nemail: {{ $json.EMAIL }}\ntech: {{ $json.TECHNOLOGY }}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Senior SMS Strategic Advisor at KRONOS Automations.\nWe assist Swiss real estate professionals with automated lead responses.\n\nGOAL: Write a short (max 160 chars), personalized SMS.\n- Focus: Immediate response and link to the lead gen calendar.\n- Tone: Swiss-Standard (Direct, professional, respectful).\n- Response MUST be ONLY JSON: {\"smsText\": \"...\"}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        2176,
+        7200
+      ],
+      "id": "343ea3cf-1813-4997-a7c7-e8b2eeb56a97",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "KRONOS APP",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1040,
+        6752
+      ],
+      "id": "dbbb4a12-676b-4726-89a1-4c7f2d808952",
+      "name": "Webhook",
+      "webhookId": "b9354503-1516-452a-a98f-2a7013be8f93"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "id-2",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "0800",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-3",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "0900",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-4",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "02",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-5",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "03",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-6",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "04",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-7",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "05",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-8",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "061",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-9",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "062",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-10",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "063",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-11",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "064",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-12",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "065",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-13",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "066",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-14",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "067",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-15",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "071",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-16",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "072",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-17",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "073",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-18",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "074",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-19",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "075",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-20",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "076",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-21",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "077",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-22",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "078",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-23",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "079",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-24",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "080",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-25",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "081",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-26",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "091",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-27",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "092",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-28",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "093",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            },
+            {
+              "id": "id-29",
+              "leftValue": "={{ $('Split Leads1').item.json.Phone.replace(/\\s/g, '').replace(/^\\+41/, '0') }}",
+              "rightValue": "094",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "56827a7b-f2ba-44df-9017-98ec8bd509da",
+      "name": "Check if Mobile Number",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1952,
+        6752
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $('Split Leads1').item.json.EMAIL }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f4914e11-4ff4-46c8-8035-964d2cff1d89",
+      "name": "Check if Has Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2240,
+        6752
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=ALWAYS ADD https://kronosautomations.it\nLead Information:\nFull Name: {{ $json[\"FULL NAME\"] }}\nEmail: {{ $json.EMAIL }}\nCompany: {{ $json[\"company name\"] }}\nJob Title: {{ $json[\"JOB TITLE\"] }}\nSeniority: {{ $json.SENIORITY }}\nCompany Description: {{ $json[\"COMPANY DESCRIPTION\"] }}\nCompany Size: {{ $json[\"COMPANY SIZE\"] }}\nSector: {{ $json.KEYWORDS }}\nCity: {{ $json.City }}\nURL: {{ $json.URL }}\nTechnology: {{ $json.TECHNOLOGY }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Senior Strategic Growth Partner at KRONOS Automations.\nWe deliver steady lead flow and qualified consultations for elite Swiss real estate firms.\n\nGOAL: Write a short, high-impact executive email (max 4-5 sentences) featuring the official KRONOS pixel-retro branding and LOGO.\n\nCONTENT PROTOCOL:\n1. PUNCHY HOOK: Reference 'company name' and the Swiss real estate market.\n2. THE PROPOSITION: Focus on \"Steady Sales\" and predictable listings via automated lead systems.\n3. TONE: Swiss-Efficiency (Ultra-direct, professional, value-first).\n\nVISUAL BRANDING (KRONOS PIXEL-STYLE):\n- LOGO: You MUST include the following logo at the VERY TOP:\n  <div style=\"text-align: center; padding: 20px 0;\">\n    <img src=\"https://kronosautomations.it/logo.png\" alt=\"KRONOS\" width=\"120\" style=\"image-rendering: pixelated;\">\n  </div>\n- CONTAINER: max-width 550px; margin: auto; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif;\n- ACCENTS: Use an orange (#FF6B00) pixel-style dotted line for the signature break.\n- CTA: An orange (#FF6B00) bolded text link: \"Discuss steady lead flow\"\n\nHTML STRUCTURE:\n- Use <p> only. Keep it clean.\n- SIGNATURE: \n  <div style=\"border-top: 2px dotted #FF6B00; margin-top: 25px; padding-top: 10px; font-size: 14px;\">\n    <strong>KRONOS Strategic Partner</strong><br>\n    The Standard in Swiss Real Estate Automation\n  </div>\n\nResponse MUST be ONLY JSON: {\"subject\": \"...\", \"emailBody\": \"...\"}"
+        }
+      },
+      "id": "c5f417e7-37d3-4502-bc19-600c8cae4c8c",
+      "name": "Email AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        2528,
+        6800
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "id": "677dcf08-e592-433d-8d2d-e097ec874613",
+      "name": "OpenRouter Model for Email",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2528,
+        7024
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "k7UXNygZGVaG7gED",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"subject\": {\n      \"type\": \"string\",\n      \"description\": \"Email subject line (max 60 characters)\"\n    },\n    \"emailBody\": {\n      \"type\": \"string\",\n      \"description\": \"Personalized email body with HTML formatting\"\n    }\n  }\n}"
+      },
+      "id": "bfe3d327-202e-45c2-810d-b19137153210",
+      "name": "Email Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2656,
+        7024
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const aiOutput = $input.item.json;\nconst leadData = $('Split Leads1').item.json;\n\nlet subject = '';\nlet emailBody = '';\n\n// The AI output has the data nested under 'output'\nif (aiOutput.output) {\n  if (typeof aiOutput.output === 'object') {\n    // Direct object access\n    subject = aiOutput.output.subject || '';\n    emailBody = aiOutput.output.emailBody || '';\n  } else if (typeof aiOutput.output === 'string') {\n    // Try parsing if it's a string\n    try {\n      const parsed = JSON.parse(aiOutput.output);\n      subject = parsed.subject || '';\n      emailBody = parsed.emailBody || '';\n    } catch (e) {\n      // Fallback\n      subject = '';\n      emailBody = '';\n    }\n  }\n}\n\nreturn {\n  ...leadData,\n  subject: subject,\n  emailBody: emailBody,\n  aiOutput: aiOutput\n};"
+      },
+      "id": "38edd806-c71e-4660-8cd6-4ef709d5d729",
+      "name": "Parse Email AI Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2896,
+        6912
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "mail",
+        "fromEmail": "consulting@kronosautomations.it",
+        "fromName": "KRONOS Automations",
+        "toEmail": "={{ $json.EMAIL }}",
+        "subject": "={{ $json.subject }}",
+        "contentType": "text/html",
+        "contentValue": "={{ $json.emailBody }}",
+        "additionalFields": {
+          "bccEmail": "consulting@kronosautomations.it"
+        }
+      },
+      "id": "ffe2d45c-a2d5-48c7-8f66-cf4e9bbbb2e2",
+      "name": "Send Email via SendGrid",
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        6912
+      ],
+      "credentials": {
+        "sendGridApi": {
+          "id": "RASZTnRZRLzMLkvY",
+          "name": "SendGrid account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Split Leads1').item.json.id }}",
+            "CONTACT": "SMS"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CONTACT",
+              "displayName": "CONTACT",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e965c082-3eb9-43e0-9d8d-d60aecd8dbb9",
+      "name": "Update Airtable - Set Contact Method SMS",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2128,
+        6464
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Split Leads1').item.json.id }}",
+            "CONTACT": "MAIL"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CONTACT",
+              "displayName": "CONTACT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ff55dbab-80cb-4bd8-8eb7-993e9a653f23",
+      "name": "Update Airtable - Set Contact Method Email",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2592,
+        6608
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Split Leads1').item.json.id }}",
+            "sms status": "sent",
+            "SMS": "={{ $('Parse AI Output1').item.json.smsText }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sms status",
+              "displayName": "sms status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "SMS",
+              "displayName": "SMS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "10db3c4a-341a-4e9f-8d93-8479a3c6e001",
+      "name": "Update Airtable - SMS Sent",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3120,
+        7200
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Split Leads1').item.json.id }}",
+            "SENT MAIL": "={{ $('Parse Email AI Output').item.json.emailBody }}",
+            "Rank": 0,
+            "REVENUE copy": 0,
+            "REVENUE copy 2": 0,
+            "REVENUE": 0,
+            "COMPANY SIZE": 0,
+            "EMAIL STATUS": "SENT"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true
+            },
+            {
+              "id": "FULL NAME",
+              "displayName": "FULL NAME",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CONTACT",
+              "displayName": "CONTACT",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SMS STATUS",
+              "displayName": "SMS STATUS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "SENT",
+                  "value": "SENT"
+                },
+                {
+                  "name": "RESPOND",
+                  "value": "RESPOND"
+                },
+                {
+                  "name": "CALL FIXED",
+                  "value": "CALL FIXED"
+                },
+                {
+                  "name": "GOLD",
+                  "value": "GOLD"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SMS",
+              "displayName": "SMS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "EMAIL STATUS",
+              "displayName": "EMAIL STATUS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "SENT",
+                  "value": "SENT"
+                },
+                {
+                  "name": "RESPOND",
+                  "value": "RESPOND"
+                },
+                {
+                  "name": "CALL FIXED",
+                  "value": "CALL FIXED"
+                },
+                {
+                  "name": "GOLD",
+                  "value": "GOLD"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SENT MAIL",
+              "displayName": "SENT MAIL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "company name",
+              "displayName": "company name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "JOB TITLE",
+              "displayName": "JOB TITLE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "COMPANY DESCRIPTION",
+              "displayName": "COMPANY DESCRIPTION",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "COMPANY SIZE",
+              "displayName": "COMPANY SIZE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "HEADLINE",
+              "displayName": "HEADLINE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SENIORITY",
+              "displayName": "SENIORITY",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "seniority_level",
+                  "value": "seniority_level"
+                },
+                {
+                  "name": "owner",
+                  "value": "owner"
+                },
+                {
+                  "name": "director",
+                  "value": "director"
+                },
+                {
+                  "name": "founder",
+                  "value": "founder"
+                },
+                {
+                  "name": "manager",
+                  "value": "manager"
+                },
+                {
+                  "name": "head",
+                  "value": "head"
+                },
+                {
+                  "name": "c_suite",
+                  "value": "c_suite"
+                },
+                {
+                  "name": "vp",
+                  "value": "vp"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "",
+                  "value": ""
+                },
+                {
+                  "name": "Real estate agency",
+                  "value": "Real estate agency"
+                },
+                {
+                  "name": "Real estate rental agency",
+                  "value": "Real estate rental agency"
+                },
+                {
+                  "name": "Tax preparation service",
+                  "value": "Tax preparation service"
+                },
+                {
+                  "name": "Property management company",
+                  "value": "Property management company"
+                },
+                {
+                  "name": "Real estate agent",
+                  "value": "Real estate agent"
+                },
+                {
+                  "name": "Real estate consultant",
+                  "value": "Real estate consultant"
+                },
+                {
+                  "name": "Hotel",
+                  "value": "Hotel"
+                },
+                {
+                  "name": "Extended stay hotel",
+                  "value": "Extended stay hotel"
+                },
+                {
+                  "name": "Commercial real estate agency",
+                  "value": "Commercial real estate agency"
+                },
+                {
+                  "name": "Loan agency",
+                  "value": "Loan agency"
+                },
+                {
+                  "name": "Gym",
+                  "value": "Gym"
+                },
+                {
+                  "name": "Financial consultant",
+                  "value": "Financial consultant"
+                },
+                {
+                  "name": "Financial planner",
+                  "value": "Financial planner"
+                },
+                {
+                  "name": "Finance broker",
+                  "value": "Finance broker"
+                },
+                {
+                  "name": "Fitness center",
+                  "value": "Fitness center"
+                },
+                {
+                  "name": "Pawn shop",
+                  "value": "Pawn shop"
+                },
+                {
+                  "name": "Personal trainer",
+                  "value": "Personal trainer"
+                },
+                {
+                  "name": "Community center",
+                  "value": "Community center"
+                },
+                {
+                  "name": "Bank",
+                  "value": "Bank"
+                },
+                {
+                  "name": "Gymnastics center",
+                  "value": "Gymnastics center"
+                },
+                {
+                  "name": "Credit counseling service",
+                  "value": "Credit counseling service"
+                },
+                {
+                  "name": "Architect",
+                  "value": "Architect"
+                },
+                {
+                  "name": "Coffee shop",
+                  "value": "Coffee shop"
+                },
+                {
+                  "name": "ATM",
+                  "value": "ATM"
+                },
+                {
+                  "name": "Private equity firm",
+                  "value": "Private equity firm"
+                },
+                {
+                  "name": "Indoor lodging",
+                  "value": "Indoor lodging"
+                },
+                {
+                  "name": "Lodge",
+                  "value": "Lodge"
+                },
+                {
+                  "name": "Financial institution",
+                  "value": "Financial institution"
+                },
+                {
+                  "name": "Check cashing service",
+                  "value": "Check cashing service"
+                },
+                {
+                  "name": "Accountant",
+                  "value": "Accountant"
+                },
+                {
+                  "name": "Boxing gym",
+                  "value": "Boxing gym"
+                },
+                {
+                  "name": "Architecture firm",
+                  "value": "Architecture firm"
+                },
+                {
+                  "name": "Engineering consultant",
+                  "value": "Engineering consultant"
+                },
+                {
+                  "name": "Non-profit organization",
+                  "value": "Non-profit organization"
+                },
+                {
+                  "name": "Architectural designer",
+                  "value": "Architectural designer"
+                },
+                {
+                  "name": "Physical fitness program",
+                  "value": "Physical fitness program"
+                },
+                {
+                  "name": "Business broker",
+                  "value": "Business broker"
+                },
+                {
+                  "name": "Currency exchange service",
+                  "value": "Currency exchange service"
+                },
+                {
+                  "name": "Consultant",
+                  "value": "Consultant"
+                },
+                {
+                  "name": "Financial Services",
+                  "value": "Financial Services"
+                },
+                {
+                  "name": "Insurance",
+                  "value": "Insurance"
+                },
+                {
+                  "name": "Banking",
+                  "value": "Banking"
+                },
+                {
+                  "name": "Investment Management",
+                  "value": "Investment Management"
+                },
+                {
+                  "name": "Construction",
+                  "value": "Construction"
+                },
+                {
+                  "name": "Venture Capital & Private Equity",
+                  "value": "Venture Capital & Private Equity"
+                },
+                {
+                  "name": "industry",
+                  "value": "industry"
+                },
+                {
+                  "name": "Real Estate",
+                  "value": "Real Estate"
+                },
+                {
+                  "name": "Building Materials",
+                  "value": "Building Materials"
+                },
+                {
+                  "name": "full_name",
+                  "value": "full_name"
+                },
+                {
+                  "name": "Kathrin Haupenthal",
+                  "value": "Kathrin Haupenthal"
+                },
+                {
+                  "name": "Luke Wenninger",
+                  "value": "Luke Wenninger"
+                },
+                {
+                  "name": "Marko Braeutigam",
+                  "value": "Marko Braeutigam"
+                },
+                {
+                  "name": "Gunilla Mannsdorff",
+                  "value": "Gunilla Mannsdorff"
+                },
+                {
+                  "name": "Andrea Zimmermann",
+                  "value": "Andrea Zimmermann"
+                },
+                {
+                  "name": "Johnson Tan",
+                  "value": "Johnson Tan"
+                },
+                {
+                  "name": "Luke Rowntree",
+                  "value": "Luke Rowntree"
+                },
+                {
+                  "name": "Anja Haegeli",
+                  "value": "Anja Haegeli"
+                },
+                {
+                  "name": "Alexandre Cyril",
+                  "value": "Alexandre Cyril"
+                },
+                {
+                  "name": "Nicola Rinderknecht",
+                  "value": "Nicola Rinderknecht"
+                },
+                {
+                  "name": "Jonathan Muller",
+                  "value": "Jonathan Muller"
+                },
+                {
+                  "name": "Nathanael Fattier",
+                  "value": "Nathanael Fattier"
+                },
+                {
+                  "name": "Benjamin Liers",
+                  "value": "Benjamin Liers"
+                },
+                {
+                  "name": "Marc Loeffel",
+                  "value": "Marc Loeffel"
+                },
+                {
+                  "name": "Robert Petritsch",
+                  "value": "Robert Petritsch"
+                },
+                {
+                  "name": "Holger Herb",
+                  "value": "Holger Herb"
+                },
+                {
+                  "name": "Christian Stierli",
+                  "value": "Christian Stierli"
+                },
+                {
+                  "name": "Franziska Biella",
+                  "value": "Franziska Biella"
+                },
+                {
+                  "name": "Fabio Iacovino",
+                  "value": "Fabio Iacovino"
+                },
+                {
+                  "name": "Volker Weissenberger",
+                  "value": "Volker Weissenberger"
+                },
+                {
+                  "name": "Daniel Lanfranconi",
+                  "value": "Daniel Lanfranconi"
+                },
+                {
+                  "name": "Michelle Bolliger",
+                  "value": "Michelle Bolliger"
+                },
+                {
+                  "name": "Matthias Bleicher",
+                  "value": "Matthias Bleicher"
+                },
+                {
+                  "name": "Andreas Dick",
+                  "value": "Andreas Dick"
+                },
+                {
+                  "name": "Ruedi Fanger",
+                  "value": "Ruedi Fanger"
+                },
+                {
+                  "name": "Laura Vogt",
+                  "value": "Laura Vogt"
+                },
+                {
+                  "name": "Fabienne Stocker",
+                  "value": "Fabienne Stocker"
+                },
+                {
+                  "name": "Christian Valdivia",
+                  "value": "Christian Valdivia"
+                },
+                {
+                  "name": "Pareth Frank",
+                  "value": "Pareth Frank"
+                },
+                {
+                  "name": "Fabian Gasser",
+                  "value": "Fabian Gasser"
+                },
+                {
+                  "name": "Bernadette Tapper",
+                  "value": "Bernadette Tapper"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SECTOR",
+              "displayName": "SECTOR",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "functional_level",
+                  "value": "functional_level"
+                },
+                {
+                  "name": "product_management",
+                  "value": "product_management"
+                },
+                {
+                  "name": "c_suite",
+                  "value": "c_suite"
+                },
+                {
+                  "name": "finance",
+                  "value": "finance"
+                },
+                {
+                  "name": "engineering",
+                  "value": "engineering"
+                },
+                {
+                  "name": "information_technology",
+                  "value": "information_technology"
+                },
+                {
+                  "name": "sales",
+                  "value": "sales"
+                },
+                {
+                  "name": "Vastgoedmanager",
+                  "value": "Vastgoedmanager"
+                },
+                {
+                  "name": "Property Development At Losinger Marazzi Sa",
+                  "value": "Property Development At Losinger Marazzi Sa"
+                },
+                {
+                  "name": "Real Estate Commercial Manager Spg",
+                  "value": "Real Estate Commercial Manager Spg"
+                },
+                {
+                  "name": "Vastgoedmanager At Maas-jacobs Vastgoed Bv",
+                  "value": "Vastgoedmanager At Maas-jacobs Vastgoed Bv"
+                },
+                {
+                  "name": "Real Estate Advisor (retail) & Owner At Rsp Makelaars",
+                  "value": "Real Estate Advisor (retail) & Owner At Rsp Makelaars"
+                },
+                {
+                  "name": "Senior Real Estate Manager",
+                  "value": "Senior Real Estate Manager"
+                },
+                {
+                  "name": "Manager At Bontrup",
+                  "value": "Manager At Bontrup"
+                },
+                {
+                  "name": "Projectleider Vastgoed Bij Woonzorg Nederland",
+                  "value": "Projectleider Vastgoed Bij Woonzorg Nederland"
+                },
+                {
+                  "name": "Vestigingsmanager",
+                  "value": "Vestigingsmanager"
+                },
+                {
+                  "name": "Acquisitie Manager Real Estate",
+                  "value": "Acquisitie Manager Real Estate"
+                },
+                {
+                  "name": "Projectleider Vastgoed",
+                  "value": "Projectleider Vastgoed"
+                },
+                {
+                  "name": "Real Estate Manager",
+                  "value": "Real Estate Manager"
+                },
+                {
+                  "name": "Sr. Projectmanager Bij Woonstad Rotterdam",
+                  "value": "Sr. Projectmanager Bij Woonstad Rotterdam"
+                },
+                {
+                  "name": "--",
+                  "value": "--"
+                },
+                {
+                  "name": "Projectleider Vastgoed Bij Nv Bim",
+                  "value": "Projectleider Vastgoed Bij Nv Bim"
+                },
+                {
+                  "name": "Real Estate Developer & Transaction Manager",
+                  "value": "Real Estate Developer & Transaction Manager"
+                },
+                {
+                  "name": "Asset Managerin Real Estate Bei Avadis Anlagestiftung / Afiaa Real Estate Investment Ag / Eidg. Dipl. Immobilientreuh\u00e4nderin",
+                  "value": "Asset Managerin Real Estate Bei Avadis Anlagestiftung / Afiaa Real Estate Investment Ag / Eidg. Dipl. Immobilientreuh\u00e4nderin"
+                },
+                {
+                  "name": "Managing Director, Commercial Real Estate Broker & Owner",
+                  "value": "Managing Director, Commercial Real Estate Broker & Owner"
+                },
+                {
+                  "name": "headline",
+                  "value": "headline"
+                },
+                {
+                  "name": "Real Estate Site Manager",
+                  "value": "Real Estate Site Manager"
+                },
+                {
+                  "name": "Community Building | Areal Marketing",
+                  "value": "Community Building | Areal Marketing"
+                },
+                {
+                  "name": "Real Estate Area Director (gen\u00e8ve)",
+                  "value": "Real Estate Area Director (gen\u00e8ve)"
+                },
+                {
+                  "name": "Manager Real Estate Development",
+                  "value": "Manager Real Estate Development"
+                },
+                {
+                  "name": "Real Estate Area Director",
+                  "value": "Real Estate Area Director"
+                },
+                {
+                  "name": "Center Leiter / Real Estate Site Manager",
+                  "value": "Center Leiter / Real Estate Site Manager"
+                },
+                {
+                  "name": "Sustainability Manager Real Estate",
+                  "value": "Sustainability Manager Real Estate"
+                },
+                {
+                  "name": "Real Estate Advisory & Valuation Manager",
+                  "value": "Real Estate Advisory & Valuation Manager"
+                },
+                {
+                  "name": "Director, Debt & Structured Finance \u2013 Operating Real Estate At Cbre",
+                  "value": "Director, Debt & Structured Finance \u2013 Operating Real Estate At Cbre"
+                },
+                {
+                  "name": "Asset Manager (real Estate)",
+                  "value": "Asset Manager (real Estate)"
+                },
+                {
+                  "name": "Senior Director, Emea Controller - Real Estate Investments",
+                  "value": "Senior Director, Emea Controller - Real Estate Investments"
+                },
+                {
+                  "name": "Real Estate Portfolio Manager",
+                  "value": "Real Estate Portfolio Manager"
+                },
+                {
+                  "name": "Junior Real Estate Community Manager",
+                  "value": "Junior Real Estate Community Manager"
+                },
+                {
+                  "name": "Wincasa - Real Estate Site Management / Cmsm\n\n\u201egeht Nicht, Gibt\u2019s Nicht\u201c",
+                  "value": "Wincasa - Real Estate Site Management / Cmsm\n\n\u201egeht Nicht, Gibt\u2019s Nicht\u201c"
+                },
+                {
+                  "name": "Asset Manager Real Estate",
+                  "value": "Asset Manager Real Estate"
+                },
+                {
+                  "name": "Orchestrating The Rebirth Of Sites @ Hiag Immobilien",
+                  "value": "Orchestrating The Rebirth Of Sites @ Hiag Immobilien"
+                },
+                {
+                  "name": "Senior Manager Real Estate Development",
+                  "value": "Senior Manager Real Estate Development"
+                },
+                {
+                  "name": "Director Bei W\u00fcest Partner Ag",
+                  "value": "Director Bei W\u00fcest Partner Ag"
+                },
+                {
+                  "name": "Real Estate Site Manager \u2014 Leiterin St\u00fccki Park Basel",
+                  "value": "Real Estate Site Manager \u2014 Leiterin St\u00fccki Park Basel"
+                },
+                {
+                  "name": "Manager Cost Planner / Real Estate Development Chez Steiner Ag",
+                  "value": "Manager Cost Planner / Real Estate Development Chez Steiner Ag"
+                },
+                {
+                  "name": "Real Estate - Director",
+                  "value": "Real Estate - Director"
+                },
+                {
+                  "name": "Real Estate | Business Development",
+                  "value": "Real Estate | Business Development"
+                },
+                {
+                  "name": "Real Estate Site Manager / Centerleiterin",
+                  "value": "Real Estate Site Manager / Centerleiterin"
+                },
+                {
+                  "name": "Centerleiter Sihlcity / Real Estate Area Director Wincasa",
+                  "value": "Centerleiter Sihlcity / Real Estate Area Director Wincasa"
+                },
+                {
+                  "name": "Corporate Real Estate Manager Switzerland",
+                  "value": "Corporate Real Estate Manager Switzerland"
+                },
+                {
+                  "name": "Program Director \u2013 Real Estate Development",
+                  "value": "Program Director \u2013 Real Estate Development"
+                },
+                {
+                  "name": "Real Estate Asset Manager",
+                  "value": "Real Estate Asset Manager"
+                },
+                {
+                  "name": "Real Estate Development Manager At Real Estate One",
+                  "value": "Real Estate Development Manager At Real Estate One"
+                },
+                {
+                  "name": "keywords",
+                  "value": "keywords"
+                },
+                {
+                  "name": "immobilien, inserieren, onlinehypothek, wohnen, real estate",
+                  "value": "immobilien, inserieren, onlinehypothek, wohnen, real estate"
+                },
+                {
+                  "name": "aog logistics, aog loanborrow recovery, aircraft parts exchange management, priority shipping, transportation, logistics, supply chain & storage, logistics & supply chain",
+                  "value": "aog logistics, aog loanborrow recovery, aircraft parts exchange management, priority shipping, transportation, logistics, supply chain & storage, logistics & supply chain"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "REVENUE",
+              "displayName": "REVENUE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "REVENUE copy 2",
+              "displayName": "REVENUE copy 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "REVENUE copy",
+              "displayName": "REVENUE copy",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "TECHNOLOGY",
+              "displayName": "TECHNOLOGY",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Street",
+              "displayName": "Street",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "KEYWORDS",
+              "displayName": "KEYWORDS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "EMAIL",
+              "displayName": "EMAIL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "LINKEDIN",
+              "displayName": "LINKEDIN",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "FACEBOOK",
+              "displayName": "FACEBOOK",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "YOUTUBE",
+              "displayName": "YOUTUBE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Rank",
+              "displayName": "Rank",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Num",
+              "displayName": "Num",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Last name",
+              "displayName": "Last name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Postal code",
+              "displayName": "Postal code",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "INSTAGRAM",
+              "displayName": "INSTAGRAM",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ENRICHMENT_STATUS",
+              "displayName": "ENRICHMENT_STATUS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Not Started",
+                  "value": "Not Started"
+                },
+                {
+                  "name": "In Progress",
+                  "value": "In Progress"
+                },
+                {
+                  "name": "Completed",
+                  "value": "Completed"
+                },
+                {
+                  "name": "Failed",
+                  "value": "Failed"
+                },
+                {
+                  "name": "Needs Review",
+                  "value": "Needs Review"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ENRICHMENT_DATE",
+              "displayName": "ENRICHMENT_DATE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "UNIQUE_FINDINGS",
+              "displayName": "UNIQUE_FINDINGS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PERSONALIZATION_HOOKS",
+              "displayName": "PERSONALIZATION_HOOKS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "RECOMMENDED_APPROACH",
+              "displayName": "RECOMMENDED_APPROACH",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AUTOMATION_OPPORTUNITIES",
+              "displayName": "AUTOMATION_OPPORTUNITIES",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "OUTCOME_PITCH",
+              "displayName": "OUTCOME_PITCH",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ENRICHMENT_SCORE",
+              "displayName": "ENRICHMENT_SCORE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CAMPAIGN_STATUS",
+              "displayName": "CAMPAIGN_STATUS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Not Sent",
+                  "value": "Not Sent"
+                },
+                {
+                  "name": "Scheduled",
+                  "value": "Scheduled"
+                },
+                {
+                  "name": "Sent",
+                  "value": "Sent"
+                },
+                {
+                  "name": "Failed",
+                  "value": "Failed"
+                },
+                {
+                  "name": "Bounced",
+                  "value": "Bounced"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CAMPAIGN_DATE",
+              "displayName": "CAMPAIGN_DATE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "EMAIL_SUBJECT",
+              "displayName": "EMAIL_SUBJECT",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "EMAIL_BODY",
+              "displayName": "EMAIL_BODY",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SMS_MESSAGE",
+              "displayName": "SMS_MESSAGE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SMS_SENT",
+              "displayName": "SMS_SENT",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Yes",
+                  "value": "Yes"
+                },
+                {
+                  "name": "No",
+                  "value": "No"
+                },
+                {
+                  "name": "Failed",
+                  "value": "Failed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "2be667d7-5ff1-4fa1-a2fd-178d4f6d8ab5",
+      "name": "Update Airtable - Email Sent",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3344,
+        6912
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "com.twilio.messaging.inbound-message.received"
+        ]
+      },
+      "id": "b0a3b8b6-f35e-431c-a465-985afb26e5a2",
+      "name": "SMS Reply Trigger",
+      "type": "n8n-nodes-base.twilioTrigger",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        6112
+      ],
+      "webhookId": "fceafe2d-9e5d-476d-851e-1d2bc424e274",
+      "credentials": {
+        "twilioApi": {
+          "id": "FKbC3T6EWuXlCyoE",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "13f3532a-b721-4b89-9367-2ba5b3f41832",
+      "name": "Email Reply Trigger",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        1040,
+        6336
+      ],
+      "credentials": {
+        "imap": {
+          "id": "VrYOMhjtdrA0gUii",
+          "name": "IONOS MAIL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+        },
+        "filterByFormula": "={{ '{Phone} = \"' + $json.From + '\"' }}",
+        "options": {}
+      },
+      "id": "85762b59-36cd-4a87-8a4f-a7daf6028b05",
+      "name": "Update Airtable - SMS Responded",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1264,
+        6112
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+        },
+        "filterByFormula": "={{ 'EMAIL = \"' + $json.from + '\"' }}",
+        "options": {}
+      },
+      "id": "997fe4c1-3df7-486b-b3d2-6f6d8daf5a5f",
+      "name": "Update Airtable - Email Responded",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1536,
+        6320
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "94214184-3eb4-453d-9dd0-04f0e8554875",
+              "leftValue": "={{ $json.to }}",
+              "rightValue": "consulting@kronosautomations.it",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1248,
+        6336
+      ],
+      "id": "8b48a525-eca2-4c70-b440-619af7d460ea",
+      "name": "Filter"
+    },
+    {
+      "parameters": {},
+      "id": "ff974a07-363f-4c75-bce5-0561e3bf1ef0",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        500,
+        7500
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}",
+        "table": "={{ $('Workflow Configuration1').first().json.airtableTableId }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $node[\"Error Trigger\"].json.execution.id }}",
+            "STATUS": "FAILED",
+            "ERROR_LOG": "={{ $node[\"Error Trigger\"].json.error.message }}"
+          },
+          "matchingColumns": [
+            "id"
+          ]
+        }
+      },
+      "id": "5acb76fe-8849-4838-95e1-c2edaba3fd56",
+      "name": "Airtable - Mark Failed",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        800,
+        7500
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads",
+        "matchColumn": "airtable_id",
+        "values": {
+          "values": [
+            {
+              "column": "status",
+              "value": "READY_RETRY"
+            }
+          ]
+        }
+      },
+      "id": "209bb898-6fd6-4def-b618-4235106ea184",
+      "name": "Supabase - Release Lock",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        7500
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "campaign_config",
+        "rowId": "current_prod"
+      },
+      "id": "c862e693-c8a7-44a7-a822-1f9639ed769f",
+      "name": "Fetch Dynamic Config",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1150,
+        6752
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
+      "id": "0f55abb2-49be-499b-a7b9-78d4e9d472e8",
+      "name": "Batch Leads (Volume)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1600,
+        6752
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "leads",
+        "matchColumn": "airtable_id",
+        "values": {
+          "values": [
+            {
+              "column": "status",
+              "value": "IN_PROGRESS"
+            }
+          ]
+        }
+      },
+      "id": "0d36f5c7-3c4d-43b8-8dc2-bdf1624db5dc",
+      "name": "Lock Lead Status",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1850,
+        6752
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * 4) + 2 }}",
+        "unit": "seconds"
+      },
+      "id": "7f8c6bf1-fe67-4e94-80ab-fdef7901289b",
+      "name": "Anti-Rate Limit Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        6752
+      ]
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "bingobongo.app.n8n.cloud",
+            "user-agent": "Deno/2.1.4 (variant; SupabaseEdgeRuntime/1.69.25)",
+            "content-length": "39",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "*",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "2a05:d014:61b:2709:c6d6:42a9:d99e:ebbf",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "DE",
+            "cf-ray": "9b4444f652a818fd-FRA",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "2a05:d014:61b:2709:c6d6:42a9:d99e:ebbf, 172.68.194.166",
+            "x-forwarded-host": "bingobongo.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-59-5786bcf55-r562x",
+            "x-is-trusted": "yes",
+            "x-real-ip": "2a05:d014:61b:2709:c6d6:42a9:d99e:ebbf"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "leadLimit": 50,
+            "contactMethod": "both"
+          },
+          "webhookUrl": "https://bingobongo.app.n8n.cloud/webhook/KRONOS APP",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Workflow Configuration1": {
+      "main": [
+        [
+          {
+            "node": "Get Leads from Airtable1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Leads1": {
+      "main": [
+        [
+          {
+            "node": "Lock Lead Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leads from Airtable1": {
+      "main": [
+        [
+          {
+            "node": "Batch Leads (Volume)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Model for SMS1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch Dynamic Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Mobile Number": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Airtable - Set Contact Method SMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check if Has Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Has Email": {
+      "main": [
+        [
+          {
+            "node": "Email AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Airtable - Set Contact Method Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Output1": {
+      "main": [
+        [
+          {
+            "node": "Send SMS via Twilio1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Model for Email": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Email AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Email AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Email AI Output": {
+      "main": [
+        [
+          {
+            "node": "Send Email via SendGrid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send SMS via Twilio1": {
+      "main": [
+        [
+          {
+            "node": "Update Airtable - SMS Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email via SendGrid": {
+      "main": [
+        [
+          {
+            "node": "Update Airtable - Email Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Reply Trigger": {
+      "main": [
+        [
+          {
+            "node": "Update Airtable - SMS Responded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Reply Trigger": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Update Airtable - Email Responded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Mark Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Mark Failed": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Release Lock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Dynamic Config": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Leads (Volume)": {
+      "main": [
+        [
+          {
+            "node": "Split Leads1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lock Lead Status": {
+      "main": [
+        [
+          {
+            "node": "Anti-Rate Limit Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anti-Rate Limit Wait": {
+      "main": [
+        [
+          {
+            "node": "Check if Mobile Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "any"
+  },
+  "versionId": "f3929584-c133-432d-86a9-1b89d13e6c50",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b8fe9ffa34d860bf671bce2d1d610471a33dba205c09095ceed37fcdb1d038cc"
+  },
+  "id": "NCp5xwC7y23DvcRM",
+  "tags": []
+}

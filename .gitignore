@@ -1,0 +1,16 @@
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+desktop.ini
+.idea/
+.vscode/
+*.log
+*.env
+*.key
+*.pem
+*.db
+*.bak

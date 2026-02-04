@@ -1,0 +1,170 @@
+{
+  "name": "KRONOS Elite Swiss Scraper (High-Performance)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "value": "={{ Math.floor(Math.random() * 60) }}"
+            }
+          ]
+        }
+      },
+      "id": "b7c4563d-92d8-42c3-8a68-bb8205bbdc2a",
+      "name": "Randomized Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        400,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const uas = [\n  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',\n  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',\n  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'\n];\nreturn { \n    userAgent: uas[Math.floor(Math.random() * uas.length)],\n    timestamp: new Date().toISOString()\n};"
+      },
+      "id": "56e8b700-e0a4-4ab2-af31-9bea34cfbf21",
+      "name": "User-Agent Rotator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.immoscout24.ch/en/real-estate/buy/city-lugano",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "={{ $node[\"User-Agent Rotator\"].json.userAgent }}"
+            }
+          ]
+        },
+        "options": {
+          "retry": {
+            "count": 5,
+            "delay": 10000
+          }
+        }
+      },
+      "id": "bc515d71-180e-4874-90fb-69261b0261e8",
+      "name": "Fetch ImmoScout24 (Anti-Bot)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Extract ALL real estate agencies from this Swiss data. \nFOR EACH LEAD, CALCULATE A 'LEAD_SCORE' (1-10) BASED ON:\n- Brand recognizable in Switzerland (+2)\n- High inventory / Luxury listings (+3)\n- Commercial/Office focus (+2)\n- Completeness of contact info (+3)\n\nEXTRACT: AgencyName, LeadScore, Sector (Luxury/Standard/Commercial), City, Phone.\nReturn as a clean JSON ARRAY."
+        }
+      },
+      "id": "db484157-59c5-4079-9f75-d58281b862ab",
+      "name": "AI Elite Parser & Scorer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        1050,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "tableId": "leads",
+        "matchColumn": "url",
+        "values": {
+          "values": [
+            {
+              "column": "company_name",
+              "value": "={{ $json.AgencyName }}"
+            },
+            {
+              "column": "lead_score",
+              "value": "={{ $json.LeadScore }}"
+            },
+            {
+              "column": "sector",
+              "value": "={{ $json.Sector }}"
+            },
+            {
+              "column": "status",
+              "value": "={{ $json.LeadScore > 7 ? 'PRIORITY' : 'READY_TO_PROCESS' }}"
+            }
+          ]
+        }
+      },
+      "id": "6a9c2370-ab9e-49b0-850f-f3e68749d54b",
+      "name": "Supabase - Elite Upsert",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        600
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_CREDENTIALS",
+          "name": "Supabase"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Randomized Trigger": {
+      "main": [
+        [
+          {
+            "node": "User-Agent Rotator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User-Agent Rotator": {
+      "main": [
+        [
+          {
+            "node": "Fetch ImmoScout24 (Anti-Bot)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch ImmoScout24 (Anti-Bot)": {
+      "main": [
+        [
+          {
+            "node": "AI Elite Parser & Scorer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Elite Parser & Scorer": {
+      "main": [
+        [
+          {
+            "node": "Supabase - Elite Upsert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
