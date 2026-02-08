@@ -1,0 +1,252 @@
+{
+  "name": "KRONOS Lead Scorer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300],
+      "notes": "Runs every hour to score new leads"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID || 'appLriEwWldpPTMPg' }}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_TABLE_ID || 'tblLZkFo7Th7uyfWB' }}",
+          "mode": "id"
+        },
+        "filterByFormula": "=AND(OR({EMAIL STATUS} = BLANK(), {EMAIL STATUS} = ''), OR({sms status} = BLANK(), {sms status} = ''), {Rank} = BLANK())",
+        "returnAll": false,
+        "limit": 20
+      },
+      "id": "get-unscored",
+      "name": "Get Unscored Leads",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [400, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "notes": "Get up to 20 leads without a score"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-leads",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-leads",
+      "name": "Has Leads?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format leads for batch scoring prompt\nconst leads = $input.all();\n\nconst leadsForPrompt = leads.map((item, idx) => ({\n  index: idx,\n  id: item.json.id,\n  name: item.json.fields['company name'] || item.json.fields['FULL NAME'] || 'Unknown',\n  email: item.json.fields['EMAIL'] || null,\n  phone: item.json.fields['Phone'] || null,\n  city: item.json.fields['City'] || null,\n  description: item.json.fields['COMPANY DESCRIPTION'] || null,\n  size: item.json.fields['COMPANY SIZE'] || null,\n  keywords: item.json.fields['KEYWORDS'] || null\n}));\n\nreturn {\n  json: {\n    leads: leadsForPrompt,\n    prompt: `Score these ${leadsForPrompt.length} Swiss real estate agencies from 1-10 for outreach priority.\n\nScoring criteria:\n- Brand recognition in Switzerland (+2)\n- Luxury/premium market focus (+3)\n- Commercial/office real estate focus (+2)\n- Complete contact info (email + phone) (+2)\n- Active online presence (+1)\n\nAgencies to score:\n${leadsForPrompt.map(l => `[${l.index}] ${l.name} | ${l.city || 'Unknown city'} | ${l.email ? 'Has email' : 'No email'} | ${l.phone ? 'Has phone' : 'No phone'}`).join('\\n')}\n\nReturn ONLY a valid JSON array with this exact format:\n[{\"index\": 0, \"score\": 7, \"reason\": \"brief reason\"}, ...]\n\nNo other text, just the JSON array.`\n  }\n};"
+      },
+      "id": "format-prompt",
+      "name": "Format Batch Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 200],
+      "notes": "Creates a single prompt for scoring all leads"
+    },
+    {
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a lead scoring assistant for Swiss real estate agency outreach. Score agencies 1-10 based on their potential value. Return ONLY valid JSON.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 2000\n}",
+        "options": {}
+      },
+      "id": "openrouter-score",
+      "name": "OpenRouter Batch Score",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_OPENROUTER_CREDENTIAL_ID",
+          "name": "OpenRouter API"
+        }
+      },
+      "notes": "Single API call to score all 20 leads"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the LLM response and extract scores\nconst response = $input.first().json;\nconst leads = $('Format Batch Prompt').first().json.leads;\n\nlet scores = [];\ntry {\n  // Extract JSON from response\n  const content = response.choices[0].message.content;\n  // Try to parse as JSON directly\n  scores = JSON.parse(content);\n} catch (e) {\n  // If parsing fails, try to extract JSON from text\n  const match = response.choices[0].message.content.match(/\\[.*\\]/s);\n  if (match) {\n    scores = JSON.parse(match[0]);\n  }\n}\n\n// Map scores back to lead IDs\nconst results = scores.map(s => {\n  const lead = leads.find(l => l.index === s.index);\n  return {\n    json: {\n      id: lead?.id,\n      score: s.score,\n      reason: s.reason,\n      status: s.score >= 7 ? 'READY' : s.score >= 5 ? 'MEDIUM' : 'LOW_PRIORITY'\n    }\n  };\n});\n\nreturn results;"
+      },
+      "id": "parse-scores",
+      "name": "Parse Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 200],
+      "notes": "Extracts scores from LLM response"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID || 'appLriEwWldpPTMPg' }}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_TABLE_ID || 'tblLZkFo7Th7uyfWB' }}",
+          "mode": "id"
+        },
+        "id": "={{ $json.id }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Rank": "={{ $json.score }}",
+            "score_reason": "={{ $json.reason }}",
+            "lead_status": "={{ $json.status }}",
+            "scored_at": "={{ new Date().toISOString() }}"
+          }
+        }
+      },
+      "id": "update-scores",
+      "name": "Update Lead Scores",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [1400, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "notes": "Updates each lead with its score"
+    },
+    {
+      "parameters": {},
+      "id": "stop-no-leads",
+      "name": "No Leads",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [800, 400],
+      "notes": "No unscored leads found"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Unscored Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unscored Leads": {
+      "main": [
+        [
+          {
+            "node": "Has Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Leads?": {
+      "main": [
+        [
+          {
+            "node": "Format Batch Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Batch Prompt": {
+      "main": [
+        [
+          {
+            "node": "OpenRouter Batch Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Batch Score": {
+      "main": [
+        [
+          {
+            "node": "Parse Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Scores": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

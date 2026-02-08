@@ -179,7 +179,7 @@
         "text": "=we are kronosautomations.it\nalways CTA to the website or to our mail\n\nLead Information:\nFull Name:{{ $json[\"FULL NAME\"] }}\nContact: {{ $json.Phone }}\nCompany:{{ $json[\"company name\"] }}\nJob Title: {{ $json[\"JOB TITLE\"] }}\nseniority: {{ $json.SENIORITY }}\nCompany Description: {{ $json[\"COMPANY DESCRIPTION\"] }}\nCompany Size:{{ $json[\"COMPANY SIZE\"] }}\nSector: {{ $json.KEYWORDS }}\nCity: {{ $json.City }}\nKeywords:{{ $json.KEYWORDS }}\nurl: {{ $json.URL }}\nemail: {{ $json.EMAIL }}\ntech: {{ $json.TECHNOLOGY }}\n",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "You are a Senior SMS Strategic Advisor at KRONOS Automations.\nWe assist Swiss real estate professionals with automated lead responses.\n\nGOAL: Write a short (max 160 chars), personalized SMS.\n- Focus: Immediate response and link to the lead gen calendar.\n- Tone: Swiss-Standard (Direct, professional, respectful).\n- Response MUST be ONLY JSON: {\"smsText\": \"...\"}"
+          "systemMessage": "You are a Senior SMS Strategic Advisor at KRONOS Automations.\nWe help Swiss real estate agencies build a predictable and scalable flow of leads.\n\nGOAL: Write a short (max 160 chars), personalized SMS.\n- Focus: We create high-converting campaigns and custom internal tools for {AgencyName}.\n- Tone: Swiss-Standard (Direct, professional, respectful).\n- Response MUST be ONLY JSON: {\"smsText\": \"...\"}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -529,7 +529,7 @@
         "text": "=ALWAYS ADD https://kronosautomations.it\nLead Information:\nFull Name: {{ $json[\"FULL NAME\"] }}\nEmail: {{ $json.EMAIL }}\nCompany: {{ $json[\"company name\"] }}\nJob Title: {{ $json[\"JOB TITLE\"] }}\nSeniority: {{ $json.SENIORITY }}\nCompany Description: {{ $json[\"COMPANY DESCRIPTION\"] }}\nCompany Size: {{ $json[\"COMPANY SIZE\"] }}\nSector: {{ $json.KEYWORDS }}\nCity: {{ $json.City }}\nURL: {{ $json.URL }}\nTechnology: {{ $json.TECHNOLOGY }}",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "You are a Senior Strategic Growth Partner at KRONOS Automations.\nWe deliver steady lead flow and qualified consultations for elite Swiss real estate firms.\n\nGOAL: Write a short, high-impact executive email (max 4-5 sentences) featuring the official KRONOS pixel-retro branding and LOGO.\n\nCONTENT PROTOCOL:\n1. PUNCHY HOOK: Reference 'company name' and the Swiss real estate market.\n2. THE PROPOSITION: Focus on \"Steady Sales\" and predictable listings via automated lead systems.\n3. TONE: Swiss-Efficiency (Ultra-direct, professional, value-first).\n\nVISUAL BRANDING (KRONOS PIXEL-STYLE):\n- LOGO: You MUST include the following logo at the VERY TOP:\n  <div style=\"text-align: center; padding: 20px 0;\">\n    <img src=\"https://kronosautomations.it/logo.png\" alt=\"KRONOS\" width=\"120\" style=\"image-rendering: pixelated;\">\n  </div>\n- CONTAINER: max-width 550px; margin: auto; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif;\n- ACCENTS: Use an orange (#FF6B00) pixel-style dotted line for the signature break.\n- CTA: An orange (#FF6B00) bolded text link: \"Discuss steady lead flow\"\n\nHTML STRUCTURE:\n- Use <p> only. Keep it clean.\n- SIGNATURE: \n  <div style=\"border-top: 2px dotted #FF6B00; margin-top: 25px; padding-top: 10px; font-size: 14px;\">\n    <strong>KRONOS Strategic Partner</strong><br>\n    The Standard in Swiss Real Estate Automation\n  </div>\n\nResponse MUST be ONLY JSON: {\"subject\": \"...\", \"emailBody\": \"...\"}"
+          "systemMessage": "You are a Senior Strategic Growth Partner at KRONOS Automations.\nWe provide a predictable, scalable flow of leads for the Swiss real estate market.\n\nGOAL: Write a short, high-impact executive email (max 4-5 sentences) featuring the official KRONOS pixel-retro branding and LOGO.\n\nCONTENT PROTOCOL:\n1. PUNCHY HOOK: Reference 'company name' and the Swiss real estate market.\n2. THE PROPOSITION: We run high-converting campaigns and build custom internal lead tools for our partners.\n3. THE OUTCOME: Predictable and scalable lead flow.\n4. TONE: Swiss-Efficiency (Ultra-direct, professional, value-first).\n\nVISUAL BRANDING (KRONOS PIXEL-STYLE):\n- LOGO: You MUST include the following logo at the VERY TOP:\n  <div style=\"text-align: center; padding: 20px 0;\">\n    <img src=\"https://kronosautomations.it/logo.png\" alt=\"KRONOS\" width=\"120\" style=\"image-rendering: pixelated;\">\n  </div>\n- CONTAINER: max-width 550px; margin: auto; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif;\n- ACCENTS: Use an orange (#FF6B00) pixel-style dotted line for the signature break.\n- CTA: An orange (#FF6B00) bolded text link: \"Explore your scalable lead flow\"\n\nHTML STRUCTURE:\n- Use <p> only. Keep it clean.\n- THE LINK: All buttons/links must point to: https://kronosautomations.it/#contattaci\n- SIGNATURE: \n  <div style=\"border-top: 2px dotted #FF6B00; margin-top: 25px; padding-top: 10px; font-size: 14px;\">\n    <strong>KRONOS Strategic Partner</strong><br>\n    The Standard in Swiss Real Estate Automation<br>\n    <a href=\"mailto:consulting@kronosautomations.it\" style=\"color: #FF6B00; text-decoration: none;\">consulting@kronosautomations.it</a>\n  </div>\n\nResponse MUST be ONLY JSON: {\"subject\": \"...\", \"emailBody\": \"...\"}"
         }
       },
       "id": "c5f417e7-37d3-4502-bc19-600c8cae4c8c",
@@ -2122,18 +2122,18 @@
         "base": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+          "value": "appLriEwWldpPTMPg"
         },
         "table": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+          "value": "tblLZkFo7Th7uyfWB"
         },
         "filterByFormula": "={{ '{Phone} = \"' + $json.From + '\"' }}",
         "options": {}
       },
       "id": "85762b59-36cd-4a87-8a4f-a7daf6028b05",
-      "name": "Update Airtable - SMS Responded",
+      "name": "Find Lead - SMS Reply",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
@@ -2149,26 +2149,102 @@
     },
     {
       "parameters": {
-        "operation": "search",
+        "operation": "update",
         "base": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+          "value": "appLriEwWldpPTMPg"
         },
         "table": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+          "value": "tblLZkFo7Th7uyfWB"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "sms status": "RESPONDED"
+          },
+          "matchingColumns": ["id"]
+        },
+        "options": {}
+      },
+      "id": "mark-sms-responded-v2",
+      "name": "Mark SMS Responded",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1488,
+        6112
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appLriEwWldpPTMPg"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblLZkFo7Th7uyfWB"
         },
         "filterByFormula": "={{ 'EMAIL = \"' + $json.from + '\"' }}",
         "options": {}
       },
       "id": "997fe4c1-3df7-486b-b3d2-6f6d8daf5a5f",
-      "name": "Update Airtable - Email Responded",
+      "name": "Find Lead - Email Reply",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
         1536,
+        6320
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appLriEwWldpPTMPg"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblLZkFo7Th7uyfWB"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "EMAIL STATUS": "RESPONDED"
+          },
+          "matchingColumns": ["id"]
+        },
+        "options": {}
+      },
+      "id": "mark-email-responded-v2",
+      "name": "Mark Email Responded",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1760,
         6320
       ],
       "credentials": {
@@ -2213,7 +2289,7 @@
     },
     {
       "parameters": {},
-      "id": "ff974a07-363f-4c75-bce5-0561e3bf1ef0",
+      "id": "54e84cc0-b914-470d-842a-0d3298016110",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
@@ -2225,8 +2301,16 @@
     {
       "parameters": {
         "operation": "update",
-        "base": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}",
-        "table": "={{ $('Workflow Configuration1').first().json.airtableTableId }}",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appLriEwWldpPTMPg"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblLZkFo7Th7uyfWB"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -2239,7 +2323,7 @@
           ]
         }
       },
-      "id": "5acb76fe-8849-4838-95e1-c2edaba3fd56",
+      "id": "54588635-c7b5-4d92-941d-87bdf7d886b9",
       "name": "Airtable - Mark Failed",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
@@ -2268,7 +2352,7 @@
           ]
         }
       },
-      "id": "209bb898-6fd6-4def-b618-4235106ea184",
+      "id": "ff975ae8-b2f4-432f-bc88-71960a8c6f8c",
       "name": "Supabase - Release Lock",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -2289,7 +2373,7 @@
         "tableId": "campaign_config",
         "rowId": "current_prod"
       },
-      "id": "c862e693-c8a7-44a7-a822-1f9639ed769f",
+      "id": "9e0d4a8f-0522-40d6-82b9-6f2c8f13ad43",
       "name": "Fetch Dynamic Config",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -2309,7 +2393,7 @@
         "batchSize": 50,
         "options": {}
       },
-      "id": "0f55abb2-49be-499b-a7b9-78d4e9d472e8",
+      "id": "119cd144-9064-4ab0-95a5-1a946639091e",
       "name": "Batch Leads (Volume)",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
@@ -2332,7 +2416,7 @@
           ]
         }
       },
-      "id": "0d36f5c7-3c4d-43b8-8dc2-bdf1624db5dc",
+      "id": "7ae96902-c144-49e5-adac-df6c55ce12e4",
       "name": "Lock Lead Status",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -2352,7 +2436,7 @@
         "amount": "={{ Math.floor(Math.random() * 4) + 2 }}",
         "unit": "seconds"
       },
-      "id": "7f8c6bf1-fe67-4e94-80ab-fdef7901289b",
+      "id": "376ec5e3-867d-48f0-aa97-360104c3c788",
       "name": "Anti-Rate Limit Wait",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
@@ -2483,6 +2567,11 @@
             "node": "Update Airtable - Set Contact Method SMS",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Check if Has Email",
+            "type": "main",
+            "index": 0
           }
         ],
         [
@@ -2602,7 +2691,18 @@
       "main": [
         [
           {
-            "node": "Update Airtable - SMS Responded",
+            "node": "Find Lead - SMS Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Lead - SMS Reply": {
+      "main": [
+        [
+          {
+            "node": "Mark SMS Responded",
             "type": "main",
             "index": 0
           }
@@ -2624,7 +2724,18 @@
       "main": [
         [
           {
-            "node": "Update Airtable - Email Responded",
+            "node": "Find Lead - Email Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Lead - Email Reply": {
+      "main": [
+        [
+          {
+            "node": "Mark Email Responded",
             "type": "main",
             "index": 0
           }

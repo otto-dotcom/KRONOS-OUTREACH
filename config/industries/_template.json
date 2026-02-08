@@ -1,0 +1,70 @@
+{
+  "industry_id": "CHANGE_ME",
+  "display_name": "Industry Display Name",
+  "region": "CH",
+  "language": ["de", "fr", "en"],
+
+  "data_sources": [
+    {
+      "name": "SourceName",
+      "type": "apify",
+      "actor_id": "namespace/actor-name",
+      "input": {
+        "location": "switzerland",
+        "maxItems": 500
+      },
+      "field_mapping": {
+        "company_name": ["field1", "nested.field2", "fallback.field3"],
+        "email": ["email", "contact.email"],
+        "phone": ["phone", "contact.phone"],
+        "website": ["website", "url"],
+        "city": ["city", "location.city"],
+        "url": ["url", "listingUrl"]
+      },
+      "enabled": true
+    }
+  ],
+
+  "scoring": {
+    "model": "openai/gpt-4o-mini",
+    "batch_size": 20,
+    "criteria": [
+      {
+        "name": "criterion_1",
+        "weight": 2,
+        "description": "Description of what this criterion measures"
+      },
+      {
+        "name": "criterion_2",
+        "weight": 3,
+        "description": "Description of what this criterion measures"
+      },
+      {
+        "name": "contact_completeness",
+        "weight": 2,
+        "description": "Has both email AND phone number"
+      }
+    ],
+    "thresholds": {
+      "priority": 7,
+      "medium": 5,
+      "low": 0
+    },
+    "system_prompt": "You are a lead scoring assistant. Score businesses 1-10 based on their potential value. Return ONLY valid JSON."
+  },
+
+  "outreach": {
+    "sms_template_context": "Brief context for SMS generation",
+    "email_template_context": "Longer context for email generation with value proposition",
+    "value_proposition": "What you're offering to this industry"
+  },
+
+  "deduplication": {
+    "match_fields": ["url", "company_name"],
+    "normalize_company_name": true
+  },
+
+  "estimated_total_leads": 1000,
+  "scrape_frequency_hours": 24,
+  "notes": "Any notes about this industry configuration"
+}

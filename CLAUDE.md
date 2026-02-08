@@ -4,7 +4,8 @@ This project enables Claude to build high-quality n8n workflows using the n8n MC
 
 ## Environment
 
-- **n8n Instance**: n8n Cloud
+- **Hosting Provider**: Hostinger VPS (KVM 2)
+- **n8n Instance**: Self-hosted via Docker
 - **MCP Server**: n8n-mcp (czlonkowski/n8n-mcp)
 - **Skills**: n8n-skills (czlonkowski/n8n-skills)
 

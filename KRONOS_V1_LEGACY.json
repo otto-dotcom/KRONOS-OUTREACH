@@ -2122,18 +2122,18 @@
         "base": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+          "value": "appLriEwWldpPTMPg"
         },
         "table": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+          "value": "tblLZkFo7Th7uyfWB"
         },
         "filterByFormula": "={{ '{Phone} = \"' + $json.From + '\"' }}",
         "options": {}
       },
       "id": "85762b59-36cd-4a87-8a4f-a7daf6028b05",
-      "name": "Update Airtable - SMS Responded",
+      "name": "Find Lead - SMS Reply",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
@@ -2149,26 +2149,100 @@
     },
     {
       "parameters": {
-        "operation": "search",
+        "operation": "update",
         "base": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}"
+          "value": "appLriEwWldpPTMPg"
         },
         "table": {
           "__rl": true,
           "mode": "id",
-          "value": "={{ $('Workflow Configuration1').first().json.airtableTableId }}"
+          "value": "tblLZkFo7Th7uyfWB"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "sms status": "RESPONDED"
+          }
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Mark SMS Responded",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1504,
+        6112
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appLriEwWldpPTMPg"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblLZkFo7Th7uyfWB"
         },
         "filterByFormula": "={{ 'EMAIL = \"' + $json.from + '\"' }}",
         "options": {}
       },
       "id": "997fe4c1-3df7-486b-b3d2-6f6d8daf5a5f",
-      "name": "Update Airtable - Email Responded",
+      "name": "Find Lead - Email Reply",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
         1536,
+        6320
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AtP2rrGrxZ5FHBNZ",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "appLriEwWldpPTMPg"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblLZkFo7Th7uyfWB"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "EMAIL STATUS": "RESPONDED"
+          }
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Mark Email Responded",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1776,
         6320
       ],
       "credentials": {
@@ -2452,7 +2526,18 @@
       "main": [
         [
           {
-            "node": "Update Airtable - SMS Responded",
+            "node": "Find Lead - SMS Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Lead - SMS Reply": {
+      "main": [
+        [
+          {
+            "node": "Mark SMS Responded",
             "type": "main",
             "index": 0
           }
@@ -2474,7 +2559,18 @@
       "main": [
         [
           {
-            "node": "Update Airtable - Email Responded",
+            "node": "Find Lead - Email Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Lead - Email Reply": {
+      "main": [
+        [
+          {
+            "node": "Mark Email Responded",
             "type": "main",
             "index": 0
           }

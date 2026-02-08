@@ -1,6 +1,6 @@
 # KRONOS FAMILY
 
-Repository for the KRONOS FAMILY project. This workspace contains workflow JSONs, directives, and Python helper scripts used to build and run lead-scraping and outreach workflows.
+Repository for the KRONOS FAMILY project. This workspace contains workflow JSONs, directives, and Python helper scripts used to build and run lead-scraping and outreach workflows, optimized for **Hostinger VPS** hosting.
 
 Quick start
 - Review and remove or rotate any embedded secrets in `KRONOS_V2_PERFECTED.json` and `KRONOS_V1_LEGACY.json` before publishing.

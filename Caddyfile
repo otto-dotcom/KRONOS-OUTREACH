@@ -1,0 +1,13 @@
+{$N8N_HOST:n8n.yourdomain.com} {
+    reverse_proxy n8n:5678
+
+    # Enable compression
+    encode gzip
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+}

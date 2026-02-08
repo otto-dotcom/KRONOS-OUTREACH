@@ -1,0 +1,115 @@
+{
+  "industry_id": "swiss_realestate",
+  "display_name": "Swiss Real Estate Agencies",
+  "region": "CH",
+  "language": ["de", "fr", "it", "en"],
+
+  "data_sources": [
+    {
+      "name": "ImmoScout24",
+      "type": "apify",
+      "actor_id": "ecomscrape/immoscout24-property-search-scraper",
+      "input": {
+        "location": "switzerland",
+        "maxItems": 500,
+        "proxy": { "useApifyProxy": true }
+      },
+      "field_mapping": {
+        "company_name": ["agencyName", "advertiser.name", "contact.name"],
+        "email": ["agencyEmail", "advertiser.email", "contact.email"],
+        "phone": ["agencyPhone", "advertiser.phone", "contact.phone"],
+        "website": ["agencyUrl", "advertiser.website"],
+        "city": ["city", "location.city"],
+        "url": ["url", "agencyUrl"]
+      }
+    },
+    {
+      "name": "FlatFox",
+      "type": "apify",
+      "actor_id": "apify/flatfox-scraper",
+      "input": {
+        "startUrls": [{ "url": "https://flatfox.ch/en/search/?east=10.5&north=47.9&south=45.8&west=5.9" }],
+        "maxItems": 300
+      },
+      "field_mapping": {
+        "company_name": ["advertiser.name", "contact.name"],
+        "email": ["advertiser.email", "contact.email"],
+        "phone": ["advertiser.phone", "contact.phone"],
+        "website": ["advertiser.website"],
+        "city": ["location.city"],
+        "url": ["url"]
+      }
+    },
+    {
+      "name": "Homegate",
+      "type": "apify",
+      "actor_id": "apify/homegate-scraper",
+      "input": {
+        "startUrls": [{ "url": "https://www.homegate.ch/rent/real-estate/switzerland/matching-list" }],
+        "maxItems": 300
+      },
+      "field_mapping": {
+        "company_name": ["agency.name", "advertiser.name"],
+        "email": ["agency.email", "advertiser.email"],
+        "phone": ["agency.phone", "advertiser.phone"],
+        "website": ["agency.website"],
+        "city": ["address.city"],
+        "url": ["url"]
+      },
+      "enabled": false
+    }
+  ],
+
+  "scoring": {
+    "model": "openai/gpt-4o-mini",
+    "batch_size": 20,
+    "criteria": [
+      {
+        "name": "brand_recognition",
+        "weight": 2,
+        "description": "Well-known Swiss real estate brand"
+      },
+      {
+        "name": "luxury_focus",
+        "weight": 3,
+        "description": "Targets luxury/premium property market"
+      },
+      {
+        "name": "commercial_focus",
+        "weight": 2,
+        "description": "Specializes in commercial/office real estate"
+      },
+      {
+        "name": "contact_completeness",
+        "weight": 2,
+        "description": "Has both email AND phone number"
+      },
+      {
+        "name": "online_presence",
+        "weight": 1,
+        "description": "Active website and listing presence"
+      }
+    ],
+    "thresholds": {
+      "priority": 7,
+      "medium": 5,
+      "low": 0
+    },
+    "system_prompt": "You are a lead scoring assistant for Swiss real estate agency outreach. Score agencies 1-10 based on their potential value for B2B services (photography, virtual tours, marketing). Return ONLY valid JSON."
+  },
+
+  "outreach": {
+    "sms_template_context": "B2B service for real estate agencies - professional photography and virtual tours",
+    "email_template_context": "Professional real estate marketing services including HDR photography, drone shots, and 3D virtual tours",
+    "value_proposition": "Help agencies sell properties faster with professional visual content"
+  },
+
+  "deduplication": {
+    "match_fields": ["url", "company_name"],
+    "normalize_company_name": true
+  },
+
+  "estimated_total_leads": 3000,
+  "scrape_frequency_hours": 24,
+  "notes": "Switzerland has ~2,500-3,000 real estate agencies. Full scrape expected within 1-2 weeks."
+}
