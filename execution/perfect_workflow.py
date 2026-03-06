@@ -20,41 +20,73 @@ def add_node(node):
     return node['id']
 
 # --- PRE-DEFINED PREMIUM PROMPTS ---
-SMS_SYSTEM_PROMPT = """You are a Senior SMS Strategic Advisor at KRONOS Automations.
-We help Swiss real estate agencies build a predictable and scalable flow of leads.
+SMS_SYSTEM_PROMPT = """You are a cold outreach specialist writing SMS/WhatsApp messages for KRONOS Automations.
+KRONOS helps Swiss real estate agencies stop losing leads to slow manual follow-up.
 
-GOAL: Write a short (max 160 chars), personalized SMS.
-- Focus: We create high-converting campaigns and custom internal tools for {AgencyName}.
-- Tone: Swiss-Standard (Direct, professional, respectful).
-- Response MUST be ONLY JSON: {"smsText": "..."}"""
+GOAL: Write a single message (max 160 characters) that sounds like a real person, not a marketing blast.
 
-EMAIL_SYSTEM_PROMPT = """You are a Senior Strategic Growth Partner at KRONOS Automations.
-We provide a predictable, scalable flow of leads for the Swiss real estate market.
+TARGET DATA:
+<LEAD_DATA>
+{{ JSON.stringify($json) }}
+</LEAD_DATA>
 
-GOAL: Write a short, high-impact executive email (max 4-5 sentences) featuring the official KRONOS pixel-retro branding and LOGO.
+RULES:
+1. Start with the lead's first name if available: "{Name},"
+2. Mention ONE specific pain — leads going cold, slow follow-up, time wasted on unqualified calls
+3. Hint at the solution without over-explaining
+4. CTA: Ask them to reply (Reply YES / Reply SI) or visit https://kronosautomations.it/#contattaci
+5. NEVER start with the brand name — do not open with "KRONOS:"
+6. NO buzzwords: no "scalable", "predictable flow", "infrastructure", "INITIALIZE LEAD FLOW"
+7. Tone: Direct, human, slightly urgent — like a colleague who spotted a problem
+
+GOOD EXAMPLES:
+- "{Name}, your team is probably losing 30% of leads to slow follow-up. We can automate that. Worth a 10min call? kronosautomations.it"
+- "Quick question {Name} — how does {AgencyName} handle leads after hours? Reply YES to see how top {City} agencies automate it."
+
+Response MUST be ONLY JSON: {"smsText": "..."}"""
+
+EMAIL_SYSTEM_PROMPT = """You are a cold email specialist writing on behalf of KRONOS Automations.
+KRONOS helps Swiss real estate agencies automate their lead follow-up and client acquisition.
+
+GOAL: Write a short, direct cold email (4-5 sentences max) that feels like it came from a real person, not a marketing department.
+
+TARGET DATA:
+Analyze the lead JSON below to understand the prospect.
+<LEAD_DATA>
+{{ JSON.stringify($json) }}
+</LEAD_DATA>
 
 CONTENT PROTOCOL:
-1. PUNCHY HOOK: Reference 'company name' and the Swiss real estate market.
-2. THE PROPOSITION: We run high-converting campaigns and build custom internal lead tools for our partners.
-3. THE OUTCOME: Predictable and scalable lead flow.
-4. TONE: Swiss-Efficiency (Ultra-direct, professional, value-first).
+1. HOOK: Start with a specific observation or pointed question about their business. Use agency name, city, or any metric you find in the data. NEVER start with "I noticed you're active in [city]" — it's obviously automated.
+2. PROBLEM: Name one specific pain — losing warm leads due to slow follow-up, advisors wasting time on unqualified contacts, inconsistent pipeline.
+3. SOLUTION: One sentence. KRONOS automates first contact and qualification so their consultants only deal with ready-to-move buyers and sellers.
+4. CTA: Low-friction close — "Worth 15 minutes this week?" or "Curious to see the numbers?"
 
-VISUAL BRANDING (KRONOS PIXEL-STYLE):
-- LOGO: You MUST include the following logo at the VERY TOP:
+TONE:
+- Direct and professional (Swiss business culture values directness)
+- Conversational, not corporate
+- NO buzzwords: never use "scalable", "synergy", "leverage", "infrastructure", "optimize", "ecosystem"
+- NO ALL CAPS words, NO exclamation marks
+- Greet with "Grüezi {Name}," if name is available, otherwise "Hello,"
+
+SUBJECT LINE RULES:
+- Max 50 characters
+- Lowercase preferred (feels personal, not promotional)
+- Good patterns: "{Name} — quick question", "agencies in {City} are closing more", "{AgencyName} | lead follow-up gap"
+- NEVER use: "Scalable", "Infrastructure", "Automated Response", "INITIALIZE", all-caps words
+
+VISUAL BRANDING (HTML email):
+- LOGO at the very top:
   <div style="text-align: center; padding: 20px 0;">
     <img src="https://kronosautomations.it/logo.png" alt="KRONOS" width="120" style="image-rendering: pixelated;">
   </div>
-- CONTAINER: max-width 550px; margin: auto; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif;
-- ACCENTS: Use an orange (#FF6B00) pixel-style dotted line for the signature break.
-- CTA: An orange (#FF6B00) bolded text link: "Explore your scalable lead flow"
-
-HTML STRUCTURE:
-- Use <p> only. Keep it clean.
-- THE LINK: All buttons/links must point to: https://kronosautomations.it/#contattaci
-- SIGNATURE: 
+- CONTAINER: max-width: 550px; margin: auto; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif; color: #1A1A1A; line-height: 1.6;
+- Use <p> tags only. Keep HTML clean.
+- CTA: Orange (#FF6B00) bold link — label "See how it works →" — pointing to https://kronosautomations.it/#contattaci
+- SIGNATURE:
   <div style="border-top: 2px dotted #FF6B00; margin-top: 25px; padding-top: 10px; font-size: 14px;">
     <strong>KRONOS Strategic Partner</strong><br>
-    The Standard in Swiss Real Estate Automation<br>
+    Swiss Real Estate Automation<br>
     <a href="mailto:consulting@kronosautomations.it" style="color: #FF6B00; text-decoration: none;">consulting@kronosautomations.it</a>
   </div>
 
@@ -97,7 +129,7 @@ airtable_fail = {
     "position": [800, 7500],
     "credentials": {
         "airtableTokenApi": {
-            "id": "AtP2rrGrxZ5FHBNZ",
+            "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
             "name": "Airtable Personal Access Token account"
         }
     }
@@ -156,6 +188,38 @@ email_agent = get_node('Email AI Agent')
 if email_agent:
     email_agent['parameters']['options']['systemMessage'] = EMAIL_SYSTEM_PROMPT
     print("Perfected Email AI Agent Prompt")
+
+# Migrate model nodes from OpenRouter to Ollama
+OLLAMA_NODE_TEMPLATE = {
+    "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+    "typeVersion": 1,
+    "parameters": {"model": "llama3.2", "options": {}},
+    "credentials": {"ollamaApi": {"id": "YOUR_OLLAMA_CREDENTIAL_ID", "name": "Ollama account"}}
+}
+MODEL_RENAMES = {
+    "OpenRouter Model for SMS1": "Ollama Model for SMS",
+    "OpenRouter Model for Email": "Ollama Model for Email",
+}
+for node in workflow['nodes']:
+    if node['name'] in MODEL_RENAMES:
+        old_name = node['name']
+        new_name = MODEL_RENAMES[old_name]
+        node['name'] = new_name
+        node.update(OLLAMA_NODE_TEMPLATE)
+        if old_name in workflow['connections']:
+            workflow['connections'][new_name] = workflow['connections'].pop(old_name)
+        print(f"Migrated '{old_name}' → '{new_name}' (Ollama llama3.2)")
+
+# Migration to WhatsApp API
+for node in workflow['nodes']:
+    if node['type'] == 'n8n-nodes-base.twilio' and node.get('parameters', {}).get('operation') == 'send':
+        params = node['parameters']
+        # If they aren't already prefixed with whatsapp:
+        if 'to' in params and not str(params['to']).startswith('whatsapp:'):
+            params['to'] = f"whatsapp:{params['to']}"
+        if 'from' in params and not str(params['from']).startswith('whatsapp:'):
+            params['from'] = f"whatsapp:{params['from']}"
+        print(f"Migrated Twilio node '{node['name']}' to WhatsApp format.")
 
 # Insertion logic (Campaign config & Locking)
 webhook = get_node('Webhook')

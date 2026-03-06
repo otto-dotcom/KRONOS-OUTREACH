@@ -1,0 +1,1294 @@
+{
+  "name": "KRONOS - Social Video Factory",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1000, 0],
+      "id": "aa000001-0000-0000-0000-000000000001",
+      "name": "Schedule - Daily 8AM"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Videos"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Ready"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-800, 0],
+      "id": "aa000002-0000-0000-0000-000000000002",
+      "name": "Get Next Ready Video",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "switch-cond-0001",
+                    "leftValue": "={{ $json.VideoType }}",
+                    "rightValue": "content_ai",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "AI News"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "switch-cond-0002",
+                    "leftValue": "={{ $json.VideoType }}",
+                    "rightValue": "content_re",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Real Estate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "switch-cond-0003",
+                    "leftValue": "={{ $json.VideoType }}",
+                    "rightValue": "content_vision",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Vision"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "switch-cond-0004",
+                    "leftValue": "={{ $json.VideoType }}",
+                    "rightValue": "content_freeinfo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Free Info"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "switch-cond-0005",
+                    "leftValue": "={{ $json.VideoType }}",
+                    "rightValue": "ugc_character",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "UGC Character"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [-600, 0],
+      "id": "aa000003-0000-0000-0000-000000000003",
+      "name": "Switch - Video Type"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-ai-01",
+              "name": "systemPromptText",
+              "value": "You are a specialized Kie.ai Veo 3.1 video prompt engineer for KRONOS Automations.\n\nKRONOS Automations is a Swiss AI automation company that helps real estate professionals and HNW clients automate their operations with AI.\n\nYour task: Write a SINGLE detailed video generation prompt for an 8-second social media video about AI technology news, trends, or tips relevant to Swiss business professionals.\n\nVIDEO REQUIREMENTS:\n- Format: 9:16 vertical (Instagram Reels, TikTok)\n- Duration: 8 seconds\n- Style: Professional, cinematic, modern tech aesthetic\n- Setting: Modern Swiss office, Zurich skyline, clean digital environment with holographic UI elements\n- Include: Dynamic AI data visualizations, neural network animations, or a confident professional presenter gesturing at tech displays\n- End visual: Clean text overlay — \"KRONOS AI | kronosautomations.it\"\n- Quality: Cinematic 4K, professional lighting, sharp focus with bokeh background\n\nOutput ONLY the prompt text. No explanations, no preamble.",
+              "type": "string"
+            },
+            {
+              "id": "set-ai-02",
+              "name": "Topic",
+              "value": "={{ $json.Topic }}",
+              "type": "string"
+            },
+            {
+              "id": "set-ai-03",
+              "name": "ContentBrief",
+              "value": "={{ $json.ContentBrief }}",
+              "type": "string"
+            },
+            {
+              "id": "set-ai-04",
+              "name": "No",
+              "value": "={{ $json.No }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-400, -600],
+      "id": "aa000004-0000-0000-0000-000000000004",
+      "name": "Set - AI News Context"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-re-01",
+              "name": "systemPromptText",
+              "value": "You are a specialized Kie.ai Veo 3.1 video prompt engineer for KRONOS Automations.\n\nKRONOS Automations provides AI automation for Swiss real estate professionals and investors.\n\nYour task: Write a SINGLE detailed video generation prompt for an 8-second social media video about Swiss real estate market insights, trends, or investment opportunities.\n\nVIDEO REQUIREMENTS:\n- Format: 9:16 vertical (Instagram Reels, TikTok)\n- Duration: 8 seconds\n- Style: Premium, aspirational, luxury real estate aesthetic\n- Settings: Swiss Alpine chalets, Zurich or Geneva luxury skyline, elegant modern interiors, aerial property views\n- Include: Property showcase with price data overlays, market trend charts, smooth cinematic transitions between premium properties\n- Brand aesthetic: KRONOS gold and deep black palette, premium finance feel\n- End visual: \"KRONOS AI | Smart Real Estate | kronosautomations.it\"\n- Quality: Cinematic drone-style footage, golden hour lighting, ultra-sharp detail\n\nOutput ONLY the prompt text. No explanations, no preamble.",
+              "type": "string"
+            },
+            {
+              "id": "set-re-02",
+              "name": "Topic",
+              "value": "={{ $json.Topic }}",
+              "type": "string"
+            },
+            {
+              "id": "set-re-03",
+              "name": "ContentBrief",
+              "value": "={{ $json.ContentBrief }}",
+              "type": "string"
+            },
+            {
+              "id": "set-re-04",
+              "name": "No",
+              "value": "={{ $json.No }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-400, -300],
+      "id": "aa000005-0000-0000-0000-000000000005",
+      "name": "Set - Real Estate Context"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-vi-01",
+              "name": "systemPromptText",
+              "value": "You are a specialized Kie.ai Veo 3.1 video prompt engineer for KRONOS Automations.\n\nKRONOS Automations automates the future of Swiss real estate with AI. Vision: every real estate professional powered by an AI-driven operation — lead generation, client outreach, market analysis, all on autopilot.\n\nYour task: Write a SINGLE detailed video generation prompt for an 8-second brand vision video showcasing KRONOS Automations' mission and transformative impact.\n\nVIDEO REQUIREMENTS:\n- Format: 9:16 vertical (Instagram Reels, TikTok)\n- Duration: 8 seconds\n- Style: Futuristic, bold, premium brand aesthetic — think Apple meets Swiss banking\n- Visuals: Neural network animations flowing into Swiss property silhouettes, automated workflow visualizations, AI-powered dashboards transforming real estate operations\n- Brand colors: Gold (#C9A96E) and deep black (#0A0A0A) with clean white text\n- Setting: High-tech Swiss environment, Alpine precision meets Silicon Valley innovation\n- Dramatic opening then smooth transition to brand identity reveal\n- End visual: \"The Future of Real Estate is Automated | KRONOS | kronosautomations.it\"\n- Quality: Cinematic, high contrast, dramatic lighting, Hollywood trailer feel\n\nOutput ONLY the prompt text. No explanations, no preamble.",
+              "type": "string"
+            },
+            {
+              "id": "set-vi-02",
+              "name": "Topic",
+              "value": "={{ $json.Topic }}",
+              "type": "string"
+            },
+            {
+              "id": "set-vi-03",
+              "name": "ContentBrief",
+              "value": "={{ $json.ContentBrief }}",
+              "type": "string"
+            },
+            {
+              "id": "set-vi-04",
+              "name": "No",
+              "value": "={{ $json.No }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-400, 0],
+      "id": "aa000006-0000-0000-0000-000000000006",
+      "name": "Set - Vision Context"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-fi-01",
+              "name": "systemPromptText",
+              "value": "You are a specialized Kie.ai Veo 3.1 video prompt engineer for KRONOS Automations.\n\nKRONOS Automations shares free AI and automation knowledge to empower Swiss business and real estate professionals.\n\nYour task: Write a SINGLE detailed video generation prompt for an 8-second educational/free value video about AI tools, automation tips, or productivity concepts.\n\nVIDEO REQUIREMENTS:\n- Format: 9:16 vertical (Instagram Reels, TikTok)\n- Duration: 8 seconds\n- Style: Approachable, educational, clean and modern — friendly but professional\n- Visuals: Clean step-by-step animations, friendly UI walkthroughs, bright explainer graphics showing before/after automation, minimal design with clear typography\n- Setting: Modern minimal workspace, bright natural light, clean desk environment\n- Tone: Helpful and accessible — this is free value, not a hard sell\n- End visual: \"Free AI Tips | KRONOS | kronosautomations.it\"\n- Quality: Crisp, well-lit, clear focus, clean graphic design aesthetic\n\nOutput ONLY the prompt text. No explanations, no preamble.",
+              "type": "string"
+            },
+            {
+              "id": "set-fi-02",
+              "name": "Topic",
+              "value": "={{ $json.Topic }}",
+              "type": "string"
+            },
+            {
+              "id": "set-fi-03",
+              "name": "ContentBrief",
+              "value": "={{ $json.ContentBrief }}",
+              "type": "string"
+            },
+            {
+              "id": "set-fi-04",
+              "name": "No",
+              "value": "={{ $json.No }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-400, 300],
+      "id": "aa000007-0000-0000-0000-000000000007",
+      "name": "Set - Free Info Context"
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [-100, -150],
+      "id": "aa000008-0000-0000-0000-000000000008",
+      "name": "Merge Content Types"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Topic: {{ $json.Topic }}\n\nContent Brief: {{ $json.ContentBrief }}\n\nBased on the above topic and brief, generate a detailed, cinematic Kie.ai Veo 3.1 video prompt. The prompt must follow the system instructions exactly. Output ONLY the final video prompt — nothing else.",
+        "options": {
+          "systemMessage": "={{ $json.systemPromptText }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [100, -150],
+      "id": "aa000009-0000-0000-0000-000000000009",
+      "name": "AI: Generate Content Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.output.replace(/\\r?\\n|\\r/g, ' ').replace(/\"/g, '').replace(/[\\u201C\\u201D]/g, '') }}\",\n  \"model\": \"veo3_fast\",\n  \"generationType\": \"TEXT_2_VIDEO\",\n  \"aspectRatio\": \"9:16\",\n  \"enableTranslation\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, -150],
+      "id": "aa000010-0000-0000-0000-000000000010",
+      "name": "Submit Veo Text2Video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_HEADER_CREDENTIAL_ID",
+          "name": "Kie Demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [600, -150],
+      "id": "aa000011-0000-0000-0000-000000000011",
+      "name": "Wait Content 30s",
+      "webhookId": "b1c2d3e4-f5a6-7890-abcd-ef1234567890"
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/veo/record-info",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $('Submit Veo Text2Video').item.json.data.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, -150],
+      "id": "aa000012-0000-0000-0000-000000000012",
+      "name": "Get Content Video Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_HEADER_CREDENTIAL_ID",
+          "name": "Kie Demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-content-done-01",
+              "leftValue": "={{ $json.data.response }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1000, -150],
+      "id": "aa000013-0000-0000-0000-000000000013",
+      "name": "If Content Video Done?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Videos"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "No": "={{ $('Get Next Ready Video').item.json.No }}",
+            "Status": "Finished",
+            "FinishedVideo": "={{ $('Get Content Video Status').item.json.data.response.resultUrls[0] }}",
+            "CompletedAt": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": ["No"],
+          "schema": [
+            {
+              "id": "No",
+              "displayName": "No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "FinishedVideo",
+              "displayName": "FinishedVideo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "CompletedAt",
+              "displayName": "CompletedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1200, -300],
+      "id": "aa000014-0000-0000-0000-000000000014",
+      "name": "Update Sheet - Content Done",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "to": "whatsapp:+393XXXXXXXXXX",
+        "from": "whatsapp:+12135836915",
+        "message": "=✅ KRONOS Video Ready!\n\nTopic: {{ $('Get Next Ready Video').item.json.Topic }}\nType: {{ $('Get Next Ready Video').item.json.VideoType }}\n\n🎬 Video URL:\n{{ $('Get Content Video Status').item.json.data.response.resultUrls[0] }}\n\n— KRONOS Video Factory"
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1400, -300],
+      "id": "aa000015-0000-0000-0000-000000000015",
+      "name": "WhatsApp - Content Video Ready",
+      "credentials": {
+        "twilioApi": {
+          "id": "YOUR_TWILIO_CRED_ID",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Topic for this video: {{ $('Get Next Ready Video').item.json.Topic }}\n\nContent Brief: {{ $('Get Next Ready Video').item.json.ContentBrief }}\n\nGenerate a Flux Kontext Pro image generation prompt for the Swiss realtor character 'Lorenzo' as described in your system instructions. Output ONLY the image generation prompt.",
+        "options": {
+          "systemMessage": "You are a hyper-realistic character design prompt engineer for Flux Kontext Pro image generation.\n\nYour task: Write a SINGLE detailed Flux Kontext Pro prompt that generates a photorealistic Swiss real estate professional character for KRONOS Automations social media.\n\nCHARACTER SPECIFICATIONS — Lorenzo:\n- Age: 35-40 year old Swiss-Italian professional\n- Appearance: Sharp Mediterranean features, clean-shaven with subtle shadow, dark brown styled hair with silver temples, olive complexion, strong jawline\n- Attire: Perfectly tailored charcoal or navy suit, crisp white dress shirt, gold tie clip, silk pocket square, luxury Swiss timepiece (Patek Philippe style)\n- Expression: Confident, warm, intelligent — professional smile making direct eye contact\n- Pose: Relaxed professional posture, facing camera directly, slight natural shoulder angle\n- Background: Modern minimalist Swiss office interior, floor-to-ceiling windows showing Zurich skyline, clean bokeh depth of field\n- Lighting: Soft professional studio lighting with natural window light, subtle rim light on shoulders\n\nIMAGE SPECS:\n- Style: Ultra-realistic photography, 85mm lens portrait\n- Format: 9:16 vertical portrait\n- Quality: 8K hyper-realistic, ultra-detailed skin texture, professional headshot quality\n- The character must look authentically human — zero AI-generated artifacts\n\nOutput ONLY the Flux image prompt. No explanations."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [-400, 700],
+      "id": "aa000016-0000-0000-0000-000000000016",
+      "name": "AI: UGC Character Image Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/flux/kontext/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.output.replace(/\\r?\\n|\\r/g, ' ').replace(/\"/g, '').replace(/[\\u201C\\u201D]/g, '') }}\",\n  \"model\": \"flux-kontext-max\",\n  \"aspectRatio\": \"9:16\",\n  \"outputFormat\": \"jpeg\",\n  \"promptUpsampling\": true,\n  \"safetyTolerance\": 2\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-100, 700],
+      "id": "aa000017-0000-0000-0000-000000000017",
+      "name": "Submit Flux Image",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_HEADER_CREDENTIAL_ID",
+          "name": "Kie Demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [100, 700],
+      "id": "aa000018-0000-0000-0000-000000000018",
+      "name": "Wait Flux 20s",
+      "webhookId": "c2d3e4f5-a6b7-8901-cdef-234567890abc"
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/flux/kontext/record-info",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $('Submit Flux Image').item.json.data.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, 700],
+      "id": "aa000019-0000-0000-0000-000000000019",
+      "name": "Get Flux Image Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_HEADER_CREDENTIAL_ID",
+          "name": "Kie Demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-flux-done-01",
+              "leftValue": "={{ $json.data.successFlag }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [500, 700],
+      "id": "aa000020-0000-0000-0000-000000000020",
+      "name": "If Flux Image Done?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "store-img-01",
+              "name": "characterImageUrl",
+              "value": "={{ $json.data.resultImageUrl }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [700, 700],
+      "id": "aa000021-0000-0000-0000-000000000021",
+      "name": "Store Character Image URL"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Topic for this video: {{ $('Get Next Ready Video').item.json.Topic }}\n\nContent Brief: {{ $('Get Next Ready Video').item.json.ContentBrief }}\n\nGenerate a Kie.ai Veo 3.1 image-to-video prompt that animates 'Lorenzo' (the Swiss realtor) into a professional talking-head social media video about the above topic. Output ONLY the video prompt.",
+        "options": {
+          "systemMessage": "You are a specialized Kie.ai Veo 3.1 image-to-video prompt engineer for KRONOS Automations.\n\nThe input image shows Lorenzo — a photorealistic Swiss-Italian real estate and AI automation professional (KRONOS Automations brand character). He is wearing a tailored suit and appears in a modern Swiss office setting.\n\nYour task: Write a SINGLE Veo 3.1 video prompt that animates this static image into an 8-second professional talking-head social media video.\n\nANIMATION REQUIREMENTS:\n- Lorenzo looks naturally and confidently at the camera\n- He makes subtle, natural hand gestures while appearing to speak\n- Slight natural head movement and micro-expressions — authentic, not stiff\n- The background remains consistent with the image (Swiss office, Zurich view)\n- Lighting stays professional and consistent\n- The video feels like an authentic LinkedIn/Instagram professional creator video\n- End with a natural pause and warm professional smile\n\nSPECS:\n- Format: 9:16 vertical\n- Duration: 8 seconds\n- Style: Professional presenter / educational content creator\n- Quality: Cinematic, consistent with the input image quality\n\nBased on the provided topic and brief, describe specifically what gestures, expressions, and body language Lorenzo should use to naturally convey that subject.\n\nOutput ONLY the video prompt. No explanations."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [900, 700],
+      "id": "aa000022-0000-0000-0000-000000000022",
+      "name": "AI: UGC Video Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/veo/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": \"{{ $json.output.replace(/\\r?\\n|\\r/g, ' ').replace(/\"/g, '').replace(/[\\u201C\\u201D]/g, '') }}\",\n  \"imageUrls\": [\"{{ $('Store Character Image URL').item.json.characterImageUrl }}\"],\n  \"model\": \"veo3_fast\",\n  \"generationType\": \"FIRST_AND_LAST_FRAMES_2_VIDEO\",\n  \"aspectRatio\": \"9:16\",\n  \"enableTranslation\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 700],
+      "id": "aa000023-0000-0000-0000-000000000023",
+      "name": "Submit Veo Image2Video",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_HEADER_CREDENTIAL_ID",
+          "name": "Kie Demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1300, 700],
+      "id": "aa000024-0000-0000-0000-000000000024",
+      "name": "Wait UGC Video 30s",
+      "webhookId": "d3e4f5a6-b7c8-9012-def0-34567890abcd"
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/veo/record-info",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $('Submit Veo Image2Video').item.json.data.taskId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 700],
+      "id": "aa000025-0000-0000-0000-000000000025",
+      "name": "Get UGC Video Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_HEADER_CREDENTIAL_ID",
+          "name": "Kie Demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-ugc-done-01",
+              "leftValue": "={{ $json.data.response }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1700, 700],
+      "id": "aa000026-0000-0000-0000-000000000026",
+      "name": "If UGC Video Done?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Videos"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "No": "={{ $('Get Next Ready Video').item.json.No }}",
+            "Status": "Finished",
+            "FinishedVideo": "={{ $('Get UGC Video Status').item.json.data.response.resultUrls[0] }}",
+            "CharacterImageURL": "={{ $('Store Character Image URL').item.json.characterImageUrl }}",
+            "CompletedAt": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": ["No"],
+          "schema": [
+            {
+              "id": "No",
+              "displayName": "No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "FinishedVideo",
+              "displayName": "FinishedVideo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "CharacterImageURL",
+              "displayName": "CharacterImageURL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "CompletedAt",
+              "displayName": "CompletedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1900, 600],
+      "id": "aa000027-0000-0000-0000-000000000027",
+      "name": "Update Sheet - UGC Done",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "to": "whatsapp:+393XXXXXXXXXX",
+        "from": "whatsapp:+12135836915",
+        "message": "=✅ KRONOS UGC Character Video Ready!\n\nTopic: {{ $('Get Next Ready Video').item.json.Topic }}\n\n🎭 Character Image:\n{{ $('Store Character Image URL').item.json.characterImageUrl }}\n\n🎬 Video URL:\n{{ $('Get UGC Video Status').item.json.data.response.resultUrls[0] }}\n\n— KRONOS Video Factory"
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [2100, 600],
+      "id": "aa000028-0000-0000-0000-000000000028",
+      "name": "WhatsApp - UGC Video Ready",
+      "credentials": {
+        "twilioApi": {
+          "id": "YOUR_TWILIO_CRED_ID",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-3-5-sonnet",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [0, -400],
+      "id": "aa000029-0000-0000-0000-000000000029",
+      "name": "Claude 3.5 Sonnet via OpenRouter",
+      "credentials": {
+        "openRouterApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# 🎬 KRONOS Social Video Factory\n\n## Setup Steps\n\n**1. Google Sheets**\nCreate a sheet with these columns:\n`No | Topic | VideoType | ContentBrief | Status | FinishedVideo | CharacterImageURL | CompletedAt`\n\n**VideoType values:**\n- `content_ai` — AI tech news/tips\n- `content_re` — Swiss real estate market\n- `content_vision` — KRONOS brand vision\n- `content_freeinfo` — Free educational content\n- `ugc_character` — Lorenzo character video (image-to-video)\n\n**Status values:** `Ready → Finished`\n\n**2. Replace placeholders**\n- `YOUR_GOOGLE_SHEET_ID_HERE` in all Sheets nodes\n- `YOUR_TWILIO_CRED_ID` in WhatsApp nodes\n- Update `to:` WhatsApp number in both notification nodes\n\n**3. Credentials already wired (from existing workflows):**\n- ✅ Kie.ai: `Kie Demo`\n- ✅ OpenRouter: `OpenRouter account 2`\n- ✅ Google Sheets: `Google Sheets account`\n\n**4. Add Twilio credential in n8n**\nSettings → Credentials → New → Twilio",
+        "height": 500,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-1100, -500],
+      "id": "aa000030-0000-0000-0000-000000000030",
+      "name": "Setup Guide"
+    }
+  ],
+  "connections": {
+    "Schedule - Daily 8AM": {
+      "main": [
+        [
+          {
+            "node": "Get Next Ready Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Next Ready Video": {
+      "main": [
+        [
+          {
+            "node": "Switch - Video Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Video Type": {
+      "main": [
+        [
+          {
+            "node": "Set - AI News Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set - Real Estate Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set - Vision Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set - Free Info Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI: UGC Character Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set - AI News Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Content Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set - Real Estate Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Content Types",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set - Vision Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Content Types",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Set - Free Info Context": {
+      "main": [
+        [
+          {
+            "node": "Merge Content Types",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Merge Content Types": {
+      "main": [
+        [
+          {
+            "node": "AI: Generate Content Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude 3.5 Sonnet via OpenRouter": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI: Generate Content Prompt",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI: UGC Character Image Prompt",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI: UGC Video Prompt",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Generate Content Prompt": {
+      "main": [
+        [
+          {
+            "node": "Submit Veo Text2Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Veo Text2Video": {
+      "main": [
+        [
+          {
+            "node": "Wait Content 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Content 30s": {
+      "main": [
+        [
+          {
+            "node": "Get Content Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Content Video Status": {
+      "main": [
+        [
+          {
+            "node": "If Content Video Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Content Video Done?": {
+      "main": [
+        [
+          {
+            "node": "Wait Content 30s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Sheet - Content Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sheet - Content Done": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - Content Video Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: UGC Character Image Prompt": {
+      "main": [
+        [
+          {
+            "node": "Submit Flux Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Flux Image": {
+      "main": [
+        [
+          {
+            "node": "Wait Flux 20s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Flux 20s": {
+      "main": [
+        [
+          {
+            "node": "Get Flux Image Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Flux Image Status": {
+      "main": [
+        [
+          {
+            "node": "If Flux Image Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Flux Image Done?": {
+      "main": [
+        [
+          {
+            "node": "Store Character Image URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Flux 20s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Character Image URL": {
+      "main": [
+        [
+          {
+            "node": "AI: UGC Video Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: UGC Video Prompt": {
+      "main": [
+        [
+          {
+            "node": "Submit Veo Image2Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Veo Image2Video": {
+      "main": [
+        [
+          {
+            "node": "Wait UGC Video 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait UGC Video 30s": {
+      "main": [
+        [
+          {
+            "node": "Get UGC Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get UGC Video Status": {
+      "main": [
+        [
+          {
+            "node": "If UGC Video Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If UGC Video Done?": {
+      "main": [
+        [
+          {
+            "node": "Wait UGC Video 30s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Sheet - UGC Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sheet - UGC Done": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - UGC Video Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": []
+}

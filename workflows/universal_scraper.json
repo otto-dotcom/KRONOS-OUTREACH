@@ -134,7 +134,7 @@
       "position": [1400, 300],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -204,7 +204,7 @@
       "position": [1800, 200],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }

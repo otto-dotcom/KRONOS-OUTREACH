@@ -28,7 +28,7 @@ Follow these steps to set up your KRONOS-OUTREACH automated system on Hostinger.
     - [ ] Create a [Personal Access Token](https://airtable.com/create/tokens) with `data.records:read` and `data.records:write` scopes.
 - [ ] **Data Sources**:
     - [ ] **Apify**: Copy your API Token from [Apify Console](https://console.apify.com/account/integrations).
-    - [ ] **OpenRouter**: Create an API Key at [OpenRouter](https://openrouter.ai/keys) for GPT-4o-mini access.
+    - [ ] **Ollama**: Ensure Ollama is running (`ollama serve`) with `llama3.2` pulled (`ollama pull llama3.2`).
 - [ ] **Outreach Channels**:
     - [ ] **Twilio**: Get your Account SID, Auth Token, and a valid Send Number.
     - [ ] **SendGrid**: Create an API Key and verify your "Sender Identity".
@@ -49,7 +49,7 @@ Follow these steps to set up your KRONOS-OUTREACH automated system on Hostinger.
 - [ ] **Credentials**: In n8n, go to "Credentials" and add:
     - [ ] Airtable Token API
     - [ ] Apify API
-    - [ ] OpenRouter (via HTTP Header Auth)
+    - [ ] Ollama (base URL: `http://localhost:11434` or `http://host.docker.internal:11434` if n8n runs in Docker)
     - [ ] Twilio API
     - [ ] SendGrid API
 - [ ] **Import Workflows**:

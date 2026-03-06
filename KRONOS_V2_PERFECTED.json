@@ -120,28 +120,28 @@
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
     },
     {
       "parameters": {
-        "model": "openai/gpt-4o-mini",
+        "model": "llama3.2",
         "options": {}
       },
       "id": "6e997ef6-ce2a-40c9-95d2-bec49a1f1b10",
-      "name": "OpenRouter Model for SMS1",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "name": "Ollama Model for SMS",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "typeVersion": 1,
       "position": [
         2176,
         7424
       ],
       "credentials": {
-        "openRouterApi": {
-          "id": "k7UXNygZGVaG7gED",
-          "name": "OpenRouter account"
+        "ollamaApi": {
+          "id": "YOUR_OLLAMA_CREDENTIAL_ID",
+          "name": "Ollama account"
         }
       }
     },
@@ -179,7 +179,7 @@
         "text": "=we are kronosautomations.it\nalways CTA to the website or to our mail\n\nLead Information:\nFull Name:{{ $json[\"FULL NAME\"] }}\nContact: {{ $json.Phone }}\nCompany:{{ $json[\"company name\"] }}\nJob Title: {{ $json[\"JOB TITLE\"] }}\nseniority: {{ $json.SENIORITY }}\nCompany Description: {{ $json[\"COMPANY DESCRIPTION\"] }}\nCompany Size:{{ $json[\"COMPANY SIZE\"] }}\nSector: {{ $json.KEYWORDS }}\nCity: {{ $json.City }}\nKeywords:{{ $json.KEYWORDS }}\nurl: {{ $json.URL }}\nemail: {{ $json.EMAIL }}\ntech: {{ $json.TECHNOLOGY }}\n",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "You are a Senior SMS Strategic Advisor at KRONOS Automations.\nWe help Swiss real estate agencies build a predictable and scalable flow of leads.\n\nGOAL: Write a short (max 160 chars), personalized SMS.\n- Focus: We create high-converting campaigns and custom internal tools for {AgencyName}.\n- Tone: Swiss-Standard (Direct, professional, respectful).\n- Response MUST be ONLY JSON: {\"smsText\": \"...\"}"
+          "systemMessage": "You are a cold outreach specialist writing SMS/WhatsApp messages for KRONOS Automations.\nKRONOS helps Swiss real estate agencies stop losing leads to slow manual follow-up.\n\nGOAL: Write a single message (max 160 characters) that sounds like a real person, not a marketing blast.\n\nTARGET DATA:\n<LEAD_DATA>\n{{ JSON.stringify($json) }}\n</LEAD_DATA>\n\nRULES:\n1. Start with the lead's first name if available: \"{Name},\"\n2. Mention ONE specific pain — leads going cold, slow follow-up, time wasted on unqualified calls\n3. Hint at the solution without over-explaining\n4. CTA: Ask them to reply (Reply YES / Reply SI) or visit https://kronosautomations.it/#contattaci\n5. NEVER start with the brand name — do not open with \"KRONOS:\"\n6. NO buzzwords: no \"scalable\", \"predictable flow\", \"infrastructure\", \"INITIALIZE LEAD FLOW\"\n7. Tone: Direct, human, slightly urgent — like a colleague who spotted a problem\n\nGOOD EXAMPLES:\n- \"{Name}, your team is probably losing 30% of leads to slow follow-up. We can automate that. Worth a 10min call? kronosautomations.it\"\n- \"Quick question {Name} — how does {AgencyName} handle leads after hours? Reply YES to see how top {City} agencies automate it.\"\n\nResponse MUST be ONLY JSON: {\"smsText\": \"...\"}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -529,7 +529,7 @@
         "text": "=ALWAYS ADD https://kronosautomations.it\nLead Information:\nFull Name: {{ $json[\"FULL NAME\"] }}\nEmail: {{ $json.EMAIL }}\nCompany: {{ $json[\"company name\"] }}\nJob Title: {{ $json[\"JOB TITLE\"] }}\nSeniority: {{ $json.SENIORITY }}\nCompany Description: {{ $json[\"COMPANY DESCRIPTION\"] }}\nCompany Size: {{ $json[\"COMPANY SIZE\"] }}\nSector: {{ $json.KEYWORDS }}\nCity: {{ $json.City }}\nURL: {{ $json.URL }}\nTechnology: {{ $json.TECHNOLOGY }}",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "You are a Senior Strategic Growth Partner at KRONOS Automations.\nWe provide a predictable, scalable flow of leads for the Swiss real estate market.\n\nGOAL: Write a short, high-impact executive email (max 4-5 sentences) featuring the official KRONOS pixel-retro branding and LOGO.\n\nCONTENT PROTOCOL:\n1. PUNCHY HOOK: Reference 'company name' and the Swiss real estate market.\n2. THE PROPOSITION: We run high-converting campaigns and build custom internal lead tools for our partners.\n3. THE OUTCOME: Predictable and scalable lead flow.\n4. TONE: Swiss-Efficiency (Ultra-direct, professional, value-first).\n\nVISUAL BRANDING (KRONOS PIXEL-STYLE):\n- LOGO: You MUST include the following logo at the VERY TOP:\n  <div style=\"text-align: center; padding: 20px 0;\">\n    <img src=\"https://kronosautomations.it/logo.png\" alt=\"KRONOS\" width=\"120\" style=\"image-rendering: pixelated;\">\n  </div>\n- CONTAINER: max-width 550px; margin: auto; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif;\n- ACCENTS: Use an orange (#FF6B00) pixel-style dotted line for the signature break.\n- CTA: An orange (#FF6B00) bolded text link: \"Explore your scalable lead flow\"\n\nHTML STRUCTURE:\n- Use <p> only. Keep it clean.\n- THE LINK: All buttons/links must point to: https://kronosautomations.it/#contattaci\n- SIGNATURE: \n  <div style=\"border-top: 2px dotted #FF6B00; margin-top: 25px; padding-top: 10px; font-size: 14px;\">\n    <strong>KRONOS Strategic Partner</strong><br>\n    The Standard in Swiss Real Estate Automation<br>\n    <a href=\"mailto:consulting@kronosautomations.it\" style=\"color: #FF6B00; text-decoration: none;\">consulting@kronosautomations.it</a>\n  </div>\n\nResponse MUST be ONLY JSON: {\"subject\": \"...\", \"emailBody\": \"...\"}"
+          "systemMessage": "You are a cold email specialist writing on behalf of KRONOS Automations.\nKRONOS helps Swiss real estate agencies automate their lead follow-up and client acquisition.\n\nGOAL: Write a short, direct cold email (4-5 sentences max) that feels like it came from a real person, not a marketing department.\n\nTARGET DATA:\nAnalyze the lead JSON below to understand the prospect.\n<LEAD_DATA>\n{{ JSON.stringify($json) }}\n</LEAD_DATA>\n\nCONTENT PROTOCOL:\n1. HOOK: Start with a specific observation or pointed question about their business. Use agency name, city, or any metric you find in the data. NEVER start with \"I noticed you're active in [city]\" — it's obviously automated.\n2. PROBLEM: Name one specific pain — losing warm leads due to slow follow-up, advisors wasting time on unqualified contacts, inconsistent pipeline.\n3. SOLUTION: One sentence. KRONOS automates first contact and qualification so their consultants only deal with ready-to-move buyers and sellers.\n4. CTA: Low-friction close — \"Worth 15 minutes this week?\" or \"Curious to see the numbers?\"\n\nTONE:\n- Direct and professional (Swiss business culture values directness)\n- Conversational, not corporate\n- NO buzzwords: never use \"scalable\", \"synergy\", \"leverage\", \"infrastructure\", \"optimize\", \"ecosystem\"\n- NO ALL CAPS words, NO exclamation marks\n- Greet with \"Grüezi {Name},\" if name is available, otherwise \"Hello,\"\n\nSUBJECT LINE RULES:\n- Max 50 characters\n- Lowercase preferred (feels personal, not promotional)\n- Good patterns: \"{Name} — quick question\", \"agencies in {City} are closing more\", \"{AgencyName} | lead follow-up gap\"\n- NEVER use: \"Scalable\", \"Infrastructure\", \"Automated Response\", \"INITIALIZE\", all-caps words\n\nVISUAL BRANDING (HTML email):\n- LOGO at the very top:\n  <div style=\"text-align: center; padding: 20px 0;\">\n    <img src=\"https://kronosautomations.it/logo.png\" alt=\"KRONOS\" width=\"120\" style=\"image-rendering: pixelated;\">\n  </div>\n- CONTAINER: max-width: 550px; margin: auto; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif; color: #1A1A1A; line-height: 1.6;\n- Use <p> tags only. Keep HTML clean.\n- CTA: Orange (#FF6B00) bold link — label \"See how it works →\" — pointing to https://kronosautomations.it/#contattaci\n- SIGNATURE:\n  <div style=\"border-top: 2px dotted #FF6B00; margin-top: 25px; padding-top: 10px; font-size: 14px;\">\n    <strong>KRONOS Strategic Partner</strong><br>\n    Swiss Real Estate Automation<br>\n    <a href=\"mailto:consulting@kronosautomations.it\" style=\"color: #FF6B00; text-decoration: none;\">consulting@kronosautomations.it</a>\n  </div>\n\nResponse MUST be ONLY JSON: {\"subject\": \"...\", \"emailBody\": \"...\"}"
         }
       },
       "id": "c5f417e7-37d3-4502-bc19-600c8cae4c8c",
@@ -543,21 +543,21 @@
     },
     {
       "parameters": {
-        "model": "openai/gpt-4o-mini",
+        "model": "llama3.2",
         "options": {}
       },
       "id": "677dcf08-e592-433d-8d2d-e097ec874613",
-      "name": "OpenRouter Model for Email",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "name": "Ollama Model for Email",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
       "typeVersion": 1,
       "position": [
         2528,
         7024
       ],
       "credentials": {
-        "openRouterApi": {
-          "id": "k7UXNygZGVaG7gED",
-          "name": "OpenRouter account"
+        "ollamaApi": {
+          "id": "YOUR_OLLAMA_CREDENTIAL_ID",
+          "name": "Ollama account"
         }
       }
     },
@@ -668,7 +668,7 @@
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -728,7 +728,7 @@
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -798,7 +798,7 @@
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -1481,8 +1481,8 @@
                   "value": "Real Estate Developer & Transaction Manager"
                 },
                 {
-                  "name": "Asset Managerin Real Estate Bei Avadis Anlagestiftung / Afiaa Real Estate Investment Ag / Eidg. Dipl. Immobilientreuh\u00e4nderin",
-                  "value": "Asset Managerin Real Estate Bei Avadis Anlagestiftung / Afiaa Real Estate Investment Ag / Eidg. Dipl. Immobilientreuh\u00e4nderin"
+                  "name": "Asset Managerin Real Estate Bei Avadis Anlagestiftung / Afiaa Real Estate Investment Ag / Eidg. Dipl. Immobilientreuhänderin",
+                  "value": "Asset Managerin Real Estate Bei Avadis Anlagestiftung / Afiaa Real Estate Investment Ag / Eidg. Dipl. Immobilientreuhänderin"
                 },
                 {
                   "name": "Managing Director, Commercial Real Estate Broker & Owner",
@@ -1501,8 +1501,8 @@
                   "value": "Community Building | Areal Marketing"
                 },
                 {
-                  "name": "Real Estate Area Director (gen\u00e8ve)",
-                  "value": "Real Estate Area Director (gen\u00e8ve)"
+                  "name": "Real Estate Area Director (genève)",
+                  "value": "Real Estate Area Director (genève)"
                 },
                 {
                   "name": "Manager Real Estate Development",
@@ -1525,8 +1525,8 @@
                   "value": "Real Estate Advisory & Valuation Manager"
                 },
                 {
-                  "name": "Director, Debt & Structured Finance \u2013 Operating Real Estate At Cbre",
-                  "value": "Director, Debt & Structured Finance \u2013 Operating Real Estate At Cbre"
+                  "name": "Director, Debt & Structured Finance – Operating Real Estate At Cbre",
+                  "value": "Director, Debt & Structured Finance – Operating Real Estate At Cbre"
                 },
                 {
                   "name": "Asset Manager (real Estate)",
@@ -1545,8 +1545,8 @@
                   "value": "Junior Real Estate Community Manager"
                 },
                 {
-                  "name": "Wincasa - Real Estate Site Management / Cmsm\n\n\u201egeht Nicht, Gibt\u2019s Nicht\u201c",
-                  "value": "Wincasa - Real Estate Site Management / Cmsm\n\n\u201egeht Nicht, Gibt\u2019s Nicht\u201c"
+                  "name": "Wincasa - Real Estate Site Management / Cmsm\n\n„geht Nicht, Gibt’s Nicht“",
+                  "value": "Wincasa - Real Estate Site Management / Cmsm\n\n„geht Nicht, Gibt’s Nicht“"
                 },
                 {
                   "name": "Asset Manager Real Estate",
@@ -1561,12 +1561,12 @@
                   "value": "Senior Manager Real Estate Development"
                 },
                 {
-                  "name": "Director Bei W\u00fcest Partner Ag",
-                  "value": "Director Bei W\u00fcest Partner Ag"
+                  "name": "Director Bei Wüest Partner Ag",
+                  "value": "Director Bei Wüest Partner Ag"
                 },
                 {
-                  "name": "Real Estate Site Manager \u2014 Leiterin St\u00fccki Park Basel",
-                  "value": "Real Estate Site Manager \u2014 Leiterin St\u00fccki Park Basel"
+                  "name": "Real Estate Site Manager — Leiterin Stücki Park Basel",
+                  "value": "Real Estate Site Manager — Leiterin Stücki Park Basel"
                 },
                 {
                   "name": "Manager Cost Planner / Real Estate Development Chez Steiner Ag",
@@ -1593,8 +1593,8 @@
                   "value": "Corporate Real Estate Manager Switzerland"
                 },
                 {
-                  "name": "Program Director \u2013 Real Estate Development",
-                  "value": "Program Director \u2013 Real Estate Development"
+                  "name": "Program Director – Real Estate Development",
+                  "value": "Program Director – Real Estate Development"
                 },
                 {
                   "name": "Real Estate Asset Manager",
@@ -2070,7 +2070,7 @@
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -2142,7 +2142,7 @@
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -2165,22 +2165,21 @@
           "value": {
             "id": "={{ $json.id }}",
             "sms status": "RESPONDED"
-          },
-          "matchingColumns": ["id"]
+          }
         },
         "options": {}
       },
-      "id": "mark-sms-responded-v2",
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
       "name": "Mark SMS Responded",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        1488,
+        1504,
         6112
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -2211,7 +2210,7 @@
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -2234,22 +2233,21 @@
           "value": {
             "id": "={{ $json.id }}",
             "EMAIL STATUS": "RESPONDED"
-          },
-          "matchingColumns": ["id"]
+          }
         },
         "options": {}
       },
-      "id": "mark-email-responded-v2",
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
       "name": "Mark Email Responded",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
       "position": [
-        1760,
+        1776,
         6320
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -2289,7 +2287,7 @@
     },
     {
       "parameters": {},
-      "id": "54e84cc0-b914-470d-842a-0d3298016110",
+      "id": "103d1e4a-07d1-4b16-9ac8-2b386a499289",
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
@@ -2301,16 +2299,8 @@
     {
       "parameters": {
         "operation": "update",
-        "base": {
-          "__rl": true,
-          "mode": "id",
-          "value": "appLriEwWldpPTMPg"
-        },
-        "table": {
-          "__rl": true,
-          "mode": "id",
-          "value": "tblLZkFo7Th7uyfWB"
-        },
+        "base": "={{ $('Workflow Configuration1').first().json.airtableBaseId }}",
+        "table": "={{ $('Workflow Configuration1').first().json.airtableTableId }}",
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -2323,7 +2313,7 @@
           ]
         }
       },
-      "id": "54588635-c7b5-4d92-941d-87bdf7d886b9",
+      "id": "78a9a065-f22f-4b58-aa3e-3db97155604a",
       "name": "Airtable - Mark Failed",
       "type": "n8n-nodes-base.airtable",
       "typeVersion": 2.1,
@@ -2333,7 +2323,7 @@
       ],
       "credentials": {
         "airtableTokenApi": {
-          "id": "AtP2rrGrxZ5FHBNZ",
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -2352,7 +2342,7 @@
           ]
         }
       },
-      "id": "ff975ae8-b2f4-432f-bc88-71960a8c6f8c",
+      "id": "9f4d85ca-a191-470b-a249-4ea951c807e1",
       "name": "Supabase - Release Lock",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -2373,7 +2363,7 @@
         "tableId": "campaign_config",
         "rowId": "current_prod"
       },
-      "id": "9e0d4a8f-0522-40d6-82b9-6f2c8f13ad43",
+      "id": "79ba5a68-d869-472f-ab87-bb84df3d0d8f",
       "name": "Fetch Dynamic Config",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -2393,7 +2383,7 @@
         "batchSize": 50,
         "options": {}
       },
-      "id": "119cd144-9064-4ab0-95a5-1a946639091e",
+      "id": "6ed9055d-0381-4c28-a210-83a28c7ec3f7",
       "name": "Batch Leads (Volume)",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
@@ -2416,7 +2406,7 @@
           ]
         }
       },
-      "id": "7ae96902-c144-49e5-adac-df6c55ce12e4",
+      "id": "bdd09aa2-01af-4dd7-af31-5477a84eb4e0",
       "name": "Lock Lead Status",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -2436,7 +2426,7 @@
         "amount": "={{ Math.floor(Math.random() * 4) + 2 }}",
         "unit": "seconds"
       },
-      "id": "376ec5e3-867d-48f0-aa97-360104c3c788",
+      "id": "d09d0662-62ea-473e-bdec-49910d945b18",
       "name": "Anti-Rate Limit Wait",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
@@ -2522,17 +2512,6 @@
         ]
       ]
     },
-    "OpenRouter Model for SMS1": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "SMS Output Parser1": {
       "ai_outputParser": [
         [
@@ -2565,11 +2544,6 @@
           },
           {
             "node": "Update Airtable - Set Contact Method SMS",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Check if Has Email",
             "type": "main",
             "index": 0
           }
@@ -2616,17 +2590,6 @@
           {
             "node": "Send SMS via Twilio1",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenRouter Model for Email": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Email AI Agent",
-            "type": "ai_languageModel",
             "index": 0
           }
         ]
@@ -2803,6 +2766,28 @@
           {
             "node": "Check if Mobile Number",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model for SMS": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model for Email": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email AI Agent",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
