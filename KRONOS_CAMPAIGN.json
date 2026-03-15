@@ -1,0 +1,385 @@
+{
+  "name": "KRONOS Campaign - Scrape → Score → Outreach",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/ecomscrape~immoscout24-property-search-scraper/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"location\": \"switzerland\",\n  \"maxItems\": 500,\n  \"proxy\": { \"useApifyProxy\": true }\n}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "apify-scraper",
+      "name": "Apify - Scrape ImmoScout24",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [250, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "APIFY_CREDENTIAL_ID",
+          "name": "Apify API Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and normalize lead data from Apify scrape results\nconst leads = [];\nconst seen = new Set();\n\nfor (const item of $input.all()) {\n  const raw = item.json;\n  \n  // Extract company name from various field paths\n  const companyName = raw.agencyName || raw.advertiser?.name || raw.contact?.name || '';\n  const email = raw.agencyEmail || raw.advertiser?.email || raw.contact?.email || '';\n  const phone = raw.agencyPhone || raw.advertiser?.phone || raw.contact?.phone || '';\n  const website = raw.agencyUrl || raw.advertiser?.website || '';\n  const city = raw.city || raw.location?.city || '';\n  const url = raw.url || raw.agencyUrl || '';\n  \n  // Skip if no company name or already seen\n  if (!companyName || seen.has(companyName.toLowerCase())) continue;\n  seen.add(companyName.toLowerCase());\n  \n  // Skip if no email\n  if (!email) continue;\n  \n  leads.push({\n    json: {\n      company_name: companyName,\n      email: email,\n      phone: phone,\n      website: website,\n      city: city,\n      url: url,\n      scraped_at: new Date().toISOString(),\n      source: 'ImmoScout24'\n    }\n  });\n}\n\nreturn leads;"
+      },
+      "id": "normalize-leads",
+      "name": "Normalize & Deduplicate Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"openai/gpt-4o-mini\",\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a lead scoring assistant for Swiss real estate agency outreach. Score agencies 1-10 based on their potential value for B2B services. Evaluate: brand recognition (weight 2), luxury focus (weight 3), commercial focus (weight 2), contact completeness (weight 2), online presence (weight 1). Return JSON: {\\\"score\\\": number, \\\"reason\\\": string}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Score this agency: Company: {{ $json.company_name }}, City: {{ $json.city }}, Website: {{ $json.website }}, Has Email: {{ $json.email ? 'yes' : 'no' }}, Has Phone: {{ $json.phone ? 'yes' : 'no' }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "ai-scoring",
+      "name": "AI Score Lead (OpenRouter)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [750, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "OPENROUTER_CREDENTIAL_ID",
+          "name": "OpenRouter API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI scoring response and merge with lead data\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const lead = item.json;\n  let score = 5;\n  let reason = 'Default score';\n  \n  try {\n    const aiResponse = JSON.parse(lead.choices?.[0]?.message?.content || '{}');\n    score = aiResponse.score || 5;\n    reason = aiResponse.reason || 'No reason provided';\n  } catch (e) {\n    // Keep default score on parse error\n  }\n  \n  // Get original lead data from previous node\n  const originalLead = $('Normalize & Deduplicate Leads').item;\n  \n  results.push({\n    json: {\n      ...originalLead.json,\n      score: score,\n      score_reason: reason,\n      lead_status: score >= 7 ? 'priority' : score >= 5 ? 'medium' : 'low'\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "parse-score",
+      "name": "Parse Score & Classify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.AIRTABLE_BASE_ID }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.AIRTABLE_TABLE_ID }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "company name": "={{ $json.company_name }}",
+            "EMAIL": "={{ $json.email }}",
+            "Phone": "={{ $json.phone }}",
+            "URL": "={{ $json.url }}",
+            "City": "={{ $json.city }}",
+            "Rank": "={{ $json.score }}",
+            "score_reason": "={{ $json.score_reason }}",
+            "lead_status": "={{ $json.lead_status }}",
+            "scraped_at": "={{ $json.scraped_at }}"
+          }
+        }
+      },
+      "id": "airtable-sync",
+      "name": "Airtable - Save Lead",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [1250, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "score-check",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "score-filter",
+      "name": "Score >= 5?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1500, 300]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.city }} Real Estate Market — Custom Lead Flow for {{ $json.company_name }}",
+        "htmlContent": "=<div style=\"max-width: 550px; margin: auto; background: #ffffff; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif; color: #1A1A1A; line-height: 1.6;\">\n  <div style=\"text-align: center; padding: 20px 0;\">\n    <img src=\"https://kronosautomations.com/logo.png\" alt=\"KRONOS\" width=\"120\" style=\"image-rendering: pixelated;\">\n  </div>\n  <p>Gr&uuml;ezi,</p>\n  <p>I noticed {{ $json.company_name }} is active in the {{ $json.city }} market. In Switzerland's current competitive landscape, the key to growth is a <strong>predictable and scalable flow of high-quality leads</strong>.</p>\n  <p>At KRONOS, we don't just find leads; we build high-converting campaigns and custom internal tools tailored specifically for your agency's operations.</p>\n  <p>Would you like to see how a custom-built tool could scale your lead flow in {{ $json.city }}?</p>\n  <p><a href=\"https://kronosautomations.com\" style=\"color: #FF6B00; font-weight: bold; text-decoration: none;\">Explore your scalable lead flow &rarr;</a></p>\n  <div style=\"border-top: 2px dotted #FF6B00; margin-top: 25px; padding-top: 10px; font-size: 14px;\">\n    <strong>KRONOS Strategic Partner</strong><br>\n    The Standard in Swiss Real Estate Automation<br>\n    <a href=\"mailto:consulting@kronosautomations.com\" style=\"color: #FF6B00; text-decoration: none;\">consulting@kronosautomations.com</a>\n  </div>\n</div>",
+        "additionalFields": {
+          "senderName": "KRONOS Automations",
+          "senderEmail": "consulting@kronosautomations.com"
+        }
+      },
+      "id": "brevo-email",
+      "name": "Brevo - Send Email",
+      "type": "n8n-nodes-base.brevo",
+      "typeVersion": 1,
+      "position": [1750, 200],
+      "credentials": {
+        "brevoApi": {
+          "id": "BREVO_CREDENTIAL_ID",
+          "name": "Brevo API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "={{ $env.WHATSAPP_PHONE_NUMBER_ID }}",
+        "recipientPhoneNumber": "={{ $json.phone }}",
+        "textBody": "=Grüezi! 👋 KRONOS here. We noticed {{ $json.company_name }} in {{ $json.city }}. We build custom lead-gen tools for Swiss RE agencies. Interested in a quick demo? → kronosautomations.com"
+      },
+      "id": "whatsapp-msg",
+      "name": "WhatsApp - Send Message",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [1750, 400],
+      "credentials": {
+        "whatsAppBusinessCloudApi": {
+          "id": "WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Business Cloud"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.AIRTABLE_BASE_ID }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.AIRTABLE_TABLE_ID }}"
+        },
+        "id": "={{ $json.airtable_record_id }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "EMAIL STATUS": "sent",
+            "sms status": "={{ $json.phone ? 'sent' : 'no_phone' }}"
+          }
+        }
+      },
+      "id": "airtable-update",
+      "name": "Airtable - Update Status",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [2000, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Token"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 600]
+    },
+    {
+      "parameters": {
+        "sendTo": "consulting@kronosautomations.com",
+        "subject": "KRONOS Campaign Error - {{ $json.workflow.name }}",
+        "htmlContent": "=<h2>Workflow Error</h2>\n<p><strong>Workflow:</strong> {{ $json.workflow.name }}</p>\n<p><strong>Node:</strong> {{ $json.execution.error.node.name }}</p>\n<p><strong>Error:</strong> {{ $json.execution.error.message }}</p>\n<p><strong>Time:</strong> {{ $now.toISO() }}</p>\n<p><a href=\"https://n8n.kronosautomations.com/workflow/{{ $json.workflow.id }}/executions/{{ $json.execution.id }}\">View Execution</a></p>",
+        "additionalFields": {
+          "senderName": "KRONOS System",
+          "senderEmail": "system@kronosautomations.com"
+        }
+      },
+      "id": "error-notification",
+      "name": "Brevo - Error Alert",
+      "type": "n8n-nodes-base.brevo",
+      "typeVersion": 1,
+      "position": [250, 600],
+      "credentials": {
+        "brevoApi": {
+          "id": "BREVO_CREDENTIAL_ID",
+          "name": "Brevo API Key"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "Apify - Scrape ImmoScout24",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify - Scrape ImmoScout24": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Deduplicate Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Deduplicate Leads": {
+      "main": [
+        [
+          {
+            "node": "AI Score Lead (OpenRouter)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Score Lead (OpenRouter)": {
+      "main": [
+        [
+          {
+            "node": "Parse Score & Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Score & Classify": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Save Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable - Save Lead": {
+      "main": [
+        [
+          {
+            "node": "Score >= 5?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score >= 5?": {
+      "main": [
+        [
+          {
+            "node": "Brevo - Send Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp - Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brevo - Send Email": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Update Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Brevo - Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "campaign"
+    },
+    {
+      "name": "kronos"
+    }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
