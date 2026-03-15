@@ -1,23 +1,21 @@
 # KRONOS Workflow Optimization SOP
-Version: 1.0
+Version: 2.0
 Status: ACTIVE
 
 ## Goal
 To maintain a high-volume, self-healing outreach workflow in n8n that processes real estate leads with deterministic quality.
 
 ## Inputs
-- `n8n Workflow JSON`: The raw workflow structure.
-- `Dynamic Config`: Supabase table `campaign_config` for orchestrating settings.
-
-## Tools
-- `execution/perfect_workflow.py`: The deterministic script for JSON injection.
+- `KRONOS_CAMPAIGN.json`: The campaign workflow definition.
+- `config/industries/*.json`: Industry-specific scraping and scoring config.
 
 ## Process
-1. **Fetch**: Always pull the latest legacy or perfected JSON version.
-2. **Inject**: Run `perfect_workflow.py` to ensure the latest AI prompts and error-handling nodes are present.
-3. **Verify**: Check that all nodes (SendGrid, Twilio, Supabase) have the correct mapping.
+1. **Import**: Use `scripts/n8n_api_manager.py --import-all` or n8n UI to import workflows.
+2. **Configure**: Assign credentials in n8n (Apify, OpenRouter, Airtable, Brevo, WhatsApp).
+3. **Validate**: Use n8n MCP `validate_workflow` to check for errors before activation.
+4. **Test**: Run manually once via n8n UI to verify the full pipeline.
 
 ## Definition of Done
-- JSON contains the `Error Trigger` and `Self-Healing` logic.
-- AI Agent prompts use the latest **Email Outreach Strategy**.
-- File is saved as `KRONOS_V2_PERFECTED.json`.
+- Workflow contains the `Error Trigger` and error notification logic.
+- AI scoring prompts use the latest criteria from `swiss_realestate.json`.
+- All credential placeholders are replaced with real n8n credential IDs.

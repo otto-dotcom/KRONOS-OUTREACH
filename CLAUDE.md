@@ -4,14 +4,16 @@ This repo is the **backend only** for KRONOS. It runs n8n on Hostinger VPS via D
 
 ## What This Repo Does
 
-- Hosts n8n workflow engine at `n8n.kronosautomations.com`
+- Hosts n8n workflow engine (Hostinger managed instance)
 - Runs automated lead scraping, AI scoring, and outreach campaigns
-- All workflows are managed via n8n MCP tools (no local JSON files)
+- Campaign workflow: `KRONOS_CAMPAIGN.json` (import to n8n)
+- Full deployment docs: `DEPLOYMENT.md`
 
 ## Architecture
 
-- **Backend** (this repo): n8n + Docker + Caddy on Hostinger VPS
+- **Backend** (this repo): n8n on Hostinger managed VPS
 - **Frontend** (separate repo): `kronosautomations` on Vercel at `kronosautomations.com`
+- **Email domain**: `kronosbusiness.com` (cold outreach, protects primary domain)
 
 ## Available MCP Tools
 
