@@ -1,8 +1,3 @@
-venv/
-.venv/
-env/
-__pycache__/
-*.pyc
 node_modules/
 .DS_Store
 desktop.ini
@@ -10,7 +5,9 @@ desktop.ini
 .vscode/
 *.log
 *.env
+!.env.template
 *.key
 *.pem
 *.db
 *.bak
+.planning/

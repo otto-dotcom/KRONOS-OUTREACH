@@ -1,25 +1,53 @@
-# KRONOS FAMILY
+# KRONOS-OUTREACH — Backend
 
-Repository for the KRONOS FAMILY project. This workspace contains workflow JSONs, directives, and Python helper scripts used to build and run lead-scraping and outreach workflows, optimized for **Hostinger VPS** hosting.
+n8n workflow engine on Hostinger VPS for automated Swiss real estate lead scraping and outreach.
 
-Quick start
-- Review and remove or rotate any embedded secrets in `KRONOS_V2_PERFECTED.json` and `KRONOS_V1_LEGACY.json` before publishing.
-- Optionally run the sanitizer to redact secrets (creates backups):
+## Architecture
+
+```
+Hostinger VPS (KVM 2)
+├── n8n (port 5678) — Workflow automation
+└── Caddy (80/443) — Reverse proxy + auto-SSL
+```
+
+**Domain**: `n8n.kronosautomations.com`
+**Frontend**: Separate repo → [kronosautomations](https://github.com/otto-dotcom/kronosautomations) on Vercel
+
+## Deploy
 
 ```bash
-python scripts/sanitize_secrets.py
+# On fresh Ubuntu 22.04 VPS
+sudo ./scripts/setup_vps.sh
 ```
 
-- To create a private GitHub repo and push (requires `gh` CLI and authentication):
+This installs Docker, creates `/opt/kronos`, and starts n8n + Caddy.
 
-```powershell
-powershell -File scripts/create_github_repo.ps1
+## DNS Required
+
+| Type | Name | Value |
+|------|------|-------|
+| A | n8n | YOUR_VPS_IP |
+
+## Manage Workflows
+
+```bash
+# List workflows
+python scripts/n8n_api_manager.py --list
+
+# Import workflow
+python scripts/n8n_api_manager.py --import workflow.json
+
+# Activate
+python scripts/n8n_api_manager.py --activate WORKFLOW_ID
 ```
 
-Files of interest
-- `execution/` — Python workflows
-- `directives/` — documentation and strategy
-- `KRONOS_*.json` — workflow JSONs
+## Structure
 
-Notes
-- Repo will be created as **KRONOS-FAMILY** (GitHub names cannot contain spaces). The repo should be private.
+```
+├── docker-compose.yml    # n8n + Caddy services
+├── Caddyfile             # Reverse proxy config
+├── .env.template         # Environment variables
+├── config/industries/    # Campaign configs
+├── directives/           # Strategy docs (AI context)
+└── scripts/              # VPS setup + n8n API manager
+```

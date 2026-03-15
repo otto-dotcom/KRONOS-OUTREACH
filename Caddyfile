@@ -1,4 +1,4 @@
-{$N8N_HOST:n8n.yourdomain.com} {
+{$N8N_HOST:n8n.kronosautomations.com} {
     reverse_proxy n8n:5678
 
     # Enable compression
