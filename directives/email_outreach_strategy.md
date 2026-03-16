@@ -11,9 +11,9 @@ To deliver qualified consultations and steady lead flow for Swiss realtors throu
 - **Precision**: Reference specific company data and local Swiss markets.
 
 ## Copywriting Framework (PAS)
-1. **Problem**: Mention the inconsistent listing volumes or lead desync in the Swiss market.
-2. **Agitation**: Focus on the lost "Steady Sales" and tactical time-waste.
-3. **Solution**: KRONOS automated lead flow and qualified consultations.
+1. **Problem**: Mention the aggressive reliance on traditional networking and referrals for new mandates.
+2. **Agitation**: Focus on the unpredictability of this model and the vulnerability to market shifts.
+3. **Solution**: KRONOS automated, data-driven seller lead generation (Objektakquise) for predictable mandate growth.
 
 ## Visual Standards
 - **Pixel-Retro**: Minimalist black borders, orange (#FF6B00) top banner, and pixelated font accents.

@@ -80,7 +80,10 @@ if __name__ == "__main__":
 
     if args.import_all:
         workflow_files = [
-            "KRONOS_CAMPAIGN.json",
+            "workflows/universal_scraper.json",
+            "workflows/universal_scorer.json",
+            "workflows/lead_scorer.json",
+            "KRONOS_V2_PERFECTED.json"
         ]
         for wf in workflow_files:
             if os.path.exists(wf):
@@ -88,8 +91,6 @@ if __name__ == "__main__":
                     manager.import_workflow(wf)
                 except Exception as e:
                     print(f"Failed to import {wf}: {e}")
-            else:
-                print(f"SKIP: {wf} (not found)")
 
     if args.list:
         workflows = manager.list_workflows()

@@ -1,0 +1,339 @@
+{
+  "name": "KRONOS Universal Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300],
+      "notes": "Runs every 6 hours - adjust per industry config"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.CONFIG_URL || 'https://raw.githubusercontent.com/YOUR_REPO/main/config/industries/' + ($env.INDUSTRY_ID || 'swiss_realestate') + '.json' }}",
+        "options": {}
+      },
+      "id": "load-config",
+      "name": "Load Industry Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 300],
+      "notes": "Load industry config from URL or local file"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse config and prepare Apify runs\nconst config = $input.first().json;\n\n// Filter enabled data sources\nconst enabledSources = config.data_sources.filter(s => s.enabled !== false);\n\n// Return config with active sources for downstream nodes\nreturn {\n  json: {\n    config: config,\n    sources: enabledSources,\n    industry_id: config.industry_id,\n    display_name: config.display_name\n  }\n};"
+      },
+      "id": "parse-config",
+      "name": "Parse Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "resource": "actor",
+        "actorId": "={{ ($json.sources[0] && $json.sources[0].actor_id) || 'ecomscrape/immoscout24-property-search-scraper' }}",
+        "operation": "run",
+        "runInput": "={{ JSON.stringify(($json.sources[0] && $json.sources[0].input) || { location: 'switzerland', maxItems: 500 }) }}",
+        "additionalFields": {
+          "waitForFinish": 300,
+          "memory": 1024
+        }
+      },
+      "id": "apify-source-1",
+      "name": "Apify Source 1",
+      "type": "n8n-nodes-base.apify",
+      "typeVersion": 1,
+      "position": [800, 200],
+      "credentials": {
+        "apifyApi": {
+          "id": "YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify API"
+        }
+      },
+      "notes": "First data source (e.g., ImmoScout24)"
+    },
+    {
+      "parameters": {
+        "resource": "actor",
+        "actorId": "={{ ($('Parse Config').first().json.sources[1] && $('Parse Config').first().json.sources[1].actor_id) || 'apify/flatfox-scraper' }}",
+        "operation": "run",
+        "runInput": "={{ JSON.stringify(($('Parse Config').first().json.sources[1] && $('Parse Config').first().json.sources[1].input) || { maxItems: 300 }) }}",
+        "additionalFields": {
+          "waitForFinish": 300,
+          "memory": 1024
+        }
+      },
+      "id": "apify-source-2",
+      "name": "Apify Source 2",
+      "type": "n8n-nodes-base.apify",
+      "typeVersion": 1,
+      "position": [800, 400],
+      "credentials": {
+        "apifyApi": {
+          "id": "YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify API"
+        }
+      },
+      "notes": "Second data source (e.g., FlatFox)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Universal field extraction with dynamic mapping\nconst config = $('Parse Config').first().json.config;\nconst source1Results = $('Apify Source 1').first().json.items || [];\nconst source2Results = $('Apify Source 2').first().json.items || [];\n\n// Helper: Get nested value from object using dot notation\nfunction getNestedValue(obj, path) {\n  if (!obj || !path) return null;\n  return path.split('.').reduce((current, key) => {\n    return current && current[key] !== undefined ? current[key] : null;\n  }, obj);\n}\n\n// Helper: Extract lead using field mapping\nfunction extractLead(item, sourceConfig) {\n  const lead = {\n    source: sourceConfig.name.toLowerCase().replace(/\\s+/g, '_'),\n    industry: config.industry_id,\n    scraped_at: new Date().toISOString()\n  };\n  \n  // Dynamic field extraction\n  for (const [outputField, paths] of Object.entries(sourceConfig.field_mapping)) {\n    for (const path of paths) {\n      const value = getNestedValue(item, path);\n      if (value) {\n        lead[outputField] = value;\n        break;\n      }\n    }\n  }\n  \n  return lead;\n}\n\n// Process Source 1\nconst source1Config = config.data_sources[0];\nconst source1Leads = source1Results.map(item => extractLead(item, source1Config));\n\n// Process Source 2 (if exists)\nconst source2Config = config.data_sources[1];\nconst source2Leads = source2Config \n  ? source2Results.map(item => extractLead(item, source2Config))\n  : [];\n\n// Combine all leads\nconst allLeads = [...source1Leads, ...source2Leads];\n\n// Dedupe by configured fields\nconst dedupeFields = config.deduplication?.match_fields || ['url', 'company_name'];\nconst seen = new Set();\n\nconst uniqueLeads = allLeads.filter(lead => {\n  // Skip if missing company name\n  if (!lead.company_name || lead.company_name === 'Unknown') return false;\n  \n  // Build dedupe key\n  let key = dedupeFields.map(f => {\n    let val = lead[f] || '';\n    if (config.deduplication?.normalize_company_name && f === 'company_name') {\n      val = val.toLowerCase().trim();\n    }\n    return val;\n  }).join('|');\n  \n  if (seen.has(key)) return false;\n  seen.add(key);\n  return true;\n});\n\n// Filter to only those with contact info\nconst contactableLeads = uniqueLeads.filter(l => l.email || l.phone);\n\nconsole.log(`Processed: ${allLeads.length} total, ${uniqueLeads.length} unique, ${contactableLeads.length} contactable`);\n\nreturn contactableLeads.map(lead => ({ json: lead }));"
+      },
+      "id": "extract-dedupe",
+      "name": "Extract & Dedupe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "notes": "Dynamic field extraction based on config mapping"
+    },
+    {
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
+      "id": "batch-leads",
+      "name": "Batch Leads",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID || 'appLriEwWldpPTMPg' }}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_TABLE_ID || 'tblLZkFo7Th7uyfWB' }}",
+          "mode": "id"
+        },
+        "filterByFormula": "=OR({URL} = '{{ $json.url }}', LOWER({company name}) = '{{ ($json.company_name || '').toLowerCase() }}')"
+      },
+      "id": "check-existing",
+      "name": "Check Existing",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [1400, 300],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "not-exists",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-new",
+      "name": "Is New?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_BASE_ID || 'appLriEwWldpPTMPg' }}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "={{ $env.AIRTABLE_TABLE_ID || 'tblLZkFo7Th7uyfWB' }}",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "company name": "={{ $('Extract & Dedupe').item.json.company_name }}",
+            "EMAIL": "={{ $('Extract & Dedupe').item.json.email }}",
+            "Phone": "={{ $('Extract & Dedupe').item.json.phone }}",
+            "URL": "={{ $('Extract & Dedupe').item.json.url }}",
+            "City": "={{ $('Extract & Dedupe').item.json.city }}",
+            "EMAIL STATUS": "",
+            "sms status": "",
+            "lead_source": "={{ $('Extract & Dedupe').item.json.source }}",
+            "industry": "={{ $('Extract & Dedupe').item.json.industry }}",
+            "scraped_at": "={{ $('Extract & Dedupe').item.json.scraped_at }}"
+          }
+        }
+      },
+      "id": "create-lead",
+      "name": "Create Lead",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [1800, 200],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "skip-existing",
+      "name": "Skip (Exists)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1800, 400],
+      "notes": "Lead already in database"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Load Industry Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Industry Config": {
+      "main": [
+        [
+          {
+            "node": "Parse Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Config": {
+      "main": [
+        [
+          {
+            "node": "Apify Source 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Apify Source 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify Source 1": {
+      "main": [
+        [
+          {
+            "node": "Extract & Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify Source 2": {
+      "main": [
+        [
+          {
+            "node": "Extract & Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Dedupe": {
+      "main": [
+        [
+          {
+            "node": "Batch Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Leads": {
+      "main": [
+        [
+          {
+            "node": "Check Existing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing": {
+      "main": [
+        [
+          {
+            "node": "Is New?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New?": {
+      "main": [
+        [
+          {
+            "node": "Create Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip (Exists)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

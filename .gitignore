@@ -1,14 +1,51 @@
-node_modules/
-.DS_Store
-desktop.ini
-.idea/
-.vscode/
-*.log
+# === Environment & Secrets ===
 *.env
-!.env.template
+*.env.*
+.env.local
+.env.development.local
+.env.production.local
 *.key
 *.pem
+*.p12
+
+# === Python ===
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# === Node.js ===
+node_modules/
+.next/
+dist/
+build/
+
+# === Vercel ===
+.vercel/
+
+# === OS Junk ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# === Logs & Temp ===
+*.log
 *.db
 *.bak
-.planning/
-.claude/
+*.tmp
+*.txt
+
+# === Nested repos (website is separate) ===
+kronosautomations/
+
+# === Build artifacts ===
+*.tgz
+*.tar.gz
