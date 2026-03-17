@@ -22,10 +22,18 @@ CONTENT PROTOCOL:
 3. SOLUTION: One sentence framing KRONOS as an automation consulting partner — we audit the workflow, identify what can be automated, and build it. The outcome is that your team handles fewer manual tasks and more high-value client conversations.
 4. CTA: Close with two plain-text links — one to book a call, one to the website.
 
-TONE: Direct, confident, no fluff. No buzzwords: no 'streamline', 'leverage', 'game-changer', 'innovative', 'cutting-edge', 'scalable', 'synergy'. No exclamation marks. No ALL CAPS.
+TONE: Direct, confident, no fluff. No exclamation marks. No ALL CAPS.
 
 SUBJECT LINE: Max 50 chars, sentence case. Patterns: '{Agency} automation audit', '{Name}, a question about your workflow', 'Reducing manual work at {Agency}', '{City} RE agencies + AI automation'.
 NEVER: generic 'quick question', 'following up', 'touching base'.
+
+DELIVERABILITY RULES (non-negotiable — Gmail Primary tab placement depends on these):
+- Maximum 2 hyperlinks total in the entire email (Cal.com booking link + website link only)
+- Body must be under 150 words
+- HTML: only <p> tags inside the outer <div>. No nested divs, no tables, no background colors, no inline background styles.
+- Do NOT use any of these words: 'automate', 'automation', 'streamline', 'efficiency', 'leverage', 'results', 'ROI', 'save time', 'quick question', 'following up', 'touching base', 'reach out', 'free consultation', 'schedule a call', 'game-changer', 'solution', 'solutions', 'growth', 'scale', 'boost', 'seamless', 'innovative', 'cutting-edge', 'synergy'
+- Subject: never start with the word "I". Use the agency name or city, not the recipient name alone.
+- The email must read as if written by a single person to one recipient, not as marketing copy.
 
 HTML FORMAT (plain-text style — no images, no styled buttons, no decorative borders):
 - Outer wrapper: <div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#111111;max-width:580px;">
@@ -36,7 +44,7 @@ HTML FORMAT (plain-text style — no images, no styled buttons, no decorative bo
 
 Response MUST be ONLY valid JSON (no markdown fences): {"subject": "...", "emailBody": "..."}`;
 
-interface AirtableRecord {
+export interface AirtableRecord {
   id: string;
   fields: {
     "FULL NAME"?: string;
@@ -44,13 +52,30 @@ interface AirtableRecord {
     "company name"?: string;
     City?: string;
     URL?: string;
-    Rank?: string;
+    Rank?: string | number;
     score_reason?: string;
+    lead_status?: string;
     [key: string]: unknown;
   };
 }
 
-interface EmailCopy {
+export interface EmailCopy {
+  subject: string;
+  emailBody: string;
+}
+
+export interface EmailPreview {
+  recordId: string;
+  lead: {
+    name: string;
+    company: string;
+    city: string;
+    email: string;
+    url: string;
+    rank: string | number;
+    scoreReason: string;
+    leadStatus: string;
+  };
   subject: string;
   emailBody: string;
 }
@@ -62,6 +87,15 @@ export interface OutreachResult {
   errors: string[];
 }
 
+export interface SendItem {
+  recordId: string;
+  toEmail: string;
+  subject: string;
+  emailBody: string;
+  wasEdited: boolean;
+  wasRegenerated: boolean;
+}
+
 async function fetchLeads(
   baseId: string,
   tableId: string,
@@ -69,10 +103,12 @@ async function fetchLeads(
 ): Promise<AirtableRecord[]> {
   // Only target Swiss RE agencies: must have .ch URL or no URL (local),
   // exclude known non-RE categories, exclude if already sent
+  // Exclude Sent and Processing — Processing means another instance is currently handling it
   const formula = encodeURIComponent(
     `AND(
       {EMAIL} != "",
-      OR({EMAIL STATUS} = BLANK(), NOT({EMAIL STATUS} = "Sent")),
+      {EMAIL STATUS} != "Sent",
+      {EMAIL STATUS} != "Processing ",
       {Rank} >= 5,
       OR(FIND(".ch", {URL}) > 0, {URL} = ""),
       NOT({Category} = "Financial Services"),
@@ -92,7 +128,10 @@ async function fetchLeads(
   return data.records ?? [];
 }
 
-async function generateEmailCopy(record: AirtableRecord): Promise<EmailCopy> {
+export async function generateEmailCopy(
+  record: AirtableRecord,
+  extraConstraint?: string
+): Promise<EmailCopy> {
   const f = record.fields;
   const userPrompt = [
     `Lead:`,
@@ -103,7 +142,10 @@ async function generateEmailCopy(record: AirtableRecord): Promise<EmailCopy> {
     `URL: ${f.URL ?? ""}`,
     `Rank: ${f.Rank ?? ""}`,
     `Score Reason: ${f.score_reason ?? ""}`,
-  ].join("\n");
+    extraConstraint ? `\nExtra constraint: ${extraConstraint}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const res = await fetch(`${OPENROUTER_API}/chat/completions`, {
     method: "POST",
@@ -156,6 +198,64 @@ async function sendEmail(toEmail: string, copy: EmailCopy): Promise<void> {
   if (!res.ok) throw new Error(`Brevo failed: ${res.status} ${await res.text()}`);
 }
 
+// Airtable EMAIL STATUS choice values (must match exactly, including trailing space quirks)
+const STATUS_SENT       = "Sent";
+const STATUS_PROCESSING = "Processing ";   // trailing space — existing choice in Airtable
+const STATUS_FAILED     = "Failed ";       // trailing space — existing choice in Airtable
+
+/**
+ * Fetch the current EMAIL STATUS for a single record.
+ * Used to guard against double-sends across concurrent Vercel instances.
+ */
+async function fetchEmailStatus(
+  baseId: string,
+  tableId: string,
+  recordId: string
+): Promise<string | null> {
+  const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
+  try {
+    const res = await fetch(
+      `${AIRTABLE_API}/${baseId}/${tableId}/${recordId}?fields[]=EMAIL%20STATUS`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as { fields?: { "EMAIL STATUS"?: string } };
+    return data.fields?.["EMAIL STATUS"] ?? null;
+  } catch {
+    return null; // fail open
+  }
+}
+
+/** Mark record as Processing to claim it before generation/send. */
+async function markProcessing(
+  baseId: string,
+  tableId: string,
+  recordId: string
+): Promise<void> {
+  const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
+  const res = await fetch(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: { "EMAIL STATUS": STATUS_PROCESSING } }),
+  });
+  if (!res.ok) throw new Error(`markProcessing failed: ${res.status}`);
+}
+
+/** Reset record status to allow retry (called on send failure). */
+async function markFailed(
+  baseId: string,
+  tableId: string,
+  recordId: string
+): Promise<void> {
+  const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
+  await fetch(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields: { "EMAIL STATUS": STATUS_FAILED } }),
+  });
+  // Don't throw — best-effort cleanup
+}
+
 async function markSent(
   baseId: string,
   tableId: string,
@@ -182,14 +282,115 @@ async function markSent(
   if (!res.ok) throw new Error(`Airtable update failed: ${res.status}`);
 }
 
-export async function runOutreach(leadLimit = 10): Promise<OutreachResult> {
+function requireEnv() {
   const baseId = process.env.AIRTABLE_BASE_ID ?? "";
   const tableId = process.env.AIRTABLE_TABLE_ID ?? "";
-
   if (!baseId || !tableId) throw new Error("AIRTABLE_BASE_ID / AIRTABLE_TABLE_ID not set");
-  if (!process.env.AIRTABLE_API_KEY && !process.env.AIRTABLE_PAT) throw new Error("AIRTABLE_API_KEY or AIRTABLE_PAT not set");
+  if (!process.env.AIRTABLE_API_KEY && !process.env.AIRTABLE_PAT)
+    throw new Error("AIRTABLE_API_KEY or AIRTABLE_PAT not set");
   if (!process.env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not set");
   if (!process.env.BREVO_API_KEY) throw new Error("BREVO_API_KEY not set");
+  return { baseId, tableId };
+}
+
+/** Generate email copy for all leads without sending. Returns previews for gallery review. */
+export async function previewOutreach(leadLimit = 10): Promise<EmailPreview[]> {
+  const { baseId, tableId } = requireEnv();
+  const leads = await fetchLeads(baseId, tableId, leadLimit);
+
+  const previews: EmailPreview[] = [];
+
+  for (const lead of leads) {
+    const email = lead.fields.EMAIL;
+    if (!email) continue;
+
+    try {
+      const copy = await generateEmailCopy(lead);
+      previews.push({
+        recordId: lead.id,
+        lead: {
+          name: String(lead.fields["FULL NAME"] ?? ""),
+          company: String(lead.fields["company name"] ?? ""),
+          city: String(lead.fields.City ?? ""),
+          email,
+          url: String(lead.fields.URL ?? ""),
+          rank: lead.fields.Rank ?? "",
+          scoreReason: String(lead.fields.score_reason ?? ""),
+          leadStatus: String(lead.fields.lead_status ?? ""),
+        },
+        subject: copy.subject,
+        emailBody: copy.emailBody,
+      });
+    } catch (err) {
+      previews.push({
+        recordId: lead.id,
+        lead: {
+          name: String(lead.fields["FULL NAME"] ?? ""),
+          company: String(lead.fields["company name"] ?? ""),
+          city: String(lead.fields.City ?? ""),
+          email,
+          url: String(lead.fields.URL ?? ""),
+          rank: lead.fields.Rank ?? "",
+          scoreReason: String(lead.fields.score_reason ?? ""),
+          leadStatus: String(lead.fields.lead_status ?? ""),
+        },
+        subject: `[GENERATION FAILED] ${err instanceof Error ? err.message : String(err)}`,
+        emailBody: "",
+      });
+    }
+  }
+
+  return previews;
+}
+
+/** Send a pre-approved set of emails (from gallery review). */
+export async function sendPreviews(items: SendItem[]): Promise<OutreachResult> {
+  const { baseId, tableId } = requireEnv();
+  const result: OutreachResult = { sent: 0, failed: 0, skipped: 0, errors: [] };
+
+  for (const item of items) {
+    if (!item.toEmail || !item.subject || !item.emailBody) {
+      result.skipped++;
+      continue;
+    }
+
+    // Guard 1: check current status — skip if Sent or already Processing
+    const currentStatus = await fetchEmailStatus(baseId, tableId, item.recordId);
+    if (currentStatus === STATUS_SENT || currentStatus === STATUS_PROCESSING) {
+      result.skipped++;
+      result.errors.push(`${item.toEmail}: already ${currentStatus?.trim()} — skipped`);
+      continue;
+    }
+
+    // Guard 2: atomically claim the record by marking Processing
+    // Any concurrent call that checks after this will see Processing and skip
+    try {
+      await markProcessing(baseId, tableId, item.recordId);
+    } catch {
+      result.skipped++;
+      result.errors.push(`${item.toEmail}: could not claim record — skipped`);
+      continue;
+    }
+
+    try {
+      await sendEmail(item.toEmail, { subject: item.subject, emailBody: item.emailBody });
+      await markSent(baseId, tableId, item.recordId, item.subject, item.emailBody);
+      result.sent++;
+    } catch (err) {
+      await markFailed(baseId, tableId, item.recordId);
+      result.failed++;
+      result.errors.push(
+        `${item.toEmail}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  return result;
+}
+
+/** Legacy: run the full pipeline in one go (used by cron). */
+export async function runOutreach(leadLimit = 10): Promise<OutreachResult> {
+  const { baseId, tableId } = requireEnv();
 
   const result: OutreachResult = { sent: 0, failed: 0, skipped: 0, errors: [] };
   const leads = await fetchLeads(baseId, tableId, leadLimit);
@@ -201,12 +402,28 @@ export async function runOutreach(leadLimit = 10): Promise<OutreachResult> {
       continue;
     }
 
+    // Guard 1: check current status
+    const currentStatus = await fetchEmailStatus(baseId, tableId, lead.id);
+    if (currentStatus === STATUS_SENT || currentStatus === STATUS_PROCESSING) {
+      result.skipped++;
+      continue;
+    }
+
+    // Guard 2: claim the record immediately — prevents any concurrent call from picking it up
+    try {
+      await markProcessing(baseId, tableId, lead.id);
+    } catch {
+      result.skipped++;
+      continue;
+    }
+
     try {
       const copy = await generateEmailCopy(lead);
       await sendEmail(email, copy);
       await markSent(baseId, tableId, lead.id, copy.subject, copy.emailBody);
       result.sent++;
     } catch (err) {
+      await markFailed(baseId, tableId, lead.id);
       result.failed++;
       result.errors.push(`${email}: ${err instanceof Error ? err.message : String(err)}`);
     }

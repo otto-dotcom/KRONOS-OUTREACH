@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { scoreDeliverability } from "@/lib/deliverability";
+import type { DeliverabilityReport } from "@/lib/deliverability";
 
 /* ═══════════════════════════════════════════════════════
    TYPES
@@ -36,6 +38,39 @@ interface LaunchResult {
   sent?: number;
   failed?: number;
   skipped?: number;
+}
+
+type GalleryMode = "launcher" | "previewing" | "gallery" | "sending" | "done";
+
+interface LeadInfo {
+  name: string;
+  company: string;
+  city: string;
+  email: string;
+  url: string;
+  rank: string | number;
+  scoreReason: string;
+  leadStatus: string;
+}
+
+interface GalleryEmail {
+  recordId: string;
+  lead: LeadInfo;
+  subject: string;
+  emailBody: string;
+  originalSubject: string;
+  originalBody: string;
+  edited: boolean;
+  regenerated: boolean;
+  regenerating: boolean;
+  failed: boolean;
+}
+
+interface SendResult {
+  sent: number;
+  failed: number;
+  skipped: number;
+  errors: string[];
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -268,69 +303,556 @@ function ProgressStat({ label, value, max, color = "#FF6B00" }: {
 }
 
 /* ═══════════════════════════════════════════════════════
-   CAMPAIGN LAUNCHER
+   CAMPAIGN LAUNCHER + EMAIL GALLERY
    ═══════════════════════════════════════════════════════ */
 
-function CampaignLauncher() {
-  const [leadLimit, setLeadLimit] = useState(10);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<LaunchResult | null>(null);
+const TIER_COLOR = {
+  green: "#22c55e",
+  yellow: "#f59e0b",
+  red: "#ef4444",
+} as const;
 
-  async function handleLaunch() {
-    setLoading(true);
-    setResult(null);
+function DeliverabilitySection({ report }: { report: DeliverabilityReport }) {
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-[10px] tracking-[0.2em] text-[#555] uppercase">Deliverability</span>
+        <div className="flex-1 h-px bg-[#1A1A1A]" />
+        <span className="text-[11px] font-bold" style={{ color: TIER_COLOR[report.tier] }}>
+          {report.score}
+        </span>
+      </div>
+      <div className="h-1.5 bg-[#111] mb-3">
+        <div
+          className="h-full transition-all duration-500"
+          style={{ width: `${report.score}%`, backgroundColor: TIER_COLOR[report.tier] }}
+        />
+      </div>
+      {report.flags.length > 0 && (
+        <div className="space-y-1">
+          {report.flags.map((f, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span
+                className="text-[8px] mt-0.5 shrink-0"
+                style={{ color: f.level === "error" ? TIER_COLOR.red : TIER_COLOR.yellow }}
+              >
+                ●
+              </span>
+              <span className="text-[10px] text-[#777] tracking-wide">{f.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmailCard({
+  email,
+  onUpdate,
+  onRegenerate,
+}: {
+  email: GalleryEmail;
+  onUpdate: (updates: Partial<GalleryEmail>) => void;
+  onRegenerate: (mode: "standard" | "plain") => void;
+}) {
+  const report = useMemo(
+    () => scoreDeliverability(email.subject, email.emailBody),
+    [email.subject, email.emailBody]
+  );
+  const [expanded, setExpanded] = useState(false);
+  const [editingBody, setEditingBody] = useState(false);
+  const [localSubject, setLocalSubject] = useState(email.subject);
+  const [localBody, setLocalBody] = useState(email.emailBody);
+
+  useEffect(() => {
+    setLocalSubject(email.subject);
+    setLocalBody(email.emailBody);
+    setEditingBody(false);
+  }, [email.subject, email.emailBody]);
+
+  function commitSubject() {
+    const changed = localSubject !== email.originalSubject;
+    onUpdate({ subject: localSubject, edited: email.edited || changed });
+  }
+
+  function commitBody() {
+    const changed = localBody !== email.originalBody;
+    onUpdate({ emailBody: localBody, edited: email.edited || changed });
+    setEditingBody(false);
+  }
+
+  const priorityBadge =
+    email.lead.leadStatus === "priority"
+      ? { cls: "bg-green-950/40 border-green-800/50 text-green-400", label: "★ PRIORITY" }
+      : email.lead.leadStatus === "medium"
+      ? { cls: "bg-yellow-950/40 border-yellow-800/50 text-yellow-500", label: "MEDIUM" }
+      : { cls: "bg-[#111] border-[#222] text-[#555]", label: "LOW" };
+
+  return (
+    <div
+      className="bg-[#0D0D0D] border border-[#1A1A1A] overflow-hidden"
+      style={{ borderTopColor: TIER_COLOR[report.tier], borderTopWidth: "3px" }}
+    >
+      {/* Lead header */}
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <span className="text-white font-bold tracking-wide text-sm leading-tight">
+            {email.lead.company || "(no company)"}
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[#FF6B00] text-[9px] tracking-[0.15em] px-2 py-0.5 font-bold">
+              {email.lead.rank}
+            </span>
+            <span className={`border text-[9px] tracking-[0.12em] px-2 py-0.5 font-bold ${priorityBadge.cls}`}>
+              {priorityBadge.label}
+            </span>
+          </div>
+        </div>
+        <div className="text-[11px] text-[#555] tracking-wide">
+          {[email.lead.city, email.lead.url].filter(Boolean).join(" · ")}
+        </div>
+        {email.lead.scoreReason && (
+          <div className="text-[10px] text-[#3A3A3A] mt-1 italic">{email.lead.scoreReason}</div>
+        )}
+      </div>
+
+      {/* Deliverability */}
+      {!email.failed && (
+        <div className="px-5 pb-4 border-t border-[#1A1A1A] pt-4">
+          <DeliverabilitySection report={report} />
+        </div>
+      )}
+
+      {/* Subject */}
+      <div className="px-5 pb-4 border-t border-[#1A1A1A] pt-4">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-[10px] tracking-[0.2em] text-[#555] uppercase">Subject</span>
+          <div className="flex-1 h-px bg-[#1A1A1A]" />
+          {email.edited && (
+            <span className="bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[#FF6B00] text-[9px] tracking-[0.12em] px-2 py-0.5">
+              ● EDITED
+            </span>
+          )}
+        </div>
+        {email.failed ? (
+          <p className="text-[11px] text-red-400 tracking-wide">{email.subject}</p>
+        ) : (
+          <input
+            type="text"
+            value={localSubject}
+            onChange={(e) => setLocalSubject(e.target.value)}
+            onBlur={commitSubject}
+            className="w-full bg-[#060606] border border-[#222] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#FF6B00] transition-colors"
+          />
+        )}
+      </div>
+
+      {/* Body */}
+      {!email.failed && (
+        <div className="px-5 pb-4 border-t border-[#1A1A1A] pt-4">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-[10px] tracking-[0.2em] text-[#555] uppercase">Email Body</span>
+            <div className="flex-1 h-px bg-[#1A1A1A]" />
+            <button
+              onClick={() => {
+                setExpanded(!expanded);
+                if (editingBody) setEditingBody(false);
+              }}
+              className="text-[9px] tracking-[0.15em] text-[#444] hover:text-[#FF6B00] transition-colors cursor-pointer"
+            >
+              {expanded ? "▲ COLLAPSE" : "▼ EXPAND"}
+            </button>
+          </div>
+          {!expanded && (
+            <p className="text-[11px] text-[#444] italic line-clamp-2">
+              {email.emailBody
+                .replace(/<[^>]+>/g, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+                .slice(0, 120)}
+              ...
+            </p>
+          )}
+          {expanded && !editingBody && (
+            <div>
+              <iframe
+                srcDoc={email.emailBody}
+                sandbox="allow-same-origin"
+                className="w-full border border-[#1A1A1A] bg-white"
+                style={{ height: "280px" }}
+                title="Email preview"
+              />
+              <button
+                onClick={() => setEditingBody(true)}
+                className="mt-2 text-[9px] tracking-[0.15em] text-[#555] hover:text-[#FF6B00] border border-[#1A1A1A] px-3 py-1.5 hover:border-[#FF6B00] transition-colors cursor-pointer"
+              >
+                EDIT RAW HTML
+              </button>
+            </div>
+          )}
+          {expanded && editingBody && (
+            <div>
+              <textarea
+                value={localBody}
+                onChange={(e) => setLocalBody(e.target.value)}
+                className="w-full h-48 bg-[#060606] border border-[#222] text-[#AAA] text-[11px] px-3 py-2 font-mono resize-none focus:outline-none focus:border-[#FF6B00] transition-colors"
+              />
+              <button
+                onClick={commitBody}
+                className="mt-1.5 text-[9px] tracking-[0.15em] text-[#FF6B00] border border-[#FF6B00]/30 bg-[#FF6B00]/10 px-3 py-1.5 hover:bg-[#FF6B00]/20 transition-colors cursor-pointer"
+              >
+                SAVE CHANGES
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="px-5 py-4 border-t border-[#1A1A1A] flex items-center gap-2 flex-wrap">
+        {email.failed ? (
+          <span className="text-[10px] text-red-400 tracking-wider">Generation failed — cannot send</span>
+        ) : (
+          <>
+            <button
+              onClick={() => onRegenerate("standard")}
+              disabled={email.regenerating}
+              className="text-[9px] tracking-[0.15em] px-3 py-1.5 border border-[#1A1A1A] text-[#777] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-colors cursor-pointer disabled:opacity-30"
+            >
+              {email.regenerating ? "GENERATING..." : "REGENERATE"}
+            </button>
+            <button
+              onClick={() => onRegenerate("plain")}
+              disabled={email.regenerating}
+              className="text-[9px] tracking-[0.15em] px-3 py-1.5 border border-[#1A1A1A] text-[#777] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-colors cursor-pointer disabled:opacity-30"
+            >
+              REGENERATE: PLAIN
+            </button>
+            {email.regenerated && (
+              <span className="ml-auto text-[9px] tracking-[0.15em] text-[#444]">↺ REGENERATED</span>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CampaignLauncher() {
+  const [mode, setMode] = useState<GalleryMode>("launcher");
+  const [leadLimit, setLeadLimit] = useState(10);
+  const [emails, setEmails] = useState<GalleryEmail[]>([]);
+  const [sendResult, setSendResult] = useState<SendResult | null>(null);
+  const [previewError, setPreviewError] = useState("");
+
+  function updateEmail(recordId: string, updates: Partial<GalleryEmail>) {
+    setEmails((prev) =>
+      prev.map((e) => (e.recordId === recordId ? { ...e, ...updates } : e))
+    );
+  }
+
+  async function handlePreview() {
+    setMode("previewing");
+    setPreviewError("");
     try {
-      const res = await fetch("/api/campaign/launch", {
+      const res = await fetch("/api/campaign/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadLimit }),
       });
       const data = await res.json();
-      if (res.ok) {
-        setResult({ ok: true, sent: data.sent, failed: data.failed, skipped: data.skipped });
-      } else {
-        setResult({ ok: false, message: data.error || "Sequence failed" });
-      }
-    } catch {
-      setResult({ ok: false, message: "Connection error" });
+      if (!res.ok) throw new Error(data.error || "Preview failed");
+
+      const gallery: GalleryEmail[] = (
+        data.previews as Array<{
+          recordId: string;
+          lead: LeadInfo;
+          subject: string;
+          emailBody: string;
+        }>
+      ).map((p) => ({
+        recordId: p.recordId,
+        lead: p.lead,
+        subject: p.subject,
+        emailBody: p.emailBody,
+        originalSubject: p.subject,
+        originalBody: p.emailBody,
+        edited: false,
+        regenerated: false,
+        regenerating: false,
+        failed: p.subject.startsWith("[GENERATION FAILED]"),
+      }));
+
+      // Lowest deliverability score first — needs attention at top
+      gallery.sort((a, b) => {
+        if (a.failed !== b.failed) return a.failed ? -1 : 1;
+        const sa = scoreDeliverability(a.subject, a.emailBody).score;
+        const sb = scoreDeliverability(b.subject, b.emailBody).score;
+        return sa - sb;
+      });
+
+      setEmails(gallery);
+      setMode("gallery");
+    } catch (err) {
+      setPreviewError(
+        err instanceof Error ? err.message : "Connection error — check Vercel function logs"
+      );
+      setMode("launcher");
     }
-    setLoading(false);
   }
 
+  async function handleRegenerate(recordId: string, regenMode: "standard" | "plain") {
+    const email = emails.find((e) => e.recordId === recordId);
+    if (!email) return;
+    updateEmail(recordId, { regenerating: true });
+    try {
+      const leadData = {
+        "FULL NAME": email.lead.name,
+        "company name": email.lead.company,
+        City: email.lead.city,
+        EMAIL: email.lead.email,
+        URL: email.lead.url,
+        Rank: email.lead.rank,
+        score_reason: email.lead.scoreReason,
+        lead_status: email.lead.leadStatus,
+      };
+      const res = await fetch("/api/campaign/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recordId, leadData, mode: regenMode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Regeneration failed");
+      updateEmail(recordId, {
+        subject: data.subject,
+        emailBody: data.emailBody,
+        regenerated: true,
+        regenerating: false,
+        edited: false,
+        failed: false,
+      });
+    } catch {
+      updateEmail(recordId, { regenerating: false });
+    }
+  }
+
+  async function handleSendAll() {
+    setMode("sending");
+    const payload = emails
+      .filter((e) => !e.failed && e.emailBody)
+      .map((e) => ({
+        recordId: e.recordId,
+        toEmail: e.lead.email,
+        subject: e.subject,
+        emailBody: e.emailBody,
+        wasEdited: e.edited,
+        wasRegenerated: e.regenerated,
+      }));
+    try {
+      const res = await fetch("/api/campaign/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emails: payload }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Send failed");
+      setSendResult({
+        sent: data.sent,
+        failed: data.failed,
+        skipped: data.skipped,
+        errors: data.errors ?? [],
+      });
+    } catch (err) {
+      setSendResult({
+        sent: 0,
+        failed: payload.length,
+        skipped: 0,
+        errors: [err instanceof Error ? err.message : "Connection error"],
+      });
+    }
+    setMode("done");
+  }
+
+  const editedCount = emails.filter((e) => e.edited).length;
+  const regenCount = emails.filter((e) => e.regenerated).length;
+  const validCount = emails.filter((e) => !e.failed).length;
+
+  /* ── GENERATING ── */
+  if (mode === "previewing") {
+    return (
+      <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-12 flex flex-col items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 bg-[#FF6B00] blink" />
+          <span className="text-[10px] tracking-[0.3em] text-[#888] uppercase">
+            Generating email copy for {leadLimit} leads...
+          </span>
+        </div>
+        <p className="text-[10px] text-[#333] tracking-wider">This may take 30–90 seconds</p>
+      </div>
+    );
+  }
+
+  /* ── SENDING ── */
+  if (mode === "sending") {
+    return (
+      <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-12 flex flex-col items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 bg-[#FF6B00] blink" />
+          <span className="text-[10px] tracking-[0.3em] text-[#888] uppercase">
+            Sending {validCount} emails via Brevo...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── DONE ── */
+  if (mode === "done" && sendResult) {
+    const editedEmails = emails.filter((e) => e.edited);
+    return (
+      <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6 space-y-4">
+        <SectionLabel icon={<IconRocket />} label="Campaign Complete" />
+        <div className="flex items-center gap-2 p-4 border border-green-900/50 bg-green-950/20">
+          <div className="w-2 h-2 bg-green-500 shrink-0" />
+          <span className="text-xs tracking-wider text-green-400">
+            SENT <span className="font-bold text-white">{sendResult.sent}</span>
+            {" // "}FAILED{" "}
+            <span className={`font-bold ${sendResult.failed ? "text-red-400" : "text-white"}`}>
+              {sendResult.failed}
+            </span>
+            {" // "}SKIPPED <span className="font-bold text-[#888]">{sendResult.skipped}</span>
+          </span>
+        </div>
+        {editedEmails.length > 0 && (
+          <div className="border border-[#1A1A1A] p-4">
+            <div className="text-[10px] tracking-[0.2em] text-[#FF6B00] uppercase mb-3">
+              Copy Edit Log — {editedEmails.length} email{editedEmails.length > 1 ? "s" : ""} modified
+            </div>
+            <div className="space-y-1.5">
+              {editedEmails.map((e) => (
+                <div key={e.recordId} className="flex items-center gap-2">
+                  <div className="w-1 h-1 bg-[#FF6B00]" />
+                  <span className="text-[10px] text-[#AAA] tracking-wider">
+                    {e.lead.company || e.lead.email}
+                  </span>
+                  {e.regenerated && (
+                    <span className="text-[9px] text-[#444] ml-auto">↺ regenerated</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-[#333] mt-3 tracking-wider">
+              Review Vercel logs for copyedit events → use to improve the system prompt.
+            </p>
+          </div>
+        )}
+        {sendResult.errors.length > 0 && (
+          <div className="border border-red-900/30 p-4 space-y-1">
+            {sendResult.errors.map((err, i) => (
+              <p key={i} className="text-[10px] text-red-400 tracking-wider">{err}</p>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={() => {
+            setMode("launcher");
+            setEmails([]);
+            setSendResult(null);
+          }}
+          className="w-full border border-[#1A1A1A] text-[10px] tracking-[0.3em] py-3 text-[#666] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-all cursor-pointer"
+        >
+          START NEW CAMPAIGN
+        </button>
+      </div>
+    );
+  }
+
+  /* ── GALLERY ── */
+  if (mode === "gallery") {
+    return (
+      <div>
+        <div className="bg-[#080808] border border-[#1A1A1A] px-5 py-3 flex items-center gap-4 mb-4 sticky top-0 z-10">
+          <button
+            onClick={() => {
+              setMode("launcher");
+              setEmails([]);
+            }}
+            className="text-[9px] tracking-[0.2em] text-[#444] hover:text-[#FF6B00] transition-colors cursor-pointer"
+          >
+            ← BACK
+          </button>
+          <div className="flex-1 flex items-center gap-3 text-[9px] tracking-[0.15em] text-[#444]">
+            <span className="text-white font-bold">{validCount}</span> EMAILS
+            {editedCount > 0 && (
+              <>
+                <span className="text-[#222]">·</span>
+                <span className="text-[#FF6B00] font-bold">{editedCount}</span> EDITED
+              </>
+            )}
+            {regenCount > 0 && (
+              <>
+                <span className="text-[#222]">·</span>
+                <span className="text-[#888] font-bold">{regenCount}</span> REGENERATED
+              </>
+            )}
+          </div>
+          <button
+            onClick={handleSendAll}
+            disabled={validCount === 0}
+            className="bg-[#FF6B00] text-black font-bold px-5 py-2 text-[9px] tracking-[0.3em] hover:bg-[#E55F00] disabled:opacity-30 transition-all cursor-pointer"
+          >
+            SEND ALL →
+          </button>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {emails.map((email) => (
+            <EmailCard
+              key={email.recordId}
+              email={email}
+              onUpdate={(updates) => updateEmail(email.recordId, updates)}
+              onRegenerate={(m) => handleRegenerate(email.recordId, m)}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── LAUNCHER (default) ── */
   return (
     <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6 glow">
       <SectionLabel icon={<IconRocket />} label="Launch Campaign" />
       <div className="flex items-end gap-6">
         <div className="flex-1">
-          <label className="block text-[10px] tracking-[0.2em] text-[#888] uppercase mb-2">Lead Limit</label>
+          <label className="block text-[10px] tracking-[0.2em] text-[#888] uppercase mb-2">
+            Lead Limit
+          </label>
           <input
-            type="number" min={1} max={200} value={leadLimit}
+            type="number"
+            min={1}
+            max={50}
+            value={leadLimit}
             onChange={(e) => setLeadLimit(Number(e.target.value))}
             className="w-full bg-[#060606] border border-[#222] text-white px-4 py-3 text-lg font-bold tracking-wide focus:outline-none focus:border-[#FF6B00] transition-colors"
           />
         </div>
         <div className="flex items-center gap-2 pb-3">
-          <div className="px-3 py-1.5 bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[10px] text-[#FF6B00] tracking-wider font-bold">EMAIL</div>
+          <div className="px-3 py-1.5 bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[10px] text-[#FF6B00] tracking-wider font-bold">
+            EMAIL
+          </div>
         </div>
       </div>
       <button
-        onClick={handleLaunch} disabled={loading}
-        className="w-full mt-6 bg-[#FF6B00] text-black font-bold py-4 text-xs tracking-[0.3em] hover:bg-[#E55F00] disabled:opacity-30 transition-all cursor-pointer"
+        onClick={handlePreview}
+        className="w-full mt-6 bg-[#FF6B00] text-black font-bold py-4 text-xs tracking-[0.3em] hover:bg-[#E55F00] transition-all cursor-pointer"
       >
-        {loading ? "INITIATING SEQUENCE..." : "LAUNCH ACQUISITION CAMPAIGN"}
+        PREVIEW EMAILS
       </button>
-      {result && (
-        <div className={`mt-4 flex items-center gap-2 p-3 border fade-up ${result.ok ? "border-green-900/50 bg-green-950/20" : "border-red-900/50 bg-red-950/20"}`}>
-          <div className={`w-2 h-2 shrink-0 ${result.ok ? "bg-green-500" : "bg-red-500"}`} />
-          {result.ok ? (
-            <span className="text-xs tracking-wider text-green-400">
-              SENT <span className="font-bold text-white">{result.sent}</span>
-              {" // "}FAILED <span className={`font-bold ${result.failed ? "text-red-400" : "text-white"}`}>{result.failed}</span>
-              {" // "}SKIPPED <span className="font-bold text-[#888]">{result.skipped}</span>
-            </span>
-          ) : (
-            <span className="text-xs tracking-wider text-red-400">{result.message}</span>
-          )}
+      {previewError && (
+        <div className="mt-4 flex items-center gap-2 p-3 border border-red-900/50 bg-red-950/20">
+          <div className="w-2 h-2 bg-red-500 shrink-0" />
+          <span className="text-xs tracking-wider text-red-400">{previewError}</span>
         </div>
       )}
     </div>
