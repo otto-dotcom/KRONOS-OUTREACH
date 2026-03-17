@@ -1,0 +1,60 @@
+name: KRONOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-workflows:
+    name: Validate n8n Workflow JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate all workflow JSON files
+        run: |
+          FAILED=0
+          for f in $(find . -name "*.json" \
+            -not -path "./kronosautomations/*" \
+            -not -path "./dashboard/*" \
+            -not -path "./.next/*" \
+            -not -path "./node_modules/*"); do
+            python3 -c "
+          import json, sys
+          try:
+              with open('$f') as fp: json.load(fp)
+              print('  OK: $f')
+          except Exception as e:
+              print(f'  FAIL: $f — {e}')
+              sys.exit(1)
+          " || FAILED=1
+          done
+          [ $FAILED -eq 0 ] || exit 1
+
+      - name: Check for Ollama references in active workflows
+        run: |
+          ACTIVE="KRONOS_OUTREACH_EMAIL.json KRONOS_OUTREACH_V3.json"
+          FAILED=0
+          for f in $ACTIVE; do
+            if [ -f "$f" ] && grep -q "lmChatOllama\|ollamaApi\|OLLAMA" "$f"; then
+              echo "FAIL: $f still contains Ollama references"
+              FAILED=1
+            else
+              echo "  OK: $f (no Ollama refs)"
+            fi
+          done
+          [ $FAILED -eq 0 ] || exit 1
+
+      - name: Check for hardcoded secrets
+        run: |
+          PATTERNS="sk-or-v1-|eyJhbGci|pat[a-zA-Z0-9]{14}\.|xkeysib-|apify_api_|SG\."
+          FAILED=0
+          for f in $(find . -name "*.json" -o -name "*.sh" -o -name "*.py" | \
+            grep -v ".env" | grep -v "node_modules" | grep -v ".next" | grep -v ".git"); do
+            if grep -qE "$PATTERNS" "$f" 2>/dev/null; then
+              echo "WARN: Possible secret in $f — review before merging"
+            fi
+          done
+          echo "Secret scan complete."

@@ -95,13 +95,13 @@
       "medium": 5,
       "low": 0
     },
-    "system_prompt": "You are a lead scoring assistant for Swiss real estate agency outreach. Score agencies 1-10 based on their potential value for B2B services (photography, virtual tours, marketing). Return ONLY valid JSON."
+    "system_prompt": "You are a lead scoring assistant for KRONOS, a Swiss AI automation consultancy. Score Swiss real estate agencies 1-10 for outreach priority based on their potential need for automated Objektakquise and seller lead generation. Prioritize: agencies with clear mandate acquisition focus, luxury or high-volume segments, strong online presence, and complete contact details. Deprioritize: non-Swiss agencies, non-RE businesses, or those without email. Return ONLY valid JSON."
   },
 
   "outreach": {
-    "sms_template_context": "B2B service for real estate agencies - professional photography and virtual tours",
-    "email_template_context": "Professional real estate marketing services including HDR photography, drone shots, and 3D virtual tours",
-    "value_proposition": "Help agencies sell properties faster with professional visual content"
+    "sms_template_context": "AI automation for Swiss RE agencies — automated Objektakquise and qualified seller lead generation",
+    "email_template_context": "KRONOS builds automated mandate acquisition systems: AI qualifies potential sellers so Berater only handle Eigentümer ready to sign an Alleinmandat",
+    "value_proposition": "Mehr Verkaufsmandate, weniger Kaltakquise — systematische Objektakquise ohne zusätzlichen Aufwand"
   },
 
   "deduplication": {

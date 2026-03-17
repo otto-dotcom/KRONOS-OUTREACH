@@ -23,6 +23,21 @@ interface EmailData {
   days: number;
 }
 
+interface LeadsData {
+  total: number;
+  by_status: { priority: number; medium: number; low: number };
+  by_email: { sent: number; pending: number };
+  top_leads: { name: string; company: string; city: string; rank: number; emailStatus: string }[];
+}
+
+interface LaunchResult {
+  ok: boolean;
+  message?: string;
+  sent?: number;
+  failed?: number;
+  skipped?: number;
+}
+
 /* ═══════════════════════════════════════════════════════
    PIXEL ICONS
    ═══════════════════════════════════════════════════════ */
@@ -57,6 +72,18 @@ function IconRocket() {
       <rect x="11" y="7" width="2" height="3" fill="#FF6B00" opacity="0.5" />
       <rect x="7" y="11" width="1" height="2" fill="#FF6B00" opacity="0.4" />
       <rect x="8" y="12" width="1" height="2" fill="#FF6B00" opacity="0.3" />
+    </svg>
+  );
+}
+
+function IconDatabase() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ imageRendering: "pixelated" }}>
+      <ellipse cx="8" cy="4" rx="5" ry="2" stroke="#FF6B00" strokeWidth="1" fill="none" />
+      <line x1="3" y1="4" x2="3" y2="12" stroke="#FF6B00" strokeWidth="1" />
+      <line x1="13" y1="4" x2="13" y2="12" stroke="#FF6B00" strokeWidth="1" />
+      <ellipse cx="8" cy="8" rx="5" ry="2" stroke="#FF6B00" strokeWidth="1" fill="none" />
+      <ellipse cx="8" cy="12" rx="5" ry="2" stroke="#FF6B00" strokeWidth="1" fill="none" />
     </svg>
   );
 }
@@ -130,7 +157,6 @@ function RangeFilter({ days, onChange }: { days: number; onChange: (d: number) =
    CHARTS
    ═══════════════════════════════════════════════════════ */
 
-/** SVG Donut chart — pure CSS, no library */
 function DonutChart({ segments, size = 120 }: {
   segments: { value: number; color: string; label: string }[];
   size?: number;
@@ -186,7 +212,6 @@ function DonutChart({ segments, size = 120 }: {
   );
 }
 
-/** Bar chart for daily data */
 function BarChart({ data, height = 80 }: {
   data: { label: string; bars: { value: number; color: string }[] }[];
   height?: number;
@@ -213,7 +238,6 @@ function BarChart({ data, height = 80 }: {
           </div>
         ))}
       </div>
-      {/* Date labels */}
       <div className="flex gap-1 mt-2">
         {data.map((d, i) => (
           <div key={i} className="flex-1 text-center text-[8px] text-[#777] truncate">
@@ -225,7 +249,6 @@ function BarChart({ data, height = 80 }: {
   );
 }
 
-/** Horizontal progress stat */
 function ProgressStat({ label, value, max, color = "#FF6B00" }: {
   label: string; value: number; max: number; color?: string;
 }) {
@@ -251,7 +274,7 @@ function ProgressStat({ label, value, max, color = "#FF6B00" }: {
 function CampaignLauncher() {
   const [leadLimit, setLeadLimit] = useState(10);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<LaunchResult | null>(null);
 
   async function handleLaunch() {
     setLoading(true);
@@ -264,7 +287,7 @@ function CampaignLauncher() {
       });
       const data = await res.json();
       if (res.ok) {
-        setResult({ ok: true, message: `Acquisition Sequence Initiated // ${leadLimit} targets // EMAIL + SMS` });
+        setResult({ ok: true, sent: data.sent, failed: data.failed, skipped: data.skipped });
       } else {
         setResult({ ok: false, message: data.error || "Sequence failed" });
       }
@@ -287,11 +310,7 @@ function CampaignLauncher() {
           />
         </div>
         <div className="flex items-center gap-2 pb-3">
-          <div className="flex gap-1">
-            <div className="px-3 py-1.5 bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[10px] text-[#FF6B00] tracking-wider font-bold">EMAIL</div>
-            <div className="px-1 py-1.5 text-[10px] text-[#555]">+</div>
-            <div className="px-3 py-1.5 bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[10px] text-[#FF6B00] tracking-wider font-bold">SMS</div>
-          </div>
+          <div className="px-3 py-1.5 bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[10px] text-[#FF6B00] tracking-wider font-bold">EMAIL</div>
         </div>
       </div>
       <button
@@ -301,14 +320,130 @@ function CampaignLauncher() {
         {loading ? "INITIATING SEQUENCE..." : "LAUNCH ACQUISITION CAMPAIGN"}
       </button>
       {result && (
-        <div className={`mt-4 flex items-center gap-2 p-3 border fade-up ${result.ok ? "border-green-900/50 bg-green-950/20" : "border-red-900/50 bg-red-950/20"
-          }`}>
-          <div className={`w-2 h-2 ${result.ok ? "bg-green-500" : "bg-red-500"}`} />
-          <span className={`text-xs tracking-wider ${result.ok ? "text-green-400" : "text-red-400"}`}>
-            {result.message}
-          </span>
+        <div className={`mt-4 flex items-center gap-2 p-3 border fade-up ${result.ok ? "border-green-900/50 bg-green-950/20" : "border-red-900/50 bg-red-950/20"}`}>
+          <div className={`w-2 h-2 shrink-0 ${result.ok ? "bg-green-500" : "bg-red-500"}`} />
+          {result.ok ? (
+            <span className="text-xs tracking-wider text-green-400">
+              SENT <span className="font-bold text-white">{result.sent}</span>
+              {" // "}FAILED <span className={`font-bold ${result.failed ? "text-red-400" : "text-white"}`}>{result.failed}</span>
+              {" // "}SKIPPED <span className="font-bold text-[#888]">{result.skipped}</span>
+            </span>
+          ) : (
+            <span className="text-xs tracking-wider text-red-400">{result.message}</span>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   LEADS / DATABASE ANALYTICS
+   ═══════════════════════════════════════════════════════ */
+
+function LeadsAnalytics() {
+  const [data, setData] = useState<LeadsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchStats = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/analytics/leads");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setData(json);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load");
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  return (
+    <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <IconDatabase />
+            <span className="text-[10px] tracking-[0.25em] text-[#FF6B00] uppercase font-semibold">Database</span>
+          </div>
+          <div className="flex-1 h-px bg-[#1A1A1A] min-w-8" />
+        </div>
+        <button onClick={fetchStats} className="text-[10px] text-[#777] hover:text-[#FF6B00] transition-colors cursor-pointer tracking-wider">SYNC</button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-12 justify-center">
+          <div className="w-2 h-2 bg-[#FF6B00] blink" />
+          <span className="text-[10px] text-[#888] tracking-wider">FETCHING DATA...</span>
+        </div>
+      ) : error ? (
+        <div className="flex items-center gap-2 py-8">
+          <div className="w-2 h-2 bg-red-500" />
+          <span className="text-xs text-red-400">{error}</span>
+        </div>
+      ) : data ? (
+        <>
+          {/* Top row: total + email pipeline */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <Metric value={data.total} label="Total Leads" highlight large />
+            <Metric value={data.by_email.sent} label="Emails Sent" highlight />
+            <Metric value={data.by_email.pending} label="Pending (≥5)" />
+          </div>
+
+          {/* Lead scoring breakdown */}
+          <div className="bg-[#0A0A0A] border border-[#161616] p-5 mb-4">
+            <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-4">Lead Score Breakdown</div>
+            <DonutChart
+              segments={[
+                { value: data.by_status.priority, color: "#FF6B00", label: "Priority (≥7)" },
+                { value: data.by_status.medium, color: "#FF8C33", label: "Medium (5–6)" },
+                { value: data.by_status.low, color: "#333333", label: "Low (<5)" },
+              ].filter((s) => s.value > 0)}
+            />
+          </div>
+
+          {/* Email pipeline progress */}
+          <div className="bg-[#0A0A0A] border border-[#161616] p-4 mb-4 space-y-3">
+            <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-2">Outreach Pipeline</div>
+            <ProgressStat label="Sent" value={data.by_email.sent} max={data.total} color="#22C55E" />
+            <ProgressStat label="Pending" value={data.by_email.pending} max={data.total} color="#FF6B00" />
+          </div>
+
+          {/* Top leads table */}
+          {data.top_leads.length > 0 && (
+            <div className="bg-[#0A0A0A] border border-[#161616] p-4">
+              <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-3">Top Leads by Rank</div>
+              <div className="space-y-0 max-h-64 overflow-y-auto">
+                {/* Header */}
+                <div className="grid grid-cols-[2rem_1fr_auto_4rem] gap-2 pb-2 border-b border-[#161616] text-[9px] text-[#555] tracking-wider uppercase">
+                  <span>Rnk</span>
+                  <span>Agency</span>
+                  <span>City</span>
+                  <span className="text-right">Status</span>
+                </div>
+                {data.top_leads.map((lead, i) => (
+                  <div key={i} className="grid grid-cols-[2rem_1fr_auto_4rem] gap-2 py-2 border-b border-[#0D0D0D] last:border-0 items-center">
+                    <span className="text-[11px] font-bold text-[#FF6B00]">{lead.rank}</span>
+                    <span className="text-[11px] text-white truncate">{lead.company}</span>
+                    <span className="text-[10px] text-[#666] truncate">{lead.city}</span>
+                    <div className="flex justify-end">
+                      {lead.emailStatus === "Sent" ? (
+                        <span className="text-[9px] px-1.5 py-0.5 bg-green-950/40 border border-green-900/40 text-green-500 tracking-wider">SENT</span>
+                      ) : (
+                        <span className="text-[9px] px-1.5 py-0.5 bg-[#FF6B00]/10 border border-[#FF6B00]/20 text-[#FF6B00] tracking-wider">QUEUE</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -328,20 +463,13 @@ function IconEye() {
   );
 }
 
-const EMAIL_TEMPLATE_HTML = `<div style="max-width: 550px; margin: auto; background: #ffffff; padding: 30px; border: 2px solid #1A1A1A; border-top: 10px solid #FF6B00; font-family: 'Inter', sans-serif; color: #1A1A1A; line-height: 1.6;">
-  <div style="text-align: center; padding: 20px 0;">
-    <img src="https://kronosautomations.it/logo.png" alt="KRONOS" width="120" style="image-rendering: pixelated;" onerror="this.style.display='none'">
-  </div>
-  <p>Gr&uuml;ezi <strong>{Name}</strong>,</p>
-  <p>I noticed <strong>{AgencyName}</strong> is active in the <strong>{City}</strong> market. In Switzerland&rsquo;s current competitive landscape, the key to growth is a <strong>predictable and scalable flow of high-quality leads</strong>.</p>
-  <p>At KRONOS, we don&rsquo;t just find leads; we build high-converting campaigns and custom internal tools tailored specifically for your agency&rsquo;s operations.</p>
-  <p>Would you like to see how a custom-built tool could scale your lead flow in {City}?</p>
-  <p><a href="https://kronosautomations.it/#contattaci" style="color: #FF6B00; font-weight: bold; text-decoration: none;">Explore your scalable lead flow &rarr;</a></p>
-  <div style="border-top: 2px dotted #FF6B00; margin-top: 25px; padding-top: 10px; font-size: 14px;">
-    <strong>KRONOS Strategic Partner</strong><br>
-    The Standard in Swiss Real Estate Automation<br>
-    <a href="mailto:consulting@kronosautomations.it" style="color: #FF6B00; text-decoration: none;">consulting@kronosautomations.it</a>
-  </div>
+const EMAIL_TEMPLATE_HTML = `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#111111;max-width:580px;">
+  <p style="margin:0 0 16px 0;">Hello {Name},</p>
+  <p style="margin:0 0 16px 0;">[Hook — specific observation about their agency or market segment.]</p>
+  <p style="margin:0 0 16px 0;">[Problem — one concrete operational pain point.]</p>
+  <p style="margin:0 0 16px 0;">[Solution — KRONOS as automation consulting partner.]</p>
+  <p style="margin:0 0 16px 0;"><a href="https://cal.com/kronosautomations/15min" style="color:#FF6B00;">Book a 15-min call</a><br>Or review our work first: <a href="https://kronosautomations.com" style="color:#FF6B00;">kronosautomations.com</a></p>
+  <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – KRONOS Automations<br>AI Automation Consulting · Switzerland<br><a href="mailto:otto@kronosbusiness.com" style="color:#FF6B00;text-decoration:none;">otto@kronosbusiness.com</a></p>
 </div>`;
 
 function EmailTemplatePreview() {
@@ -364,27 +492,24 @@ function EmailTemplatePreview() {
 
       {showPreview && (
         <div className="mt-4 space-y-3 fade-up">
-          {/* AI Agent info */}
           <div className="flex items-center gap-2 p-2 border border-[#1A1A1A] bg-[#060606]">
             <div className="w-1.5 h-1.5 bg-[#FF6B00] blink" />
             <span className="text-[9px] text-[#888] tracking-wider uppercase">
-              AI-Generated via GPT-4o // High-Conversion Framework
+              AI-Generated via GPT-4o-mini // Plain-text style for inbox delivery
             </span>
           </div>
 
-          {/* Template details */}
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             <div className="p-2 border border-[#161616]">
               <span className="text-[#666] uppercase tracking-wider">From</span>
-              <p className="text-white mt-0.5 font-mono text-[11px]">consulting@kronosautomations.it</p>
+              <p className="text-white mt-0.5 font-mono text-[11px]">otto@kronosbusiness.com</p>
             </div>
             <div className="p-2 border border-[#161616]">
               <span className="text-[#666] uppercase tracking-wider">Subject</span>
-              <p className="text-[#FF6B00] mt-0.5 font-mono text-[11px]">Dynamic Objective</p>
+              <p className="text-[#FF6B00] mt-0.5 font-mono text-[11px]">AI-generated per lead</p>
             </div>
           </div>
 
-          {/* Rendered HTML preview */}
           <div className="border border-[#222] overflow-hidden">
             <div className="bg-[#1A1A1A] px-3 py-1.5 flex items-center justify-between">
               <span className="text-[9px] text-[#666] tracking-wider uppercase">HTML Preview</span>
@@ -395,17 +520,16 @@ function EmailTemplatePreview() {
               </div>
             </div>
             <div
-              className="bg-[#f4f4f4] p-4"
+              className="bg-[#f9f9f9] p-6"
               dangerouslySetInnerHTML={{ __html: EMAIL_TEMPLATE_HTML }}
             />
           </div>
 
-          {/* Template spec */}
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "Structure", value: "PAS Framework" },
-              { label: "Branding", value: "Pixel-Retro" },
-              { label: "CTA", value: "kronosautomations.it" },
+              { label: "Structure", value: "Hook→Pain→CTA" },
+              { label: "Style", value: "Plain-text" },
+              { label: "CTA", value: "Cal.com + Site" },
             ].map((item) => (
               <div key={item.label} className="p-2 border border-[#161616] text-center">
                 <div className="text-[9px] text-[#666] tracking-wider uppercase">{item.label}</div>
@@ -446,7 +570,6 @@ function EmailAnalytics() {
 
   return (
     <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -473,12 +596,10 @@ function EmailAnalytics() {
         </div>
       ) : data ? (
         <>
-          {/* Big number: Total Sent */}
           <div className="mb-4">
             <Metric value={data.totals.requests} label="Total Emails Sent" highlight large />
           </div>
 
-          {/* Conversion funnel */}
           <div className="bg-[#0A0A0A] border border-[#161616] p-4 mb-4 space-y-3">
             <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-2">Conversion Funnel</div>
             <ProgressStat label="Delivered" value={data.totals.delivered} max={data.totals.requests} color="#FF6B00" />
@@ -487,13 +608,11 @@ function EmailAnalytics() {
             <ProgressStat label="Bounced" value={data.totals.bounces} max={data.totals.requests} color="#FF3333" />
           </div>
 
-          {/* Rates */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             <Metric value={`${data.openRate}%`} label="Open Rate" highlight />
             <Metric value={`${data.clickRate}%`} label="Click Rate" />
           </div>
 
-          {/* Daily chart */}
           {data.daily.length > 1 && (
             <div>
               <div className="text-[10px] tracking-[0.15em] text-[#888] uppercase mb-2">Daily Activity</div>
@@ -509,7 +628,6 @@ function EmailAnalytics() {
             </div>
           )}
 
-          {/* Email Template Preview */}
           <EmailTemplatePreview />
         </>
       ) : null}
@@ -545,7 +663,6 @@ function SmsAnalytics() {
 
   return (
     <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -572,12 +689,10 @@ function SmsAnalytics() {
         </div>
       ) : data ? (
         <>
-          {/* Big number: Total Messages */}
           <div className="mb-4">
             <Metric value={data.total} label="Total SMS Sent" highlight large />
           </div>
 
-          {/* Donut chart — delivery breakdown */}
           <div className="bg-[#0A0A0A] border border-[#161616] p-5 mb-4">
             <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-4">Delivery Breakdown</div>
             <DonutChart
@@ -590,7 +705,6 @@ function SmsAnalytics() {
             />
           </div>
 
-          {/* Delivery rate with big progress bar */}
           <div className="bg-[#0A0A0A] border border-[#161616] p-4 mb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] tracking-[0.15em] text-[#888] uppercase">Delivery Rate</span>
@@ -607,7 +721,6 @@ function SmsAnalytics() {
             </div>
           </div>
 
-          {/* Daily bar chart */}
           {data.daily.length > 1 && (
             <div className="mb-4">
               <div className="text-[10px] tracking-[0.15em] text-[#888] uppercase mb-2">Daily Activity</div>
@@ -623,15 +736,13 @@ function SmsAnalytics() {
             </div>
           )}
 
-          {/* Recent messages log */}
           {data.recent && data.recent.length > 0 && (
             <div className="bg-[#0A0A0A] border border-[#161616] p-4">
               <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-3">Recent Messages</div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {data.recent.map((msg, i) => (
                   <div key={i} className="flex items-start gap-2 py-1.5 border-b border-[#111] last:border-0">
-                    <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 ${msg.status === "delivered" ? "bg-green-500" : "bg-red-500"
-                      }`} />
+                    <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 ${msg.status === "delivered" ? "bg-green-500" : "bg-red-500"}`} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[11px] text-white font-mono truncate">{msg.to}</span>
@@ -645,7 +756,6 @@ function SmsAnalytics() {
             </div>
           )}
 
-          {/* Queued indicator */}
           {data.totals.queued > 0 && (
             <div className="mt-3 flex items-center gap-2 p-3 border border-yellow-900/30 bg-yellow-950/10">
               <div className="w-2 h-2 bg-yellow-500 blink" />
@@ -666,6 +776,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <CampaignLauncher />
+      <LeadsAnalytics />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <EmailAnalytics />
         <SmsAnalytics />

@@ -4,6 +4,8 @@
 .env.local
 .env.development.local
 .env.production.local
+# Keep the template — it has no real secrets
+!.env.template
 *.key
 *.pem
 *.p12

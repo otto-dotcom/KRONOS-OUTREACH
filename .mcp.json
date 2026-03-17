@@ -4,8 +4,8 @@
       "command": "npx",
       "args": ["-y", "n8n-mcp"],
       "env": {
-        "N8N_API_URL": "YOUR_N8N_URL",
-        "N8N_API_KEY": "YOUR_N8N_API_KEY"
+        "N8N_API_URL": "https://n8n-ugw8.srv1405638.hstgr.cloud",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyOGQ1NmI5Zi01ZWY3LTRhNGQtYjc5MS0yZDgzN2ZhZDZhMDUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiNWU2YTYyYjQtY2I5Yy00NGFkLWEwNjAtMzk2ODIzMDJkMTA2IiwiaWF0IjoxNzczNTQzNTMzLCJleHAiOjE3NzYxMTc2MDB9.i3hKcV21lV5LUVGb8yzFpRp3tVprh7oItoyLrWQR13g"
       }
     }
   }

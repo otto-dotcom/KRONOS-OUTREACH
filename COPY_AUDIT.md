@@ -26,7 +26,7 @@ Preview file: `PREVIEW_EMAIL_TEMPLATE.html`
 >
 > Worth 15 minutes this week to discuss a scalable acquisition model?
 >
-> [**See our acquisition model →**](https://kronosautomations.it/#contattaci)
+> [**See our acquisition model →**](https://kronosautomations.com/#contattaci)
 
 ### Variant B: Problem-first / Competition (Score 6–7)
 > **Subject**: `how {City} agencies are scaling their Objektakquise`
@@ -41,7 +41,7 @@ Preview file: `PREVIEW_EMAIL_TEMPLATE.html`
 >
 > Curious to see how we do this for agencies like {AgencyName}?
 >
-> [**See our acquisition model →**](https://kronosautomations.it/#contattaci)
+> [**See our acquisition model →**](https://kronosautomations.com/#contattaci)
 
 ### Variant C: Data hook (use when city/metrics available in lead data)
 > **Subject**: `{AgencyName} | predictable lead generation`
@@ -54,7 +54,7 @@ Preview file: `PREVIEW_EMAIL_TEMPLATE.html`
 >
 > If scaling your mandate pipeline is a priority this year, is it worth a 15-minute demo?
 >
-> [**See our acquisition model →**](https://kronosautomations.it/#contattaci)
+> [**See our acquisition model →**](https://kronosautomations.com/#contattaci)
 
 ---
 
@@ -62,7 +62,7 @@ Preview file: `PREVIEW_EMAIL_TEMPLATE.html`
 
 ### Primary (under 160 chars)
 ```
-{Name}, relying on referrals for new mandates is risky. We automate seller lead generation for {City} agencies. Worth 10 mins? kronosautomations.it
+{Name}, relying on referrals for new mandates is risky. We automate seller lead generation for {City} agencies. Worth 10 mins? kronosautomations.com
 ```
 
 ### High-score leads (score ≥ 8)
@@ -91,8 +91,8 @@ Quick question {Name} — is {AgencyName} looking to predictably scale new manda
 ---
 
 ## 5. Pre-Flight Checklist
-- [ ] Logo `logo.png` is live at `https://kronosautomations.it/logo.png`
+- [ ] Logo `logo.png` is live at `https://kronosautomations.com/logo.png`
 - [ ] Lead data fields match: `FULL NAME`, `company name`, `City`, `EMAIL`, `Phone`
-- [ ] CTA link points to `https://kronosautomations.it/#contattaci`
+- [ ] CTA link points to `https://kronosautomations.com/#contattaci`
 - [ ] Subject line schema in Email Output Parser set to max 50 chars
 - [ ] SMS/WhatsApp: verify 160-char limit in output parser schema
