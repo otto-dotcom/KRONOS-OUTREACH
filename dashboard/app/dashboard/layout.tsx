@@ -74,17 +74,27 @@ export default function DashboardLayout({
             </nav>
             <div className="w-px h-4 bg-[#1A1A1A]" />
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full blink shadow-[0_0_8px_#22c55e]" />
-                <span className="text-[9px] text-[#555] tracking-widest uppercase font-black">Online</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="text-[9px] text-[#333] tracking-[0.2em] uppercase font-black hover:text-[#FF6B00] transition-colors cursor-pointer"
-              >
-                Logout
-              </button>
+            <button 
+              onClick={() => router.push("/dashboard/remotron")}
+              className="text-[10px] text-[#FF6B00] border border-[#FF6B00]/30 px-3 py-1 hover:bg-[#FF6B00]/10 transition-all uppercase tracking-widest font-bold cursor-pointer"
+            >
+              🚀 REMOTRON
+            </button>
+            <div className="w-px h-4 bg-[#222]" />
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full blink" />
+              <span className="text-[10px] text-[#888] tracking-wider uppercase">
+                Online
+              </span>
             </div>
+            <div className="w-px h-4 bg-[#222]" />
+            <button
+              onClick={handleLogout}
+              className="text-[10px] text-[#888] tracking-wider uppercase hover:text-[#FF6B00] transition-colors cursor-pointer"
+            >
+              Logout
+            </button>
+          </div>
           </div>
         </div>
       </header>

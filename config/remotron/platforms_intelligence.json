@@ -1,0 +1,36 @@
+{
+  "platforms": [
+    {
+      "name": "WeWorkRemotely",
+      "host": "weworkremotely.com",
+      "strategy": "DIRECT_EMAIL_PRIORITY",
+      "selectors": {
+        "apply_button": "#job-cta",
+        "description": ".listing-container",
+        "email_regex": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+      },
+      "automation_confidence": 0.9
+    },
+    {
+      "name": "RemoteOK",
+      "host": "remoteok.com",
+      "strategy": "ATS_REDIRECT",
+      "selectors": {
+        "apply_button": ".applyCandidate",
+        "ats_domains": ["greenhouse.io", "lever.co", "workable.com"]
+      },
+      "automation_confidence": 0.6
+    },
+    {
+      "name": "Working Nomads",
+      "host": "workingnomads.com",
+      "strategy": "EXTERNAL_ONLY",
+      "selectors": {
+        "apply_button": ".job-apply-button"
+      },
+      "automation_confidence": 0.3
+    }
+  ],
+  "global_keywords": ["Senior", "Full Stack", "Node", "React", "Automation", "AI"],
+  "application_blacklist": ["Entry Level", "Junior", "PHP", "WordPress"]
+}
