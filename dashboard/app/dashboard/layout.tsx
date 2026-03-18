@@ -67,20 +67,24 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full blink" />
-              <span className="text-[10px] text-[#888] tracking-wider uppercase">
-                Online
-              </span>
+          <div className="flex items-center gap-8">
+            <nav className="flex items-center gap-6 mr-4">
+              <a href="/dashboard" className="text-[10px] tracking-[0.2em] font-black uppercase text-[#FF6B00] border-b border-[#FF6B00] pb-0.5">Control</a>
+              <a href="/dashboard/analytics" className="text-[10px] tracking-[0.2em] font-black uppercase text-[#444] hover:text-white transition-all">Intelligence</a>
+            </nav>
+            <div className="w-px h-4 bg-[#1A1A1A]" />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full blink shadow-[0_0_8px_#22c55e]" />
+                <span className="text-[9px] text-[#555] tracking-widest uppercase font-black">Online</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="text-[9px] text-[#333] tracking-[0.2em] uppercase font-black hover:text-[#FF6B00] transition-colors cursor-pointer"
+              >
+                Logout
+              </button>
             </div>
-            <div className="w-px h-4 bg-[#222]" />
-            <button
-              onClick={handleLogout}
-              className="text-[10px] text-[#888] tracking-wider uppercase hover:text-[#FF6B00] transition-colors cursor-pointer"
-            >
-              Logout
-            </button>
           </div>
         </div>
       </header>

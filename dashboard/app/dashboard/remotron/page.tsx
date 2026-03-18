@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
    PREMIUM REMOTE DASHBOARD
    ═══════════════════════════════════════════════════════ */
 
-export default function RemoteDashboard() {
+export default function RemotronDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
 
   return (
@@ -16,10 +16,10 @@ export default function RemoteDashboard() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 bg-[#FF6B00] blink" />
-            <span className="text-[10px] tracking-[0.3em] text-[#999] uppercase">Global Career AI</span>
+            <span className="text-[10px] tracking-[0.3em] text-[#999] uppercase">REMOTRON // v1.0.4</span>
           </div>
           <h1 className="text-4xl font-bold tracking-tighter" style={{ fontFamily: "var(--font-pixel), monospace" }}>
-            REMOTE <span className="text-[#FF6B00]">PILOT</span>
+            REMO<span className="text-[#FF6B00]">TRON</span>
           </h1>
         </div>
         <div className="text-right">

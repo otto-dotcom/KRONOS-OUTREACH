@@ -119,6 +119,48 @@ body {
 .pulse-glow { animation: pulseGlow 4s ease-in-out infinite; }
 .blink { animation: blink 2s ease-in-out infinite; }
 
+/* Mega Pixel Typography */
+.pixel-mega {
+  font-family: var(--font-mono), monospace;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+  filter: drop-shadow(0 0 15px rgba(255, 107, 0, 0.4));
+}
+
+.pixel-mega-outline {
+  -webkit-text-stroke: 1px rgba(255, 107, 0, 0.5);
+  color: transparent;
+}
+
+.pixel-detail-lg {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: #FF6B00;
+  opacity: 0.8;
+}
+
+/* Custom scrollbar for Glassmorphism */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 107, 0, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 107, 0, 0.5);
+  box-shadow: 0 0 10px #FF6B00;
+}
+
 /* Remove number spinners */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }

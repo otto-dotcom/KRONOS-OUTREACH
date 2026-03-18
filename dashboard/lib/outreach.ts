@@ -147,6 +147,23 @@ async function fetchLeads(
   return data.records ?? [];
 }
 
+/** Fetch all leads marked as "Sent" for historical analysis. */
+export async function fetchSentArchive(limit = 100): Promise<AirtableRecord[]> {
+  const { baseId, tableId } = requireEnv();
+  const formula = encodeURIComponent(`{EMAIL STATUS} = "Sent"`);
+  // Sort by Last Modified to get recent sends first
+  const url = `${AIRTABLE_API}/${baseId}/${tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=last_modified&sort[0][direction]=desc`;
+
+  const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`Archive fetch failed: ${res.status}`);
+
+  const data = (await res.json()) as { records: AirtableRecord[] };
+  return data.records ?? [];
+}
+
 export async function generateEmailCopy(
   record: AirtableRecord,
   extraConstraint?: string
