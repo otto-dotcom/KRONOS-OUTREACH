@@ -180,14 +180,17 @@ function IconClose() {
 
 function SectionLabel({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="flex items-center gap-3 mb-5">
-      <div className="flex items-center gap-2">
-        {icon}
-        <span className="text-[10px] tracking-[0.25em] text-[#FF6B00] uppercase font-semibold">
+    <div className="flex items-center gap-4 mb-8 group">
+      <div className="p-2.5 glass-obsidian transition-all group-hover:glow-orange-strong border border-orange-500/20">
+        <div className="text-[#FF6B00] pulse-glow">{icon}</div>
+      </div>
+      <div className="flex flex-col">
+        <span className="text-[10px] tracking-[0.4em] text-[#FF6B00] uppercase font-black neon-text">
           {label}
         </span>
+        <div className="h-0.5 w-12 bg-gradient-to-r from-[#FF6B00] to-transparent mt-1" />
       </div>
-      <div className="flex-1 h-px bg-[#1A1A1A]" />
+      <div className="flex-1 h-px bg-gradient-to-r from-[#1A1A1A] to-transparent" />
     </div>
   );
 }
@@ -196,25 +199,62 @@ function Metric({ value, label, highlight, large }: {
   value: string | number; label: string; highlight?: boolean; large?: boolean;
 }) {
   return (
-    <div className="bg-[#0A0A0A] border border-[#161616] p-4 fade-up">
-      <div className={`font-bold tracking-tight ${highlight ? "text-[#FF6B00]" : "text-white"} ${large ? "text-3xl" : "text-2xl"}`}>
+    <div className="glass-obsidian border border-white/5 p-6 transition-all hover:glow-orange-strong hover:scale-[1.02] group fade-up">
+      <div className={`font-mono font-black tracking-tighter transition-all ${highlight ? "neon-text" : "text-white group-hover:neon-text"} ${large ? "text-4xl" : "text-2xl"}`}>
         {value}
       </div>
-      <div className="text-[10px] tracking-[0.15em] text-[#888] uppercase mt-1">{label}</div>
+      <div className="text-[9px] tracking-[0.25em] text-[#555] uppercase mt-2 font-bold group-hover:text-[#AAA] transition-colors">{label}</div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value, isLink, href, highlight }: { label: string, value: string, isLink?: boolean, href?: string, highlight?: boolean }) {
+  return (
+    <div className="group/row">
+      <span className="text-[8px] tracking-[0.3em] text-[#333] uppercase block mb-1.5 font-black group-hover/row:text-[#555] transition-colors">{label}</span>
+      {isLink && href && value && value !== "—" ? (
+        <a 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className={`text-[13px] font-bold transition-all break-all ${highlight ? "neon-text underline decoration-orange-500/30" : "text-[#AAA] hover:text-[#FF6B00]"}`}
+        >
+          {value}
+        </a>
+      ) : (
+        <span className={`text-[13px] font-bold break-all transition-colors ${highlight ? "neon-text focus:glow-orange" : "text-[#AAA] group-hover/row:text-white"}`}>
+          {value || "—"}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function DataBlock({ title, children, glow }: { title: string; children: React.ReactNode; glow?: boolean }) {
+  return (
+    <div className={`glass-obsidian p-6 border border-white/5 relative group transition-all ${glow ? "glow-orange-strong border-orange-500/20" : "hover:border-orange-500/10"}`}>
+       <div className="absolute top-0 right-0 w-12 h-px bg-gradient-to-l from-orange-500/40 to-transparent" />
+       <div className="absolute bottom-0 left-0 w-12 h-px bg-gradient-to-r from-orange-500/40 to-transparent" />
+       <div className="text-[9px] tracking-[0.4em] text-[#333] uppercase mb-6 font-black group-hover:text-[#555] transition-colors border-b border-[#111] pb-2">
+         {title}
+       </div>
+       <div className="space-y-6">
+         {children}
+       </div>
     </div>
   );
 }
 
 function RangeFilter({ days, onChange }: { days: number; onChange: (d: number) => void }) {
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1.5 p-1 glass-obsidian border border-white/5">
       {[7, 30, 90].map((d) => (
         <button
           key={d}
           onClick={() => onChange(d)}
-          className={`px-3 py-1 text-[10px] tracking-wider transition-all cursor-pointer border ${days === d
-            ? "bg-[#FF6B00] text-black border-[#FF6B00] font-bold"
-            : "bg-transparent text-[#888] border-[#1A1A1A] hover:border-[#FF6B00] hover:text-[#FF6B00]"
+          className={`px-4 py-1.5 text-[9px] tracking-[0.2em] transition-all cursor-pointer font-black uppercase ${days === d
+            ? "bg-[#FF6B00] text-black glow-orange shadow-[0_0_15px_rgba(255,107,0,0.4)]"
+            : "text-[#444] hover:text-[#FF6B00] hover:bg-white/5"
             }`}
         >
           {d}D
@@ -340,90 +380,94 @@ function ProgressStat({ label, value, max, color = "#FF6B00" }: {
 
 function RankMeter({ rank }: { rank: number | string }) {
   const val = typeof rank === 'number' ? rank : parseInt(String(rank)) || 0;
-  const stars = Array.from({ length: 10 }).map((_, i) => i < val);
   
   return (
-    <div className="flex gap-0.5">
-      {stars.map((filled, i) => (
+    <div className="flex gap-1">
+      {Array.from({ length: 10 }).map((_, i) => (
         <div 
           key={i} 
-          className={`w-1.5 h-3 ${filled ? 'bg-[#FF6B00]' : 'bg-[#1A1A1A]'} transition-colors duration-500`}
-          style={{ transitionDelay: `${i * 50}ms` }}
+          className={`w-2 h-4 ${i < val ? 'bg-[#FF6B00] glow-orange' : 'bg-white/5'} transition-all duration-700`}
+          style={{ 
+            transitionDelay: `${i * 40}ms`,
+            opacity: i < val ? 1 : 0.3,
+            boxShadow: i < val ? '0 0 10px #FF6B00' : 'none'
+          }}
         />
       ))}
     </div>
   );
 }
 
-function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
-  const priorityBadge =
-    lead.leadStatus === "priority"
-      ? { cls: "bg-green-500 text-black", label: "HIGH INTENT" }
-      : lead.leadStatus === "medium"
-      ? { cls: "bg-yellow-500 text-black", label: "WARM LEAD" }
-      : { cls: "bg-[#222] text-[#888]", label: "EXPLORATORY" };
+function SidebarItem({ label, value, glow }: { label: string; value: string; glow?: boolean }) {
+  return (
+    <div className={`p-4 glass-obsidian border-l-2 ${glow ? "border-l-[#FF6B00] glow-orange" : "border-l-[#1A1A1A]"} group hover:bg-white/5 transition-all`}>
+      <div className="text-[8px] tracking-[0.3em] text-[#444] uppercase font-black mb-1 group-hover:text-[#666]">{label}</div>
+      <div className={`text-[10px] font-black tracking-widest uppercase ${glow ? "neon-text" : "text-[#AAA]"}`}>{value}</div>
+    </div>
+  );
+}
 
+function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
   const initials = (lead.name || "UN").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-      <div className="bg-[#0A0A0A] border border-[#1A1A1A] w-full max-w-6xl h-fit max-h-[92vh] shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col md:flex-row overflow-hidden relative animate-in zoom-in-95 duration-500">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
+      <div className="glass-obsidian-strong border border-orange-500/10 w-full max-w-6xl h-fit max-h-[92vh] shadow-[0_0_120px_rgba(0,0,0,1)] flex flex-col md:flex-row overflow-hidden relative animate-in zoom-in-95 duration-700 cyber-border">
         
-        {/* Sidebar: Profile & Critical Pulse */}
-        <div className="w-full md:w-80 bg-[#0D0D0D] border-r border-[#1A1A1A] p-8 flex flex-col overflow-y-auto">
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#FF6B00] to-[#E55F00] flex items-center justify-center text-3xl font-black text-black mb-6 shadow-[0_0_30px_rgba(255,107,0,0.15)] flex-shrink-0">
+        {/* Sidebar: Profile Summary */}
+        <div className="w-full md:w-80 bg-black/40 border-r border-white/5 p-10 flex flex-col shrink-0">
+          <div className="flex flex-col items-center text-center mb-10">
+            <div className="w-24 h-24 glass-obsidian border-orange-500/30 flex items-center justify-center text-3xl font-black text-[#FF6B00] mb-8 glow-orange-strong animate-pulse">
               {initials}
             </div>
-            <h2 className="text-xl font-bold text-white mb-1 leading-tight tracking-wide">{lead.company || "Unnamed Agency"}</h2>
-            <p className="text-[#888] text-sm uppercase tracking-widest font-bold">{lead.name || "Anonymous Contact"}</p>
-            {lead.jobTitle && <p className="text-[#FF6B00] text-[10px] mt-1 tracking-wider font-semibold uppercase">{lead.jobTitle}</p>}
+            <h2 className="text-2xl font-black text-white mb-2 leading-none tracking-tighter uppercase neon-text">{lead.company || "X_AGENCY"}</h2>
+            <p className="text-[#555] text-[10px] tracking-[0.4em] font-black uppercase">{lead.name || "UNKNOWN_OP"}</p>
+            {lead.jobTitle && <p className="text-[#FF6B00] text-[8px] mt-2 tracking-[0.2em] font-black uppercase opacity-60">{lead.jobTitle}</p>}
           </div>
           
-          <div className="space-y-6 pt-6 border-t border-[#1A1A1A]">
-            <div className="flex flex-col items-center">
-              <span className="text-[9px] tracking-[0.2em] text-[#444] uppercase mb-2 font-black">AI Lead Score</span>
+          <div className="space-y-8 flex-1">
+            <div className="flex flex-col items-center bg-black/40 p-6 border border-white/5">
+              <span className="text-[8px] tracking-[0.4em] text-[#333] uppercase mb-4 font-black">Lead_Intensity</span>
               <RankMeter rank={lead.rank} />
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-3xl font-black text-white">{lead.rank}</span>
-                <span className="text-[10px] text-[#333] font-bold">/10</span>
+              <div className="flex items-baseline gap-2 mt-4">
+                <span className="text-4xl font-mono font-black neon-text">{lead.rank}</span>
+                <span className="text-[10px] text-[#222] font-black tracking-widest">/10_SCORE</span>
               </div>
             </div>
-            
-            <div className={`py-2 px-4 text-[9px] font-black tracking-[0.3em] text-center border ${priorityBadge.cls}`}>
-              {priorityBadge.label}
-            </div>
 
-            <div className="space-y-4 pt-4">
-              <DetailRow label="Pipeline" value={lead.emailStatus || "In Queue"} />
-              <DetailRow label="Sector" value={lead.sector || lead.category || "General"} />
+            <div className="space-y-4">
+               <SidebarItem label="PIPELINE_STATUS" value={lead.emailStatus || "READY"} glow />
+               <SidebarItem label="SECTOR_NODE" value={lead.sector || lead.category || "GENERAL"} />
+               <SidebarItem label="GEO_CITY" value={lead.city || "UNKNOWN"} />
             </div>
           </div>
 
-          <div className="mt-8">
-            <button onClick={onClose} className="w-full py-3 bg-white/5 border border-white/10 text-[9px] tracking-[0.3em] text-white hover:bg-white/10 transition-all font-black uppercase">
-              Close Record
-            </button>
-          </div>
+          <button 
+            onClick={onClose} 
+            className="mt-10 py-5 bg-white/5 border border-white/10 text-[9px] tracking-[0.5em] text-[#444] hover:text-[#FF6B00] hover:border-[#FF6B00] transition-all font-black uppercase"
+          >
+            Terminal_Exit
+          </button>
         </div>
 
-        {/* Main Content Pane */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-12 relative bg-gradient-to-b from-[#0A0A0A] to-[#080808]">
-          <div className="max-w-3xl">
-            {/* Header / Intro */}
-            <div className="mb-12">
-              <div className="flex items-center gap-3 mb-6">
-                <IconRocket />
-                <span className="text-[10px] tracking-[0.4em] text-[#FF6B00] uppercase font-black">Lead Intelligence Report</span>
-              </div>
-              <div className="bg-[#000] border-l-4 border-[#FF6B00] p-8 shadow-inner">
-                 <span className="text-[9px] tracking-[0.2em] text-[#555] uppercase block mb-4 font-black">GPT-4o Scoring Rationale</span>
-                 <p className="text-white text-xl leading-relaxed italic font-serif">
-                   "{lead.scoreReason || "No intelligence analysis generated for this record."}"
-                 </p>
-                 {lead.headline && <p className="mt-6 text-[11px] text-[#444] border-t border-[#111] pt-4 font-mono">{lead.headline}</p>}
-              </div>
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto p-10 md:p-14 bg-[#050505]/40 custom-scrollbar">
+          {/* AI Intelligence Block */}
+          <div className="mb-14">
+            <SectionLabel icon={<IconRocket />} label="INTEL_RATIONALE" />
+            <div className="bg-[#FF6B00]/5 border border-orange-500/10 p-10 relative overflow-hidden group">
+               <div className="absolute top-0 left-0 w-1 h-full bg-[#FF6B00] glow-orange-strong" />
+               <p className="text-white text-xl leading-relaxed italic font-medium group-hover:neon-text transition-colors">
+                 "{lead.scoreReason || "No deep assessment data available for this record."}"
+               </p>
+               {lead.headline && (
+                 <div className="mt-8 pt-6 border-t border-white/5">
+                   <span className="text-[8px] tracking-[0.4em] text-[#333] font-black uppercase block mb-2">Context_Head</span>
+                   <p className="text-[11px] text-[#666] font-mono leading-relaxed">{lead.headline}</p>
+                 </div>
+               )}
             </div>
+          </div>
 
             {/* Information Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12 mb-12">
@@ -504,29 +548,9 @@ function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
 }
 
-function DetailRow({ label, value, isLink, href }: { label: string, value: string, isLink?: boolean, href?: string }) {
-  return (
-    <div>
-      <span className="text-[9px] tracking-[0.15em] text-[#444] uppercase block mb-1">{label}</span>
-      {isLink && href && value !== "—" ? (
-        <a 
-          href={href} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="text-sm text-white hover:text-[#FF6B00] transition-colors break-all"
-        >
-          {value}
-        </a>
-      ) : (
-        <span className="text-sm text-white break-all">{value}</span>
-      )}
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════════════
    CAMPAIGN LAUNCHER + EMAIL GALLERY
@@ -619,20 +643,29 @@ function EmailCard({
 
   return (
     <div
-      className="bg-[#0D0D0D] border border-[#1A1A1A] transition-all hover:border-[#333] group"
-      style={{ borderTopColor: TIER_COLOR[report.tier], borderTopWidth: "3px" }}
+      className="glass-obsidian transition-all duration-300 hover:glow-orange-strong group cyber-border fade-up"
+      style={{ borderTopColor: TIER_COLOR[report.tier], borderTopWidth: "4px" }}
     >
+      <div className="absolute top-0 right-0 p-1">
+         <div className="w-1 h-1 bg-white/20 animate-pulse" />
+      </div>
       {/* Lead header */}
       <div className="p-6">
         <div className="flex items-start justify-between gap-3 mb-1">
-          <span className="text-white font-bold tracking-tight text-base leading-tight group-hover:text-[#FF6B00] transition-colors">
-            {email.lead.company || "(no company)"}
-          </span>
+          <div className="min-w-0">
+             <span className="text-white font-bold tracking-tight text-base leading-tight group-hover:text-[#FF6B00] transition-colors block truncate">
+               {email.lead.company || "(no company)"}
+             </span>
+             {email.lead.jobTitle && <span className="text-[9px] text-[#555] font-black uppercase tracking-widest block mt-0.5">{email.lead.jobTitle}</span>}
+          </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <div className="bg-[#0A0A0A] border border-[#1A1A1A] px-2 py-0.5 flex items-center gap-1.5">
-               <span className="text-[9px] text-[#444] font-bold">RANK</span>
-               <span className="text-[#FF6B00] text-[10px] font-black">{email.lead.rank}</span>
-            </div>
+             {email.lead.seniority && (
+                <div className="px-1.5 py-0.5 bg-white/5 border border-white/10 text-[8px] text-[#666] font-bold uppercase">{email.lead.seniority}</div>
+             )}
+             <div className="bg-[#0A0A0A] border border-[#1A1A1A] px-2 py-0.5 flex items-center gap-1.5">
+                <span className="text-[9px] text-[#444] font-bold">RANK</span>
+                <span className="text-[#FF6B00] text-[10px] font-black">{email.lead.rank}</span>
+             </div>
           </div>
         </div>
         
@@ -1127,40 +1160,57 @@ function CampaignLauncher({ onSelectLead }: { onSelectLead?: (lead: LeadInfo) =>
 
   /* ── LAUNCHER (default) ── */
   return (
-    <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6 glow">
-      <SectionLabel icon={<IconRocket />} label="Launch Campaign" />
-      <div className="flex items-end gap-6">
+    <div className="glass-obsidian-strong border border-orange-500/10 p-10 glow-orange-strong cyber-border fade-up">
+      <SectionLabel icon={<IconRocket />} label="Initialize Outreach Protocol" />
+      
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] items-end gap-8 bg-black/60 p-8 border border-white/5 relative group">
         <div className="flex-1">
-          <label className="block text-[10px] tracking-[0.2em] text-[#888] uppercase mb-2">
-            Lead Limit
+          <label className="block text-[8px] tracking-[0.4em] text-[#555] uppercase mb-4 font-black">
+            Batch Extraction Quantity // GPT-4o Scope
           </label>
-          <input
-            type="number"
-            min={1}
-            max={50}
-            value={leadLimit}
-            onChange={(e) => setLeadLimit(Number(e.target.value))}
-            className="w-full bg-[#060606] border border-[#222] text-white px-4 py-3 text-lg font-bold tracking-wide focus:outline-none focus:border-[#FF6B00] transition-colors"
-          />
-        </div>
-        <div className="flex items-center gap-2 pb-3">
-          <div className="px-3 py-1.5 bg-[#FF6B00]/10 border border-[#FF6B00]/30 text-[10px] text-[#FF6B00] tracking-wider font-bold">
-            EMAIL
+          <div className="relative">
+            <input
+              type="number"
+              min={1}
+              max={50}
+              value={leadLimit}
+              onChange={(e) => setLeadLimit(Number(e.target.value))}
+              className="w-full bg-[#030303] border border-[#1A1A1A] text-[#FF6B00] px-6 py-5 text-3xl font-mono font-black tracking-tighter focus:outline-none focus:border-orange-500/50 transition-all"
+            />
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 text-[9px] text-[#222] font-mono tracking-widest">LEADS_TOTAL</div>
           </div>
         </div>
+
+        <div className="flex flex-col gap-3">
+          <span className="text-[8px] tracking-[0.3em] text-[#333] uppercase font-bold text-center">Active Node</span>
+          <div className="px-6 py-3 bg-[#FF6B00]/5 border border-[#FF6B00]/20 text-[10px] text-[#FF6B00] tracking-[0.3em] font-black neon-text">
+            SMTP: {validCount} CHNL
+          </div>
+        </div>
+
+        <button
+          onClick={handlePreview}
+          className="bg-[#FF6B00] text-black font-black px-12 py-5 text-[10px] tracking-[0.4em] hover:bg-white transition-all cursor-pointer shadow-[0_0_30px_rgba(255,107,0,0.4)] uppercase group relative h-full flex items-center"
+        >
+          Generate Previews →
+        </button>
       </div>
-      <button
-        onClick={handlePreview}
-        className="w-full mt-6 bg-[#FF6B00] text-black font-bold py-4 text-xs tracking-[0.3em] hover:bg-[#E55F00] transition-all cursor-pointer"
-      >
-        PREVIEW EMAILS
-      </button>
+      
       {previewError && (
-        <div className="mt-4 flex items-center gap-2 p-3 border border-red-900/50 bg-red-950/20">
-          <div className="w-2 h-2 bg-red-500 shrink-0" />
-          <span className="text-xs tracking-wider text-red-400">{previewError}</span>
+        <div className="mt-6 flex items-center gap-3 p-5 glass-obsidian border-red-500/20 text-red-500">
+           <div className="w-2 h-2 bg-red-500 animate-ping shrink-0" />
+           <span className="text-[10px] tracking-widest">{previewError.toUpperCase()}</span>
         </div>
       )}
+
+      <div className="mt-6 flex items-center gap-4">
+        <div className="flex items-center gap-1.5">
+           <div className="w-1.5 h-1.5 bg-[#FF6B00] pulse-glow" />
+           <span className="text-[8px] text-[#333] tracking-[0.2em] font-black uppercase">GPT-4o Ready</span>
+        </div>
+        <div className="h-px bg-[#111] flex-1" />
+        <span className="text-[8px] text-[#222] font-mono">EST_LATENCY: 450MS_P_LEAD</span>
+      </div>
     </div>
   );
 }
@@ -1243,30 +1293,46 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
 
           {/* Top leads table */}
           {data.top_leads.length > 0 && (
-            <div className="bg-[#0A0A0A] border border-[#161616] p-4">
-              <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-3">Top Leads by Rank</div>
-              <div className="space-y-0 max-h-64 overflow-y-auto">
+            <div className="glass-obsidian p-6 glow-orange transition-all hover:border-orange-500/20">
+              <div className="flex items-center justify-between mb-5">
+                <div className="text-[10px] tracking-[0.4em] text-[#FF6B00] uppercase font-black neon-text">
+                  Intelligence Feed // Priority Leads
+                </div>
+                <div className="flex items-center gap-2">
+                   <div className="w-1 h-1 bg-[#FF6B00] animate-pulse" />
+                   <span className="text-[8px] text-[#444] font-mono">LIVE_SYNC</span>
+                </div>
+              </div>
+
+              <div className="space-y-1 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                 {/* Header */}
-                <div className="grid grid-cols-[2rem_1fr_auto_4rem] gap-2 pb-2 border-b border-[#161616] text-[9px] text-[#555] tracking-wider uppercase">
-                  <span>Rnk</span>
-                  <span>Agency</span>
-                  <span>City</span>
-                  <span className="text-right">Status</span>
+                <div className="grid grid-cols-[3rem_1fr_auto_5rem] gap-4 pb-3 border-b border-[#1A1A1A] text-[9px] text-[#333] tracking-[0.2em] font-black uppercase">
+                  <span>RANK</span>
+                  <span>AGENCY_ID</span>
+                  <span>LOCATION</span>
+                  <span className="text-right">STATUS</span>
                 </div>
                 {data.top_leads.map((lead, i) => (
                   <div 
                     key={i} 
                     onClick={() => onSelectLead(lead)}
-                    className="grid grid-cols-[2rem_1fr_auto_4rem] gap-2 py-2 border-b border-[#0D0D0D] last:border-0 items-center cursor-pointer hover:bg-[#FF6B00]/5 transition-colors group"
+                    className="grid grid-cols-[3rem_1fr_auto_5rem] gap-4 py-3 border-b border-[#111] last:border-0 items-center cursor-pointer hover:bg-[#FF6B00]/5 transition-all group hover:pl-2"
                   >
-                    <span className="text-[11px] font-bold text-[#555] group-hover:text-[#FF6B00] truncate">{lead.rank}</span>
-                    <span className="text-[11px] text-[#AAA] group-hover:text-white truncate font-medium">{lead.company}</span>
-                    <span className="text-[10px] text-[#444] truncate">{lead.city}</span>
+                    <span className="text-xs font-black text-[#555] group-hover:neon-text group-hover:scale-110 transition-all font-mono">
+                       {lead.rank.toString().padStart(2, '0')}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="text-[11px] text-[#AAA] group-hover:text-white transition-colors font-bold block truncate uppercase tracking-wider">
+                        {lead.company}
+                      </span>
+                      <span className="text-[8px] text-[#333] font-mono">{lead.category}</span>
+                    </div>
+                    <span className="text-[10px] text-[#444] font-medium uppercase group-hover:text-[#888]">{lead.city}</span>
                     <div className="flex justify-end">
                       {lead.emailStatus === "Sent" ? (
-                        <span className="text-[8px] px-1.5 py-0.5 bg-green-950/20 border border-green-900/40 text-green-500 tracking-wider">SENT</span>
+                        <span className="text-[8px] px-2 py-0.5 bg-green-950/30 border border-green-500/30 text-green-400 font-black tracking-widest glow-green">SENT</span>
                       ) : (
-                        <span className="text-[8px] px-1.5 py-0.5 bg-[#111] border border-[#222] text-[#555] tracking-wider">QUEUE</span>
+                        <span className="text-[8px] px-2 py-0.5 bg-[#080808] border border-[#1A1A1A] text-[#444] group-hover:border-[#FF6B00]/40 group-hover:text-[#FF6B00] font-black tracking-widest transition-all">READY</span>
                       )}
                     </div>
                   </div>
