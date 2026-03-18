@@ -51,3 +51,4 @@ kronosautomations/
 # === Build artifacts ===
 *.tgz
 *.tar.gz
+.vercel

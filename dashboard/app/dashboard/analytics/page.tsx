@@ -37,15 +37,27 @@ export default function AnalyticsPage() {
     async function loadData() {
       setLoading(true);
       try {
-        const [statsRes, historyRes] = await Promise.all([
+        const [statsRes, historyRes, leadsRes] = await Promise.all([
           fetch(`/api/analytics/email?days=${days}`),
-          fetch(`/api/analytics/history`)
+          fetch(`/api/analytics/history`),
+          fetch(`/api/analytics/leads`)
         ]);
         
         const statsData = await statsRes.json();
         const historyData = await historyRes.json();
+        const leadsData = await leadsRes.json();
         
-        if (statsRes.ok) setStats(statsData);
+        if (statsRes.ok && leadsRes.ok) {
+           setStats({
+              total_leads: leadsData.total || 0,
+              sent_emails: statsData.totals?.delivered || 0,
+              open_rate: parseFloat(statsData.openRate || "0"),
+              click_rate: parseFloat(statsData.clickRate || "0"),
+              bounce_rate: statsData.totals?.delivered > 0 
+                ? parseFloat(((statsData.totals.bounces / statsData.totals.delivered) * 100).toFixed(1))
+                : 0
+           });
+        }
         if (historyRes.ok) setHistory(historyData.history || []);
       } catch (err) {
         console.error("Failed to load analytics:", err);
