@@ -577,10 +577,12 @@ function EmailCard({
   email,
   onUpdate,
   onRegenerate,
+  onSelectLead,
 }: {
   email: GalleryEmail;
   onUpdate: (updates: Partial<GalleryEmail>) => void;
   onRegenerate: (mode: "standard" | "plain") => void;
+  onSelectLead?: (lead: LeadInfo) => void;
 }) {
   const report = useMemo(
     () => scoreDeliverability(email.subject, email.emailBody),
@@ -643,20 +645,31 @@ function EmailCard({
         {/* Info Tiles */}
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-[#0A0A0A] border border-[#161616] p-2">
-            <span className="text-[8px] text-[#333] uppercase block mb-0.5 tracking-[0.1em]">Lead Representative</span>
-            <span className="text-[10px] text-[#888] truncate block font-medium uppercase">{email.lead.name || "N/A"}</span>
+            <span className="text-[8px] text-[#333] uppercase block mb-0.5 tracking-[0.1em]">Revenue / Size</span>
+            <span className="text-[10px] text-[#888] truncate block font-medium uppercase">
+              {email.lead.revenue || "—"} / {email.lead.companySize || "—"}
+            </span>
           </div>
           <div className="bg-[#0A0A0A] border border-[#161616] p-2">
-            <span className="text-[8px] text-[#333] uppercase block mb-0.5 tracking-[0.1em]">Category</span>
-            <span className="text-[10px] text-[#888] truncate block font-medium uppercase">{email.lead.category || "General"}</span>
+            <span className="text-[8px] text-[#333] uppercase block mb-0.5 tracking-[0.1em]">Industry / Seniority</span>
+            <span className="text-[10px] text-[#888] truncate block font-medium uppercase font-semibold">
+              {email.lead.sector || email.lead.category || "—"} · {email.lead.seniority || "—"}
+            </span>
           </div>
         </div>
 
         {email.lead.scoreReason && (
-          <div className="bg-[#080808] border border-[#141414] p-3 text-[10px] text-[#666] leading-relaxed italic border-l-2 border-l-[#1A1A1A] group-hover:border-l-[#FF6B00] transition-all">
+          <div className="bg-[#080808] border border-[#141414] p-3 text-[10px] text-[#666] leading-relaxed italic border-l-2 border-l-[#1A1A1A] group-hover:border-l-[#FF6B00] transition-all mb-4">
             "{email.lead.scoreReason}"
           </div>
         )}
+
+        <button 
+          onClick={() => onSelectLead?.(email.lead)}
+          className="w-full py-2 border border-dashed border-[#1A1A1A] text-[8px] tracking-[0.2em] text-[#444] hover:text-white hover:border-white transition-all uppercase font-bold"
+        >
+          View Expanded Intelligence Profile
+        </button>
       </div>
 
       {/* Deliverability */}
@@ -781,7 +794,7 @@ function EmailCard({
   );
 }
 
-function CampaignLauncher() {
+function CampaignLauncher({ onSelectLead }: { onSelectLead?: (lead: LeadInfo) => void }) {
   const [mode, setMode] = useState<GalleryMode>("launcher");
   const [leadLimit, setLeadLimit] = useState(10);
   const [emails, setEmails] = useState<GalleryEmail[]>([]);
@@ -1098,12 +1111,13 @@ function CampaignLauncher() {
           </button>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {emails.map((email) => (
+          {emails.map((e) => (
             <EmailCard
-              key={email.recordId}
-              email={email}
-              onUpdate={(updates) => updateEmail(email.recordId, updates)}
-              onRegenerate={(m) => handleRegenerate(email.recordId, m)}
+              key={e.recordId}
+              email={e}
+              onSelectLead={onSelectLead}
+              onUpdate={(upd) => updateEmail(e.recordId, upd)}
+              onRegenerate={(m) => handleRegenerate(e.recordId, m)}
             />
           ))}
         </div>
@@ -1595,7 +1609,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <CampaignLauncher />
+      <CampaignLauncher onSelectLead={setSelectedLead} />
       <LeadsAnalytics onSelectLead={setSelectedLead} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <EmailAnalytics />

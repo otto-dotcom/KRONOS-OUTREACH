@@ -498,3 +498,10 @@ export async function runOutreach(leadLimit = 10): Promise<OutreachResult> {
 
   return result;
 }
+
+function requireEnv() {
+  // Prefer environment variables, fallback to verified dashboard IDs
+  const baseId = process.env.AIRTABLE_BASE_ID || "appLriEwWldpPTMPg";
+  const tableId = process.env.AIRTABLE_TABLE_ID || "tblLZkFo7Th7uyfWB";
+  return { baseId, tableId };
+}
