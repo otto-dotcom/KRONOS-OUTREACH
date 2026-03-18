@@ -16,10 +16,33 @@ interface AirtableRecord {
     Rank?: number;
     lead_status?: string;
     "EMAIL STATUS"?: string;
+    URL?: string;
+    score_reason?: string;
+    TECHNOLOGY?: string;
+    "Postal code"?: string;
+    State?: string;
+    KEYWORDS?: string;
+    LINKEDIN?: string;
+    REVENUE?: string;
+    "JOB TITLE"?: string;
+    HEADLINE?: string;
+    SENIORITY?: string;
+    "COMPANY SIZE"?: string;
+    "COMPANY DESCRIPTION"?: string;
+    INSTAGRAM?: string;
+    SECTOR?: string;
+    Address?: string;
+    Street?: string;
   };
 }
 
-const FIELDS = ["lead_status", "EMAIL STATUS", "Rank", "FULL NAME", "company name", "City", "EMAIL"]
+const FIELDS = [
+  "lead_status", "EMAIL STATUS", "Rank", "FULL NAME", "company name", "City", 
+  "EMAIL", "Phone", "Category", "URL", "score_reason", "TECHNOLOGY", 
+  "Postal code", "State", "KEYWORDS", "LINKEDIN", "REVENUE", "JOB TITLE", 
+  "HEADLINE", "SENIORITY", "COMPANY SIZE", "COMPANY DESCRIPTION", "INSTAGRAM", 
+  "SECTOR", "Address", "Street"
+]
   .map((f) => `fields[]=${encodeURIComponent(f)}`)
   .join("&");
 
@@ -64,13 +87,35 @@ export async function GET() {
     const topLeads = records
       .filter((r) => r.fields.EMAIL && r.fields.Rank)
       .sort((a, b) => (b.fields.Rank ?? 0) - (a.fields.Rank ?? 0))
-      .slice(0, 15)
+      .slice(0, 30) // Increased to 30 for better visibility
       .map((r) => ({
+        id: r.id,
         name: r.fields["FULL NAME"] ?? "—",
         company: r.fields["company name"] ?? "—",
         city: r.fields.City ?? "—",
         rank: r.fields.Rank ?? 0,
-        emailStatus: r.fields["EMAIL STATUS"] ?? "",
+        emailStatus: r.fields["EMAIL STATUS"] ?? "Pending",
+        email: r.fields.EMAIL ?? "",
+        phone: (r.fields as any).Phone ?? "",
+        category: (r.fields as any).Category ?? "",
+        url: r.fields.URL ?? "",
+        scoreReason: r.fields.score_reason ?? "",
+        leadStatus: r.fields.lead_status ?? "low",
+        tech: r.fields.TECHNOLOGY ?? "",
+        postalCode: r.fields["Postal code"] ?? "",
+        state: r.fields.State ?? "",
+        keywords: r.fields.KEYWORDS ?? "",
+        linkedin: r.fields.LINKEDIN ?? "",
+        revenue: r.fields.REVENUE ?? "",
+        jobTitle: r.fields["JOB TITLE"] ?? "",
+        headline: r.fields.HEADLINE ?? "",
+        seniority: r.fields.SENIORITY ?? "",
+        companySize: r.fields["COMPANY SIZE"] ?? "",
+        companyDesc: r.fields["COMPANY DESCRIPTION"] ?? "",
+        instagram: r.fields.INSTAGRAM ?? "",
+        sector: r.fields.SECTOR ?? "",
+        address: r.fields.Address ?? "",
+        street: r.fields.Street ?? "",
       }));
 
     return NextResponse.json(

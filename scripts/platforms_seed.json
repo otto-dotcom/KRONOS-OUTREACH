@@ -1,0 +1,302 @@
+[
+  {
+    "name": "Upwork",
+    "url": "https://upwork.com",
+    "rank": "200",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Freelancer",
+    "url": "https://www.freelancer.com/affiliates/andychase",
+    "rank": "700",
+    "type": "Client Platform"
+  },
+  {
+    "name": "PeoplePerHour",
+    "url": "https://www.peopleperhour.com",
+    "rank": "2,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Toptal",
+    "url": "https://www.toptal.com/BLjoyn/worlds-top-talent",
+    "rank": "3,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Guru.com",
+    "url": "http://www.guru.com/",
+    "rank": "5,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Turing",
+    "url": "https://turing.com/",
+    "rank": "6,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Truelancer",
+    "url": "https://www.truelancer.com",
+    "rank": "10,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Crossover",
+    "url": "https://www.crossover.com",
+    "rank": "10,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "arc.dev",
+    "url": "https://arc.dev/",
+    "rank": "20,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Scalable Path",
+    "url": "https://www.scalablepath.com/",
+    "rank": "70,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "freelancermap",
+    "url": "https://www.freelancermap.com/it-projects.html",
+    "rank": "80,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "StoreTasker",
+    "url": "https://www.storetasker.com/",
+    "rank": "100,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Soshace",
+    "url": "https://www.soshace.com/",
+    "rank": "100,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Adeva",
+    "url": "https://adevait.com/",
+    "rank": "200,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Speedlancer",
+    "url": "https://speedlancer.com/",
+    "rank": "600,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Worksome",
+    "url": "https://worksome.co.uk/",
+    "rank": "2,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "CodeMentor.io",
+    "url": "https://www.codementor.io",
+    "rank": "10,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Fiverr",
+    "url": "https://www.fiverr.com/",
+    "rank": "100",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Bonsai",
+    "url": "https://app.hellobonsai.com/users/sign_up?refer=8728021d",
+    "rank": "20,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Jobdone.net",
+    "url": "https://jobdone.net/explore?",
+    "rank": "1,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "\\#frontenddevelopers.org",
+    "url": "http://frontenddevelopers.org/",
+    "rank": "1,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Remote One",
+    "url": "https://remote.one/",
+    "rank": "1,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Clarrow",
+    "url": "https://clarrow.com/",
+    "rank": "2,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Dribbble Jobs",
+    "url": "https://dribbble.com/obs?utf8=%E2%9C%93&anywhere=true&location=Anywhere",
+    "rank": "1,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Angel List Jobs",
+    "url": "https://angel.co/jobs#find/f!%7B%22remote%22%3Atrue%7D",
+    "rank": "2,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "FlexJobs",
+    "url": "https://www.flexjobs.com",
+    "rank": "7,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "We Work Remotely",
+    "url": "https://weworkremotely.com/",
+    "rank": "10,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Hired",
+    "url": "https://hired.com/",
+    "rank": "20,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "RemoteOK",
+    "url": "https://remoteok.io/",
+    "rank": "80,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Himalayas",
+    "url": "https://himalayas.app",
+    "rank": "200,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "No Fluff Jobs",
+    "url": "https://nofluffjobs.com/#criteria=remote",
+    "rank": "200,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Golangprojects.com",
+    "url": "https://www.golangprojects.com/golang-remote-jobs.html",
+    "rank": "600,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Remotesome.com",
+    "url": "https://www.remotesome.com/",
+    "rank": "1,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "RemoteYeah",
+    "url": "https://remoteyeah.com/",
+    "rank": "2,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Jobhunt.ai",
+    "url": "https://jobhunt.ai/machinelearning-remote-jobs.html",
+    "rank": "8,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Team Extension",
+    "url": "https://teamextension.io/",
+    "rank": "8,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Codeable",
+    "url": "https://codeable.io/",
+    "rank": "40,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Superside",
+    "url": "https://www.superside.com/",
+    "rank": "50,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Working Not Working",
+    "url": "https://workingnotworking.com/",
+    "rank": "70,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "X-Team",
+    "url": "http://x-team.com",
+    "rank": "70,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Experfy",
+    "url": "https://www.experfy.com/",
+    "rank": "80,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Gun.io",
+    "url": "https://gun.io/",
+    "rank": "100,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Gigster",
+    "url": "https://gigster.com/",
+    "rank": "200,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "DOZ.com",
+    "url": "https://www.doz.com",
+    "rank": "500,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Moonlight",
+    "url": "https://www.moonlightwork.com",
+    "rank": "1,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "10xmanagement",
+    "url": "https://www.10xmanagement.com/",
+    "rank": "1,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Lightboard",
+    "url": "https://lightboard.io",
+    "rank": "2,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "MeteorOps.com",
+    "url": "https://meteorops.com",
+    "rank": "10,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "Dreamlance",
+    "url": "http://dreamlance.io/",
+    "rank": "10,000,000",
+    "type": "Client Platform"
+  },
+  {
+    "name": "CodersClan.net",
+    "url": "https://codersclan.net",
+    "rank": "10,000,000",
+    "type": "Client Platform"
+  }
+]

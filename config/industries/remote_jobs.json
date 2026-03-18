@@ -1,0 +1,81 @@
+{
+  "industry_id": "remote_jobs",
+  "display_name": "Global Remote Jobs",
+  "region": "GLOBAL",
+  "language": ["en"],
+
+  "data_sources": [
+    {
+      "name": "WeWorkRemotely",
+      "type": "apify",
+      "actor_id": "apify/weworkremotely-scraper",
+      "input": {
+        "maxItems": 100,
+        "search": "Full Stack Developer"
+      },
+      "field_mapping": {
+        "company_name": ["companyName"],
+        "job_title": ["title"],
+        "url": ["url"],
+        "location": ["location"],
+        "description": ["description"]
+      },
+      "enabled": true
+    },
+    {
+      "name": "RemoteOK",
+      "type": "apify",
+      "actor_id": "apify/remoteok-scraper",
+      "input": {
+        "maxItems": 100
+      },
+      "field_mapping": {
+        "company_name": ["company"],
+        "job_title": ["position"],
+        "url": ["url"],
+        "description": ["description"]
+      },
+      "enabled": true
+    }
+  ],
+
+  "scoring": {
+    "model": "openai/gpt-4o-mini",
+    "batch_size": 25,
+    "criteria": [
+      {
+        "name": "role_fit",
+        "weight": 5,
+        "description": "How well the job title and description match 'Full Stack Developer' or 'Lead Developer'"
+      },
+      {
+        "name": "compensation_clues",
+        "weight": 2,
+        "description": "Mentions of budget, salary ranges, or professional environment"
+      },
+      {
+        "name": "freshness",
+        "weight": 3,
+        "description": "Jobs posted in the last 48 hours"
+      }
+    ],
+    "thresholds": {
+      "priority": 8,
+      "medium": 6,
+      "low": 0
+    },
+    "system_prompt": "You are a recruitment scout. Score remote job postings 1-10 based on value for a Senior Full Stack Developer. Return ONLY JSON."
+  },
+
+  "outreach": {
+    "email_template_context": "Direct application highlighting 5+ years of experience in JavaScript, React, and Backend Automation. Mention KRONOS as a proof of concept.",
+    "value_proposition": "I build automated pipelines that replace 10-20 hours of manual data entry per week."
+  },
+
+  "deduplication": {
+    "match_fields": ["url", "company_name"],
+    "normalize_company_name": true
+  },
+
+  "scrape_frequency_hours": 12
+}

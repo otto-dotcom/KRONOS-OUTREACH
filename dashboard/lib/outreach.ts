@@ -67,14 +67,33 @@ export interface EmailCopy {
 export interface EmailPreview {
   recordId: string;
   lead: {
+    id: string;
     name: string;
     company: string;
     city: string;
     email: string;
+    phone: string;
+    category: string;
     url: string;
     rank: string | number;
     scoreReason: string;
     leadStatus: string;
+    emailStatus?: string;
+    tech?: string;
+    postalCode?: string;
+    state?: string;
+    keywords?: string;
+    linkedin?: string;
+    revenue?: string;
+    jobTitle?: string;
+    headline?: string;
+    seniority?: string;
+    companySize?: string;
+    companyDesc?: string;
+    instagram?: string;
+    sector?: string;
+    address?: string;
+    street?: string;
   };
   subject: string;
   emailBody: string;
@@ -298,49 +317,86 @@ export async function previewOutreach(leadLimit = 10): Promise<EmailPreview[]> {
   const { baseId, tableId } = requireEnv();
   const leads = await fetchLeads(baseId, tableId, leadLimit);
 
-  const previews: EmailPreview[] = [];
-
-  for (const lead of leads) {
+  const previewPromises = leads.map(async (lead) => {
     const email = lead.fields.EMAIL;
-    if (!email) continue;
+    if (!email) return null;
 
     try {
       const copy = await generateEmailCopy(lead);
-      previews.push({
+      return {
         recordId: lead.id,
         lead: {
+          id: lead.id,
           name: String(lead.fields["FULL NAME"] ?? ""),
           company: String(lead.fields["company name"] ?? ""),
           city: String(lead.fields.City ?? ""),
           email,
+          phone: String((lead.fields as any).Phone ?? ""),
+          category: String((lead.fields as any).Category ?? ""),
           url: String(lead.fields.URL ?? ""),
           rank: lead.fields.Rank ?? "",
           scoreReason: String(lead.fields.score_reason ?? ""),
           leadStatus: String(lead.fields.lead_status ?? ""),
+          emailStatus: String(lead.fields["EMAIL STATUS"] ?? "Pending"),
+          tech: String((lead.fields as any).TECHNOLOGY ?? ""),
+          postalCode: String((lead.fields as any)["Postal code"] ?? ""),
+          state: String((lead.fields as any).State ?? ""),
+          keywords: String((lead.fields as any).KEYWORDS ?? ""),
+          linkedin: String((lead.fields as any).LINKEDIN ?? ""),
+          revenue: String((lead.fields as any).REVENUE ?? ""),
+          jobTitle: String((lead.fields as any)["JOB TITLE"] ?? ""),
+          headline: String((lead.fields as any).HEADLINE ?? ""),
+          seniority: String((lead.fields as any).SENIORITY ?? ""),
+          companySize: String((lead.fields as any)["COMPANY SIZE"] ?? ""),
+          companyDesc: String((lead.fields as any)["COMPANY DESCRIPTION"] ?? ""),
+          instagram: String((lead.fields as any).INSTAGRAM ?? ""),
+          sector: String((lead.fields as any).SECTOR ?? ""),
+          address: String((lead.fields as any).Address ?? ""),
+          street: String((lead.fields as any).Street ?? ""),
         },
         subject: copy.subject,
         emailBody: copy.emailBody,
-      });
+      };
     } catch (err) {
-      previews.push({
+      return {
         recordId: lead.id,
         lead: {
+          id: lead.id,
           name: String(lead.fields["FULL NAME"] ?? ""),
           company: String(lead.fields["company name"] ?? ""),
           city: String(lead.fields.City ?? ""),
           email,
+          phone: String((lead.fields as any).Phone ?? ""),
+          category: String((lead.fields as any).Category ?? ""),
           url: String(lead.fields.URL ?? ""),
           rank: lead.fields.Rank ?? "",
           scoreReason: String(lead.fields.score_reason ?? ""),
           leadStatus: String(lead.fields.lead_status ?? ""),
+          emailStatus: String(lead.fields["EMAIL STATUS"] ?? "Pending"),
+          tech: String((lead.fields as any).TECHNOLOGY ?? ""),
+          postalCode: String((lead.fields as any)["Postal code"] ?? ""),
+          state: String((lead.fields as any).State ?? ""),
+          keywords: String((lead.fields as any).KEYWORDS ?? ""),
+          linkedin: String((lead.fields as any).LINKEDIN ?? ""),
+          revenue: String((lead.fields as any).REVENUE ?? ""),
+          jobTitle: String((lead.fields as any)["JOB TITLE"] ?? ""),
+          headline: String((lead.fields as any).HEADLINE ?? ""),
+          seniority: String((lead.fields as any).SENIORITY ?? ""),
+          companySize: String((lead.fields as any)["COMPANY SIZE"] ?? ""),
+          companyDesc: String((lead.fields as any)["COMPANY DESCRIPTION"] ?? ""),
+          instagram: String((lead.fields as any).INSTAGRAM ?? ""),
+          sector: String((lead.fields as any).SECTOR ?? ""),
+          address: String((lead.fields as any).Address ?? ""),
+          street: String((lead.fields as any).Street ?? ""),
         },
         subject: `[GENERATION FAILED] ${err instanceof Error ? err.message : String(err)}`,
         emailBody: "",
-      });
+      };
     }
-  }
+  });
 
-  return previews;
+  const results = await Promise.all(previewPromises);
+  return (results.filter((p) => p !== null) as EmailPreview[]);
 }
 
 /** Send a pre-approved set of emails (from gallery review). */
@@ -348,41 +404,46 @@ export async function sendPreviews(items: SendItem[]): Promise<OutreachResult> {
   const { baseId, tableId } = requireEnv();
   const result: OutreachResult = { sent: 0, failed: 0, skipped: 0, errors: [] };
 
-  for (const item of items) {
-    if (!item.toEmail || !item.subject || !item.emailBody) {
-      result.skipped++;
-      continue;
-    }
+  // Process in batches of 5 to respect Airtable rate limits (5 rps)
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = items.slice(i, i + BATCH_SIZE);
+    
+    await Promise.all(batch.map(async (item) => {
+      if (!item.toEmail || !item.subject || !item.emailBody) {
+        result.skipped++;
+        return;
+      }
 
-    // Guard 1: check current status — skip if Sent or already Processing
-    const currentStatus = await fetchEmailStatus(baseId, tableId, item.recordId);
-    if (currentStatus === STATUS_SENT || currentStatus === STATUS_PROCESSING) {
-      result.skipped++;
-      result.errors.push(`${item.toEmail}: already ${currentStatus?.trim()} — skipped`);
-      continue;
-    }
+      // Guard 1: check current status — skip if Sent or already Processing
+      const currentStatus = await fetchEmailStatus(baseId, tableId, item.recordId);
+      if (currentStatus === STATUS_SENT || currentStatus === STATUS_PROCESSING) {
+        result.skipped++;
+        result.errors.push(`${item.toEmail}: already ${currentStatus?.trim()} — skipped`);
+        return;
+      }
 
-    // Guard 2: atomically claim the record by marking Processing
-    // Any concurrent call that checks after this will see Processing and skip
-    try {
-      await markProcessing(baseId, tableId, item.recordId);
-    } catch {
-      result.skipped++;
-      result.errors.push(`${item.toEmail}: could not claim record — skipped`);
-      continue;
-    }
+      // Guard 2: atomically claim the record by marking Processing
+      try {
+        await markProcessing(baseId, tableId, item.recordId);
+      } catch {
+        result.skipped++;
+        result.errors.push(`${item.toEmail}: could not claim record — skipped`);
+        return;
+      }
 
-    try {
-      await sendEmail(item.toEmail, { subject: item.subject, emailBody: item.emailBody });
-      await markSent(baseId, tableId, item.recordId, item.subject, item.emailBody);
-      result.sent++;
-    } catch (err) {
-      await markFailed(baseId, tableId, item.recordId);
-      result.failed++;
-      result.errors.push(
-        `${item.toEmail}: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
+      try {
+        await sendEmail(item.toEmail, { subject: item.subject, emailBody: item.emailBody });
+        await markSent(baseId, tableId, item.recordId, item.subject, item.emailBody);
+        result.sent++;
+      } catch (err) {
+        await markFailed(baseId, tableId, item.recordId);
+        result.failed++;
+        result.errors.push(
+          `${item.toEmail}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }));
   }
 
   return result;
@@ -395,38 +456,44 @@ export async function runOutreach(leadLimit = 10): Promise<OutreachResult> {
   const result: OutreachResult = { sent: 0, failed: 0, skipped: 0, errors: [] };
   const leads = await fetchLeads(baseId, tableId, leadLimit);
 
-  for (const lead of leads) {
-    const email = lead.fields.EMAIL;
-    if (!email) {
-      result.skipped++;
-      continue;
-    }
+  // Use batching to avoid timeouts and rate limits
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < leads.length; i += BATCH_SIZE) {
+    const batch = leads.slice(i, i + BATCH_SIZE);
 
-    // Guard 1: check current status
-    const currentStatus = await fetchEmailStatus(baseId, tableId, lead.id);
-    if (currentStatus === STATUS_SENT || currentStatus === STATUS_PROCESSING) {
-      result.skipped++;
-      continue;
-    }
+    await Promise.all(batch.map(async (lead) => {
+      const email = lead.fields.EMAIL;
+      if (!email) {
+        result.skipped++;
+        return;
+      }
 
-    // Guard 2: claim the record immediately — prevents any concurrent call from picking it up
-    try {
-      await markProcessing(baseId, tableId, lead.id);
-    } catch {
-      result.skipped++;
-      continue;
-    }
+      // Guard 1: check current status
+      const currentStatus = await fetchEmailStatus(baseId, tableId, lead.id);
+      if (currentStatus === STATUS_SENT || currentStatus === STATUS_PROCESSING) {
+        result.skipped++;
+        return;
+      }
 
-    try {
-      const copy = await generateEmailCopy(lead);
-      await sendEmail(email, copy);
-      await markSent(baseId, tableId, lead.id, copy.subject, copy.emailBody);
-      result.sent++;
-    } catch (err) {
-      await markFailed(baseId, tableId, lead.id);
-      result.failed++;
-      result.errors.push(`${email}: ${err instanceof Error ? err.message : String(err)}`);
-    }
+      // Guard 2: claim the record immediately
+      try {
+        await markProcessing(baseId, tableId, lead.id);
+      } catch {
+        result.skipped++;
+        return;
+      }
+
+      try {
+        const copy = await generateEmailCopy(lead);
+        await sendEmail(email, copy);
+        await markSent(baseId, tableId, lead.id, copy.subject, copy.emailBody);
+        result.sent++;
+      } catch (err) {
+        await markFailed(baseId, tableId, lead.id);
+        result.failed++;
+        result.errors.push(`${email}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }));
   }
 
   return result;
