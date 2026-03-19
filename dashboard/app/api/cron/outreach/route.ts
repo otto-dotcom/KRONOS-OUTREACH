@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runOutreach } from "@/lib/outreach";
 
+export const runtime = "nodejs";
+export const maxDuration = 300;
+
 // Vercel Cron sends: Authorization: Bearer <CRON_SECRET>
 // This route is intentionally excluded from the cookie-auth middleware.
 export async function GET(req: NextRequest) {

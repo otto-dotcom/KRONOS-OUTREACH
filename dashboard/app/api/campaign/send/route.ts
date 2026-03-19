@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendPreviews, SendItem } from "@/lib/outreach";
 import { log } from "@/lib/logger";
 
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 // Module-level lock — same protection as launch route.

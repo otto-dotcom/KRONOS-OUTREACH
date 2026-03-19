@@ -41,14 +41,14 @@ export function IconDatabase() {
 export function SectionLabel({ icon, label, glow }: { icon: React.ReactNode; label: string; glow?: boolean }) {
   return (
     <div className="flex items-center gap-6 mb-12 group">
-      <div className={`p-4 glass-obsidian transition-all border border-orange-500/30 scale-125 ${glow ? 'glow-orange-strong' : 'group-hover:glow-orange-strong'}`}>
-        <div className="text-[#FF6B00] pulse-glow">{icon}</div>
+      <div className={`p-4 glass-obsidian transition-all border border-white/5 scale-125 ${glow ? 'glow-orange' : 'group-hover:glow-orange'}`}>
+        <div className="text-[#FF6B00]">{icon}</div>
       </div>
       <div className="flex flex-col">
-        <span className="text-[12px] tracking-[0.6em] text-[#FF6B00] uppercase font-black neon-text pixel-mega-outline">
+        <span className="text-[12px] tracking-[0.6em] text-white uppercase font-black">
           {label}
         </span>
-        <div className="h-1 w-24 bg-gradient-to-r from-[#FF6B00] to-transparent mt-2 shadow-[0_0_15px_#FF6B00]" />
+        <div className="h-1 w-24 bg-[#FF6B00] mt-2 opacity-80" />
       </div>
       <div className="flex-1 h-px bg-gradient-to-r from-[#1A1A1A] to-transparent ml-4" />
     </div>
@@ -59,15 +59,15 @@ export function Metric({ value, label, highlight, large }: {
   value: string | number; label: string; highlight?: boolean; large?: boolean;
 }) {
   return (
-    <div className="glass-obsidian border border-white/10 p-10 transition-all hover:glow-orange-strong hover:scale-[1.03] group fade-up relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-8 h-8 opacity-10">
-         <div className="w-px h-full bg-[#FF6B00] absolute right-0" />
-         <div className="h-px w-full bg-[#FF6B00] absolute top-0" />
+    <div className="glass-obsidian p-10 transition-all hover:bg-white/[0.02] hover:scale-[1.02] group relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-8 h-8 opacity-20">
+         <div className="w-px h-full bg-white absolute right-0" />
+         <div className="h-px w-full bg-white absolute top-0" />
       </div>
-      <div className={`pixel-mega tracking-tighter transition-all ${highlight ? "neon-text" : "text-white group-hover:neon-text"} ${large ? "text-7xl md:text-8xl" : "text-5xl md:text-6xl"}`}>
+      <div className={`pixel-mega tracking-tighter transition-all ${highlight ? "text-[#FF6B00]" : "text-white group-hover:text-[#FF6B00]"} ${large ? "text-7xl md:text-8xl" : "text-5xl md:text-6xl"}`}>
         {value}
       </div>
-      <div className="text-[10px] tracking-[0.4em] text-[#444] uppercase mt-6 font-black group-hover:text-[#FF6B00] transition-colors">{label}</div>
+      <div className="text-[10px] tracking-[0.4em] text-[#888] uppercase mt-6 font-bold group-hover:text-white transition-colors">{label}</div>
     </div>
   );
 }
@@ -96,10 +96,10 @@ export function DetailRow({ label, value, isLink, href, highlight }: { label: st
 
 export function DataBlock({ title, children, glow }: { title: string; children: React.ReactNode; glow?: boolean }) {
   return (
-    <div className={`glass-obsidian p-6 border border-white/5 relative group transition-all ${glow ? "glow-orange-strong border-orange-500/20" : "hover:border-orange-500/10"}`}>
-       <div className="absolute top-0 right-0 w-12 h-px bg-gradient-to-l from-orange-500/40 to-transparent" />
-       <div className="absolute bottom-0 left-0 w-12 h-px bg-gradient-to-r from-orange-500/40 to-transparent" />
-       <div className="text-[9px] tracking-[0.4em] text-[#333] uppercase mb-6 font-black group-hover:text-[#555] transition-colors border-b border-[#111] pb-2">
+    <div className={`glass-obsidian p-6 border relative group transition-all ${glow ? "glow-orange border-orange-500/20" : "border-white/5 hover:border-orange-500/10"}`}>
+       <div className="absolute top-0 right-0 w-12 h-px bg-gradient-to-l from-orange-500/40 to-transparent opacity-40" />
+       <div className="absolute bottom-0 left-0 w-12 h-px bg-gradient-to-r from-orange-500/40 to-transparent opacity-40" />
+       <div className="text-[9px] tracking-[0.4em] text-[#888] uppercase mb-6 font-bold group-hover:text-white transition-colors border-b border-white/5 pb-2">
          {title}
        </div>
        <div className="space-y-6">
@@ -116,9 +116,9 @@ export function RangeFilter({ days, onChange }: { days: number; onChange: (d: nu
         <button
           key={d}
           onClick={() => onChange(d)}
-          className={`px-4 py-1.5 text-[9px] tracking-[0.2em] transition-all cursor-pointer font-black uppercase ${days === d
-            ? "bg-[#FF6B00] text-black glow-orange shadow-[0_0_15px_rgba(255,107,0,0.4)]"
-            : "text-[#444] hover:text-[#FF6B00] hover:bg-white/5"
+          className={`px-4 py-1.5 text-[9px] tracking-[0.2em] transition-all cursor-pointer font-bold uppercase ${days === d
+            ? "bg-[#FF6B00] text-black"
+            : "text-[#888] hover:text-white hover:bg-white/5"
             }`}
         >
           {d}D

@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-const BASE = "appLriEwWldpPTMPg";
-const TABLE = "tblLZkFo7Th7uyfWB";
 const AIRTABLE_API = "https://api.airtable.com/v0";
+
+// Use env vars with fallback to production values
+function getAirtableIds(): { base: string; table: string } {
+  const base = process.env.AIRTABLE_BASE_ID ?? "appLriEwWldpPTMPg";
+  const table = process.env.AIRTABLE_TABLE_ID ?? "tblLZkFo7Th7uyfWB";
+  return { base, table };
+}
 
 interface AirtableRecord {
   id: string;
@@ -37,21 +42,21 @@ interface AirtableRecord {
 }
 
 const FIELDS = [
-  "lead_status", "EMAIL STATUS", "Rank", "FULL NAME", "company name", "City", 
-  "EMAIL", "Phone", "Category", "URL", "score_reason", "TECHNOLOGY", 
-  "Postal code", "State", "KEYWORDS", "LINKEDIN", "REVENUE", "JOB TITLE", 
-  "HEADLINE", "SENIORITY", "COMPANY SIZE", "COMPANY DESCRIPTION", "INSTAGRAM", 
+  "lead_status", "EMAIL STATUS", "Rank", "FULL NAME", "company name", "City",
+  "EMAIL", "Phone", "Category", "URL", "score_reason", "TECHNOLOGY",
+  "Postal code", "State", "KEYWORDS", "LINKEDIN", "REVENUE", "JOB TITLE",
+  "HEADLINE", "SENIORITY", "COMPANY SIZE", "COMPANY DESCRIPTION", "INSTAGRAM",
   "SECTOR", "Address", "Street"
 ]
   .map((f) => `fields[]=${encodeURIComponent(f)}`)
   .join("&");
 
-async function fetchAll(apiKey: string): Promise<AirtableRecord[]> {
+async function fetchAll(apiKey: string, base: string, table: string): Promise<AirtableRecord[]> {
   const records: AirtableRecord[] = [];
   let offset: string | undefined;
 
   do {
-    const url = `${AIRTABLE_API}/${BASE}/${TABLE}?pageSize=100&${FIELDS}${offset ? `&offset=${offset}` : ""}`;
+    const url = `${AIRTABLE_API}/${base}/${table}?pageSize=100&${FIELDS}${offset ? `&offset=${offset}` : ""}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
     if (!res.ok) throw new Error(`Airtable ${res.status}`);
     const data = (await res.json()) as { records: AirtableRecord[]; offset?: string };
@@ -68,8 +73,10 @@ export async function GET() {
     return NextResponse.json({ error: "Airtable API key not configured" }, { status: 500 });
   }
 
+  const { base, table } = getAirtableIds();
+
   try {
-    const records = await fetchAll(apiKey);
+    const records = await fetchAll(apiKey, base, table);
 
     let priority = 0, medium = 0, low = 0, sent = 0, pending = 0;
 

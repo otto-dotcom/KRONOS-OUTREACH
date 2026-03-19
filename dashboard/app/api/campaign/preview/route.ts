@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { previewOutreach } from "@/lib/outreach";
 import { log } from "@/lib/logger";
 
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MAX_LEAD_LIMIT = 50;

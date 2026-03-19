@@ -74,12 +74,12 @@ export default function AnalyticsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#111] pb-10">
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-1 h-3 bg-[#FF6B00] glow-orange" />
+            <div className="w-1 h-3 bg-[#FF6B00]" />
             <span className="text-[10px] tracking-[0.5em] text-[#444] font-black uppercase">Operation_Intelligence_Matrix</span>
           </div>
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-white uppercase pixel-mega leading-[0.85]">
             Global<br/>
-            <span className="text-[#FF6B00] neon-text">Analytics</span>
+            <span className="text-[#FF6B00]">Analytics</span>
           </h1>
           <p className="mt-6 text-[#555] text-[10px] tracking-[0.3em] font-black uppercase">Real-time KRONOS lead processing & conversion telemetry</p>
         </div>
@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
       {/* Visual Data Grids */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Engagement Matrix */}
-        <div className="lg:col-span-2 glass-obsidian p-10 glow-orange-strong cyber-border">
+        <div className="lg:col-span-2 glass-obsidian p-10 cyber-border">
           <SectionLabel icon={<IconMail />} label="Engagement_Trajectory" glow />
           <div className="mt-8 flex flex-col md:flex-row gap-12 items-center">
             <div className="shrink-0 scale-125">
@@ -159,7 +159,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* FULL SENT HISTORY TABLE */}
-      <div className="glass-obsidian p-10 cyber-border glow-orange-strong">
+      <div className="glass-obsidian p-10 cyber-border">
          <div className="flex items-center justify-between mb-10">
             <div>
                <SectionLabel icon={<IconDatabase />} label="Historical_Audit_Log" glow />
@@ -192,7 +192,7 @@ export default function AnalyticsPage() {
                         </td>
                         <td className="py-6">
                            <div className="flex flex-col">
-                              <span className="text-[13px] text-white font-bold tracking-tight uppercase group-hover:neon-text transition-colors">
+                              <span className="text-[13px] text-white font-bold tracking-tight uppercase group-hover:text-[#FF6B00] transition-colors">
                                  {item.company}
                               </span>
                               <span className="text-[9px] text-[#333] font-mono tracking-widest">{item.email}</span>
@@ -207,7 +207,7 @@ export default function AnalyticsPage() {
                         </td>
                         <td className="py-6">
                            <div className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 bg-green-500 glow-orange shadow-[0_0_8px_#22c55e]" />
+                              <div className="w-1.5 h-1.5 bg-green-500 shadow-[0_0_8px_#22c55e]" />
                               <span className="text-[9px] text-green-400 font-black tracking-[0.2em] ml-1">SUCCESS_DELIVERY</span>
                            </div>
                         </td>

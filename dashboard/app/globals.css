@@ -44,18 +44,18 @@ body {
 
 /* Glassmorphism system */
 .glass-obsidian {
-  background: rgba(13, 13, 13, 0.7);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 107, 0, 0.08);
+  background: rgba(10, 10, 10, 0.4);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-obsidian-strong {
-  background: rgba(8, 8, 8, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 107, 0, 0.15);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  background: rgba(5, 5, 5, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 107, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .cyber-border {
@@ -82,16 +82,16 @@ body {
 
 /* Glow effects */
 .glow-orange { 
-  box-shadow: 0 0 40px rgba(255, 107, 0, 0.15), inset 0 0 20px rgba(255, 107, 0, 0.05); 
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.08); 
 }
 .glow-orange-strong { 
-  box-shadow: 0 0 60px rgba(255, 107, 0, 0.3), inset 0 0 30px rgba(255, 107, 0, 0.1); 
+  box-shadow: 0 0 30px rgba(255, 107, 0, 0.15); 
 }
 
 /* Text nuances */
 .neon-text {
   color: #FF6B00;
-  text-shadow: 0 0 10px rgba(255, 107, 0, 0.6), 0 0 20px rgba(255, 107, 0, 0.2);
+  text-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
 }
 
 .pixel-detail {
@@ -122,15 +122,14 @@ body {
 /* Mega Pixel Typography */
 .pixel-mega {
   font-family: var(--font-mono), monospace;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: -0.05em;
   line-height: 0.9;
-  filter: drop-shadow(0 0 15px rgba(255, 107, 0, 0.4));
 }
 
 .pixel-mega-outline {
-  -webkit-text-stroke: 1px rgba(255, 107, 0, 0.5);
+  -webkit-text-stroke: 1px rgba(255, 107, 0, 0.3);
   color: transparent;
 }
 
