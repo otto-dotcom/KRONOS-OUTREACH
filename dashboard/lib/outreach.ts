@@ -225,7 +225,7 @@ async function sendEmail(toEmail: string, copy: EmailCopy): Promise<void> {
     body: JSON.stringify({
       sender: { name: "Otto from KRONOS", email: "otto@kronosbusiness.com" },
       to: [{ email: toEmail }],
-      bcc: [{ email: "consulting@kronosautomations.com" }],
+      bcc: [{ email: "otto@kronosbusiness.com" }],
       subject: copy.subject,
       htmlContent: copy.emailBody,
     }),
