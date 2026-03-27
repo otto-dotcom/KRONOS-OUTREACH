@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+@theme {
+  --color-k: #F97316;
+  --color-k-hover: #EA580C;
+  --color-k-glow: rgba(249, 115, 22, 0.15);
+  --color-k-bg: #060606;
+  --color-k-card: #0D0D0D;
+  --color-k-border: #1A1A1A;
+  --color-k-muted: #555555;
+  --color-k-text: #E0E0E0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  background: #060606;
+  color: #E0E0E0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+strong {
+  font-family: var(--font-pixel), "Press Start 2P", cursive;
+  font-size: 0.75em;
+  color: #F97316;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: inline-block;
+}
+
+/* Simple clean background */
+.pixel-grid {
+  background: #060606;
+}
+
+/* Glassmorphism system */
+.glass-obsidian {
+  background: rgba(13, 13, 13, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.glass-obsidian-strong {
+  background: rgba(5, 5, 5, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+}
+
+.cyber-border {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Glow effects */
+.glow {
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.08);
+}
+.glow-orange {
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.08);
+}
+.glow-orange-strong {
+  box-shadow: 0 0 30px rgba(255, 107, 0, 0.15);
+}
+.glow-green {
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.15);
+}
+
+/* Text nuances */
+.neon-text {
+  color: #FF6B00;
+}
+
+.pixel-detail {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseGlow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.4) drop-shadow(0 0 8px #FF6B00); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.pulse-glow { animation: pulseGlow 4s ease-in-out infinite; }
+.blink { animation: blink 2s ease-in-out infinite; }
+.slide-in { animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Mega Pixel Typography */
+.pixel-mega {
+  font-family: var(--font-mono), monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+}
+
+.pixel-mega-outline {
+  -webkit-text-stroke: 1px rgba(255, 107, 0, 0.3);
+  color: transparent;
+}
+
+.pixel-detail-lg {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: #FF6B00;
+  opacity: 0.8;
+}
+
+/* Custom scrollbar for Glassmorphism */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 107, 0, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 107, 0, 0.5);
+  box-shadow: 0 0 10px #FF6B00;
+}
+
+/* Remove number spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+input[type="number"] { -moz-appearance: textfield; }
+input[type="number"] { background: transparent; color: inherit; }

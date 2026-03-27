@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(vercel logs --follow)"
+      "Bash(git push)",
+      "Bash(vercel --prod --yes)"
     ],
     "deny": [],
     "ask": []

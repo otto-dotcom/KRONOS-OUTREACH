@@ -1,0 +1,451 @@
+{
+  "name": "KRONOS Outreach - Email Only (OpenRouter + Brevo)",
+  "nodes": [
+    {
+      "id": "wh-001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        400
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kronos-outreach",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "cfg-001",
+      "name": "Set Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        460,
+        400
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "airtableBaseId",
+              "value": "={{ $json.body.baseId || 'appLriEwWldpPTMPg' }}",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "airtableTableId",
+              "value": "={{ $json.body.tableId || 'tblLZkFo7Th7uyfWB' }}",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "leadLimit",
+              "value": "={{ $json.body.leadLimit || 5 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "atbl-001",
+      "name": "Get Leads from Airtable",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        680,
+        400
+      ],
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Set Config').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Set Config').first().json.airtableTableId }}"
+        },
+        "filterByFormula": "=AND({EMAIL} != \"\", {EMAIL STATUS} != \"Sent\", {EMAIL STATUS} != \"Processing \", {Rank} >= 5)",
+        "returnAll": false,
+        "limit": "={{ $('Set Config').first().json.leadLimit }}",
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "if-email",
+      "name": "Check Has Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        920,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "e1",
+              "leftValue": "={{ $json.EMAIL }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ai-email",
+      "name": "Email AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1140,
+        200
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Lead:\nName: {{ $json['FULL NAME'] || '' }}\nEmail: {{ $json.EMAIL }}\nAgency: {{ $json['company name'] }}\nCity: {{ $json.City }}\nURL: {{ $json.URL || '' }}\nRank: {{ $json.Rank || '' }}\nScore Reason: {{ $json.score_reason || '' }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a cold email specialist writing on behalf of KRONOS Automations.\nKRONOS helps Swiss real estate agencies automate their lead follow-up and mandate acquisition.\n\nGOAL: Write a short, direct cold email (4-5 sentences max) that feels like it came from a real person.\n\nTARGET DATA:\n<LEAD_DATA>\n{{ JSON.stringify($json) }}\n</LEAD_DATA>\n\nCONTENT PROTOCOL:\n1. HOOK: Specific observation about their business using agency name or city. NEVER start with 'I noticed you are active in [city]'.\n2. PROBLEM: One pain - losing warm leads, advisors wasting time on unqualified contacts, inconsistent mandate pipeline.\n3. SOLUTION: One sentence. KRONOS automates first contact so consultants only deal with ready-to-move clients.\n4. CTA: Low-friction close with the booking link.\n\nTONE: Direct, professional, conversational. NO buzzwords (scalable/synergy/leverage/infrastructure/optimize). NO ALL CAPS. NO exclamation marks.\nGreet with 'Gruezi {Name},' if name available, else 'Hello,'\n\nSUBJECT LINE: Max 50 chars. Lowercase preferred. Patterns: '{Name} - quick question', '{AgencyName} | mandate pipeline gap'.\nNEVER: 'Scalable', 'Infrastructure', 'INITIALIZE', all-caps.\n\nHTML BRANDING:\n- Logo: <div style=\"text-align:center;padding:20px 0;\"><img src=\"https://kronosautomations.com/logo.png\" alt=\"KRONOS\" width=\"120\" style=\"image-rendering:pixelated;\"></div>\n- Container: max-width:550px;margin:auto;padding:30px;border:2px solid #1A1A1A;border-top:10px solid #FF6B00;font-family:'Inter',sans-serif;color:#1A1A1A;line-height:1.6;\n- P tags only, clean HTML.\n- CTA: <a href=\"https://cal.com/othman-zraidi-o24jj1/15min\" style=\"color:#FF6B00;font-weight:bold;\">Book a 15-min call</a>\n- Signature: <div style=\"border-top:2px dotted #FF6B00;margin-top:25px;padding-top:10px;font-size:14px;\"><strong>Otto - KRONOS Automations</strong><br>Swiss Real Estate Automation<br><a href=\"mailto:otto@kronosbusiness.com\" style=\"color:#FF6B00;text-decoration:none;\">otto@kronosbusiness.com</a></div>\n\nResponse MUST be ONLY valid JSON (no markdown fences): {\"subject\": \"...\", \"emailBody\": \"...\"}"
+        }
+      }
+    },
+    {
+      "id": "llm-email",
+      "name": "OpenRouter Email",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.1,
+      "position": [
+        1140,
+        20
+      ],
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {
+          "baseURL": "https://openrouter.ai/api/v1"
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENROUTER_CREDENTIAL_ID",
+          "name": "OpenRouter API"
+        }
+      }
+    },
+    {
+      "id": "parser-email",
+      "name": "Email Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1340,
+        20
+      ],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\":\"object\",\"properties\":{\"subject\":{\"type\":\"string\",\"description\":\"Email subject line max 50 chars\"},\"emailBody\":{\"type\":\"string\",\"description\":\"Full HTML email body\"}},\"required\":[\"subject\",\"emailBody\"]}"
+      }
+    },
+    {
+      "id": "code-email",
+      "name": "Parse Email Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ai = $input.item.json;\nconst lead = $('Check Has Email').item.json;\nlet subject = '', emailBody = '';\nif (ai.output) {\n  const out = typeof ai.output === 'string' ? JSON.parse(ai.output) : ai.output;\n  subject = out.subject || '';\n  emailBody = out.emailBody || '';\n}\nreturn { ...lead, subject, emailBody };"
+      }
+    },
+    {
+      "id": "http-brevo",
+      "name": "Send Email via Brevo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "={{ $credentials.brevoApiKey }}"
+            },
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sender: { name: \"Otto from KRONOS\", email: \"otto@kronosbusiness.com\" }, to: [{ email: $json.EMAIL }], bcc: [{ email: \"otto@kronosbusiness.com\" }], subject: $json.subject, htmlContent: $json.emailBody, tags: [\"KRONOS_OUTREACH\"] }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_BREVO_CREDENTIAL_ID",
+          "name": "Brevo API Key"
+        }
+      }
+    },
+    {
+      "id": "atbl-email-sent",
+      "name": "Update Airtable - Email Sent",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2000,
+        200
+      ],
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Set Config').first().json.airtableBaseId }}"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Set Config').first().json.airtableTableId }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Parse Email Output').item.json.id }}",
+            "EMAIL STATUS": "Sent",
+            "EMAIL_SUBJECT": "={{ $('Parse Email Output').item.json.subject }}",
+            "SENT MAIL": "={{ $('Parse Email Output').item.json.emailBody }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "err-001",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        1040
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "http-err",
+      "name": "Brevo - Error Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        1040
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "={{ $credentials.brevoApiKey }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sender: { name: \"KRONOS Error\", email: \"otto@kronosbusiness.com\" }, to: [{ email: \"consulting@kronosautomations.com\" }], subject: \"KRONOS Outreach Error - \" + $json.execution.id, htmlContent: \"<p>Error in: <strong>\" + $json.execution.lastNodeExecuted + \"</strong></p><p>\" + ($json.execution.error && $json.execution.error.message) + \"</p>\" }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_BREVO_CREDENTIAL_ID",
+          "name": "Brevo API Key"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Config": {
+      "main": [
+        [
+          {
+            "node": "Get Leads from Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Leads from Airtable": {
+      "main": [
+        [
+          {
+            "node": "Check Has Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Has Email": {
+      "main": [
+        [
+          {
+            "node": "Email AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "OpenRouter Email": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Email AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Email Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Email Output": {
+      "main": [
+        [
+          {
+            "node": "Send Email via Brevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email via Brevo": {
+      "main": [
+        [
+          {
+            "node": "Update Airtable - Email Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Brevo - Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "pinData": {}
+}

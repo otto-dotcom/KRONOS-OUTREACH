@@ -31,14 +31,18 @@ python scripts/n8n_api_manager.py --activate WORKFLOW_ID
 
 ## Structure
 
+For a detailed map of the project, see [STRUCTURE.md](STRUCTURE.md).
+
 ```
-├── KRONOS_CAMPAIGN.json        # Main workflow (import to n8n)
-├── DEPLOYMENT.md               # Full stack docs + deployment checklist
-├── docker-compose.yml          # n8n + Caddy services
-├── Caddyfile                   # Reverse proxy config
-├── config/industries/          # Industry-specific scraping + scoring config
-├── directives/                 # Strategy docs (AI context for workflows)
-└── scripts/                    # VPS setup + n8n API manager
+├── apps/               # Frontend applications (React, Next.js)
+├── data/               # Persistent local data (logs, mini-db)
+├── docs/               # Documentation (Deployment, Protocols, Architecture)
+├── infra/              # Infrastructure (Docker, Caddy, VPS setup)
+├── scripts/            # Automation scripts & categorization
+│   ├── config/         # Shared JSON configurations
+│   ├── scraper/        # Scraping and lead generation
+│   └── scorer/         # AI scoring and auto-applier logic
+└── workflows/          # n8n workflow exports (JSON)
 ```
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the full deployment checklist, DNS records, credentials, and error cases.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full deployment checklist, DNS records, credentials, and error cases.
