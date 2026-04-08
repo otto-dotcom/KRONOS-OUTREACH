@@ -21,6 +21,13 @@
       "env": {
         "BREVO_API_KEY": "PLACEHOLDER_SEE_ENV_LOCAL"
       }
+    },
+    "magic": {
+      "command": "npx",
+      "args": ["-y", "@21st-dev/magic@latest"],
+      "env": {
+        "API_KEY": "898a1404a3438ce9492cf4badaeeeccaee9abfd1ce28e3411e107b4840d8c8cf"
+      }
     }
   }
 }
