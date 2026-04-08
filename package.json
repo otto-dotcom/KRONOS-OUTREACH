@@ -1,0 +1,8 @@
+{
+  "name": "kronos-outreach-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "vercel-build": "cd apps/dashboard && npm install && npm run build"
+  }
+}
