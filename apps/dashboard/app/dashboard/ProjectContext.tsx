@@ -10,7 +10,11 @@ interface ProjectContextType {
   brandColor: string;
 }
 
-const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+const ProjectContext = createContext<ProjectContextType>({
+  project: "kronos",
+  setProject: () => {},
+  brandColor: "#FF6B00"
+});
 
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [project, setProject] = useState<Project>("kronos");
@@ -30,9 +34,5 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useProject() {
-  const context = useContext(ProjectContext);
-  if (!context) {
-    throw new Error("useProject must be used within a ProjectProvider");
-  }
-  return context;
+  return useContext(ProjectContext);
 }
