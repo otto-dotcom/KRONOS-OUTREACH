@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "vercel-build": "cd apps/dashboard && npm install && npm run build"
+    "vercel-build": "cd apps/dashboard && npm install --include=dev && npm run build",
+    "build": "cd apps/dashboard && npm install --include=dev && npm run build"
+  },
+  "devDependencies": {
+    "next": "16.1.6"
   }
 }
