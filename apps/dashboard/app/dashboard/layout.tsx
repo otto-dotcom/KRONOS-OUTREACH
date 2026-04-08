@@ -52,83 +52,78 @@ export default function DashboardLayout({
   const isActive = (path: string) => pathname === path;
 
   return (
-    <div className="min-h-screen bg-[#060606]">
+    <div className="min-h-screen bg-k-bg mesh-bg grid-paper">
+      {/* Dynamic Navigation Line */}
+      <div className="fixed top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-k to-transparent opacity-30 z-[60]" />
+
       {/* Header */}
-      <header className="border-b border-[#1A1A1A] bg-[#0A0A0A] sticky top-0 z-50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4 cursor-pointer" onClick={() => router.push("/dashboard")}>
-            <div className="pulse-glow">
+      <header className="fixed top-0 left-0 w-full z-50 px-8 py-6">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between glass-panel px-6 py-4 reveal">
+          <div className="flex items-center gap-6 cursor-pointer group" onClick={() => router.push("/dashboard")}>
+            <div className="relative">
               <KronosLogoSmall />
+              <div className="absolute -inset-2 bg-k/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex flex-col">
-              <span className="text-k text-[10px] tracking-[0.3em] font-pixel">
+              <span className="text-k text-xs tracking-[0.4em] font-mono font-black">
                 KRONOS
               </span>
-              <span className="text-[#555] text-[7px] tracking-[0.15em] uppercase font-light">
-                Outreach Command
+              <span className="text-[#444] text-[8px] tracking-[0.2em] uppercase font-medium">
+                Autonomous Outreach Ops
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-10">
-            <nav className="flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-12">
+            {[
+              { label: "Control", path: "/dashboard" },
+              { label: "Intelligence", path: "/dashboard/analytics" },
+              { label: "Directives", path: "/dashboard/directives" },
+              { label: "Automations", path: "/dashboard/automations" },
+              { label: "LeadBase", path: "/dashboard/database" },
+              { label: "Agent", path: "/dashboard/chat" },
+            ].map((item) => (
               <a
-                href="/dashboard"
-                className={`text-[9px] tracking-[0.25em] font-pixel transition-all pb-1.5 uppercase font-bold ${
-                  isActive("/dashboard")
-                    ? "text-[#FF6B00] border-b-2 border-[#FF6B00]"
-                    : "text-[#444] hover:text-white border-b-2 border-transparent"
+                key={item.path}
+                href={item.path}
+                className={`text-[9px] tracking-[0.3em] font-mono transition-all uppercase font-bold relative group ${
+                  isActive(item.path) ? "text-k" : "text-[#555] hover:text-white"
                 }`}
               >
-                Control
+                {item.label}
+                {isActive(item.path) && (
+                  <div className="absolute -bottom-1 left-0 w-full h-[1px] bg-k" />
+                )}
+                <div className="absolute -bottom-1 left-0 w-0 h-[1px] bg-white group-hover:w-full transition-all" />
               </a>
-              <a
-                href="/dashboard/analytics"
-                className={`text-[9px] tracking-[0.25em] font-pixel transition-all pb-1.5 uppercase font-bold ${
-                  isActive("/dashboard/analytics")
-                    ? "text-[#FF6B00] border-b-2 border-[#FF6B00]"
-                    : "text-[#444] hover:text-white border-b-2 border-transparent"
-                }`}
-              >
-                Intelligence
-              </a>
-              <a
-                href="/dashboard/directives"
-                className={`text-[9px] tracking-[0.25em] font-pixel transition-all pb-1.5 uppercase font-bold ${
-                  isActive("/dashboard/directives")
-                    ? "text-[#FF6B00] border-b-2 border-[#FF6B00]"
-                    : "text-[#444] hover:text-white border-b-2 border-transparent"
-                }`}
-              >
-                Directives
-              </a>
-              <a
-                href="/dashboard/remotron"
-                className={`text-[9px] tracking-[0.25em] font-pixel transition-all pb-1.5 uppercase font-bold ${
-                  isActive("/dashboard/remotron")
-                    ? "text-[#FF6B00] border-b-2 border-[#FF6B00]"
-                    : "text-[#444] hover:text-white border-b-2 border-transparent"
-                }`}
-              >
-                Remotron
-              </a>
-            </nav>
-            <div className="w-px h-5 bg-[#1A1A1A]" />
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-green-500 blink" />
-                <span className="text-[8px] text-[#666] tracking-widest font-pixel uppercase">
-                  Live
-                </span>
-              </div>
-              <SwissBadge />
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-6">
+            <div className="hidden lg:flex flex-col items-end">
+              <div className="cyber-tag mb-1">Status: Operational</div>
+              <div className="text-[7px] text-[#333] tracking-[0.3em] uppercase">Zurich // HQ</div>
+            </div>
+            <div className="w-10 h-10 flex items-center justify-center border border-k/10 hover:border-k/40 transition-colors cursor-pointer" onClick={handleLogout}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#444] hover:text-k transition-colors">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
             </div>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-8 py-12">{children}</main>
+      <main className="pt-32 pb-20 px-8 max-w-[1600px] mx-auto min-h-screen">
+        {children}
+      </main>
+
+      {/* Side Aesthetics */}
+      <div className="fixed left-4 bottom-8 rotate-90 origin-left text-[8px] text-[#222] tracking-[0.4em] uppercase font-mono pointer-events-none">
+        System_Version: V.4.0.8 // Outreach_Engine
+      </div>
     </div>
   );
 }

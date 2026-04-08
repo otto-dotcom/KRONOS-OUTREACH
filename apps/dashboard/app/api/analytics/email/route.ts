@@ -56,9 +56,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ totals, openRate, clickRate, daily, days });
     }
 
-    return NextResponse.json({
-      error: "Brevo API key missing or invalid.",
-    }, { status: 403 });
+      const errorData = await statsRes.json();
+      return NextResponse.json({
+        error: `Brevo API error: ${errorData.message || statsRes.statusText}`,
+      }, { status: statsRes.status });
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";

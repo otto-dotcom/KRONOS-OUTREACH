@@ -8,6 +8,16 @@ const AIRTABLE_API = "https://api.airtable.com/v0";
 const OPENROUTER_API = "https://openrouter.ai/api/v1";
 const BREVO_API = "https://api.brevo.com/v3";
 
+async function fetchWithTimeout(url: string, init: RequestInit, ms = 15_000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const EMAIL_SYSTEM_PROMPT = `You are a cold email specialist writing on behalf of KRONOS Automations.
 KRONOS is an AI automation consultancy. We work with Swiss real estate agencies to map and automate the manual, repetitive parts of their business — follow-up sequences, lead qualification, client onboarding, mandate tracking — so their consultants spend time on work that actually requires a human.
 
@@ -140,7 +150,7 @@ async function fetchLeads(
   const url = `${AIRTABLE_API}/${baseId}/${tableId}?filterByFormula=${formula}&maxRecords=${limit}`;
 
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
   if (!res.ok) throw new Error(`Airtable fetch failed: ${res.status} ${await res.text()}`);
@@ -156,7 +166,7 @@ export async function fetchSentArchive(limit = 100): Promise<AirtableRecord[]> {
   // Sort by Last Modified to get recent sends first
   const url = `${AIRTABLE_API}/${baseId}/${tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=last_modified&sort[0][direction]=desc`;
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
   if (!res.ok) throw new Error(`Archive fetch failed: ${res.status}`);
@@ -175,7 +185,7 @@ async function fetchEditingExamples(limit = 3): Promise<string> {
 
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   try {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
+    const res = await fetchWithTimeout(url, { headers: { Authorization: `Bearer ${apiKey}` } });
     if (!res.ok) return "";
     const data = (await res.json()) as { records: AirtableRecord[] };
     if (!data.records?.length) return "";
@@ -206,7 +216,7 @@ export async function generateEmailCopy(
   let systemPrompt = EMAIL_SYSTEM_PROMPT;
   try {
     const settingsUrl = `https://api.airtable.com/v0/${baseId}/Settings?filterByFormula={Key}='copy_directives'`;
-    const settingsRes = await fetch(settingsUrl, {
+    const settingsRes = await fetchWithTimeout(settingsUrl, {
       headers: { Authorization: `Bearer ${airtableKey}` },
     });
     if (settingsRes.ok) {
@@ -237,7 +247,7 @@ export async function generateEmailCopy(
     .filter(Boolean)
     .join("\n");
 
-  const res = await fetch(`${OPENROUTER_API}/chat/completions`, {
+  const res = await fetchWithTimeout(`${OPENROUTER_API}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -271,8 +281,8 @@ export async function generateEmailCopy(
   return copy;
 }
 
-async function sendEmail(toEmail: string, copy: EmailCopy): Promise<void> {
-  const res = await fetch(`${BREVO_API}/smtp/email`, {
+async function sendEmail(toEmail: string, copy: EmailCopy, attempt = 0): Promise<void> {
+  const res = await fetchWithTimeout(`${BREVO_API}/smtp/email`, {
     method: "POST",
     headers: {
       "api-key": process.env.BREVO_API_KEY ?? "",
@@ -288,7 +298,14 @@ async function sendEmail(toEmail: string, copy: EmailCopy): Promise<void> {
     }),
   });
 
-  if (!res.ok) throw new Error(`Brevo failed: ${res.status} ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    if (res.status >= 500 && attempt < 2) {
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      return sendEmail(toEmail, copy, attempt + 1);
+    }
+    throw new Error(`Brevo failed (${res.status}): ${body}`);
+  }
 }
 
 // Airtable EMAIL STATUS choice values (must match exactly, including trailing space quirks)
@@ -307,7 +324,7 @@ async function fetchEmailStatus(
 ): Promise<string | null> {
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${AIRTABLE_API}/${baseId}/${tableId}/${recordId}?fields[]=EMAIL%20STATUS`,
       { headers: { Authorization: `Bearer ${apiKey}` } }
     );
@@ -326,7 +343,7 @@ async function markProcessing(
   recordId: string
 ): Promise<void> {
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  const res = await fetch(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
+  const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ fields: { "EMAIL STATUS": STATUS_PROCESSING } }),
@@ -341,12 +358,18 @@ async function markFailed(
   recordId: string
 ): Promise<void> {
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  await fetch(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ fields: { "EMAIL STATUS": STATUS_FAILED } }),
-  });
-  // Don't throw — best-effort cleanup
+  try {
+    const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ fields: { "EMAIL STATUS": STATUS_FAILED } }),
+    });
+    if (!res.ok) {
+      console.error(`[KRONOS] markFailed CRITICAL: could not release lock for ${recordId} (${res.status}) — record stuck as Processing`);
+    }
+  } catch (err) {
+    console.error(`[KRONOS] markFailed CRITICAL: network error releasing lock for ${recordId} — record stuck as Processing`, err);
+  }
 }
 
 async function markSent(
@@ -375,7 +398,7 @@ async function markSent(
     fields["ORIGINAL_BODY"] = originalBody;
   }
 
-  const res = await fetch(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
+  const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -398,6 +421,39 @@ function requireEnv() {
   return { baseId, tableId, apiKey };
 }
 
+function mapLeadFields(lead: AirtableRecord): EmailPreview["lead"] {
+  const f = lead.fields;
+  return {
+    id: lead.id,
+    name: String(f["FULL NAME"] ?? ""),
+    company: String(f["company name"] ?? ""),
+    city: String(f.City ?? ""),
+    email: String(f.EMAIL ?? ""),
+    phone: String((f as any).Phone ?? ""),
+    category: String((f as any).Category ?? ""),
+    url: String(f.URL ?? ""),
+    rank: f.Rank ?? "",
+    scoreReason: String(f.score_reason ?? ""),
+    leadStatus: String(f.lead_status ?? ""),
+    emailStatus: String(f["EMAIL STATUS"] ?? "Pending"),
+    tech: String((f as any).TECHNOLOGY ?? ""),
+    postalCode: String((f as any)["Postal code"] ?? ""),
+    state: String((f as any).State ?? ""),
+    keywords: String((f as any).KEYWORDS ?? ""),
+    linkedin: String((f as any).LINKEDIN ?? ""),
+    revenue: String((f as any).REVENUE ?? ""),
+    jobTitle: String((f as any)["JOB TITLE"] ?? ""),
+    headline: String((f as any).HEADLINE ?? ""),
+    seniority: String((f as any).SENIORITY ?? ""),
+    companySize: String((f as any)["COMPANY SIZE"] ?? ""),
+    companyDesc: String((f as any)["COMPANY DESCRIPTION"] ?? ""),
+    instagram: String((f as any).INSTAGRAM ?? ""),
+    sector: String((f as any).SECTOR ?? ""),
+    address: String((f as any).Address ?? ""),
+    street: String((f as any).Street ?? ""),
+  };
+}
+
 /** Generate email copy for all leads without sending. Returns previews for gallery review. */
 export async function previewOutreach(leadLimit = 10): Promise<EmailPreview[]> {
   const { baseId, tableId } = requireEnv();
@@ -407,74 +463,14 @@ export async function previewOutreach(leadLimit = 10): Promise<EmailPreview[]> {
     const email = lead.fields.EMAIL;
     if (!email) return null;
 
+    const leadFields = mapLeadFields(lead);
     try {
       const copy = await generateEmailCopy(lead);
-      return {
-        recordId: lead.id,
-        lead: {
-          id: lead.id,
-          name: String(lead.fields["FULL NAME"] ?? ""),
-          company: String(lead.fields["company name"] ?? ""),
-          city: String(lead.fields.City ?? ""),
-          email,
-          phone: String((lead.fields as any).Phone ?? ""),
-          category: String((lead.fields as any).Category ?? ""),
-          url: String(lead.fields.URL ?? ""),
-          rank: lead.fields.Rank ?? "",
-          scoreReason: String(lead.fields.score_reason ?? ""),
-          leadStatus: String(lead.fields.lead_status ?? ""),
-          emailStatus: String(lead.fields["EMAIL STATUS"] ?? "Pending"),
-          tech: String((lead.fields as any).TECHNOLOGY ?? ""),
-          postalCode: String((lead.fields as any)["Postal code"] ?? ""),
-          state: String((lead.fields as any).State ?? ""),
-          keywords: String((lead.fields as any).KEYWORDS ?? ""),
-          linkedin: String((lead.fields as any).LINKEDIN ?? ""),
-          revenue: String((lead.fields as any).REVENUE ?? ""),
-          jobTitle: String((lead.fields as any)["JOB TITLE"] ?? ""),
-          headline: String((lead.fields as any).HEADLINE ?? ""),
-          seniority: String((lead.fields as any).SENIORITY ?? ""),
-          companySize: String((lead.fields as any)["COMPANY SIZE"] ?? ""),
-          companyDesc: String((lead.fields as any)["COMPANY DESCRIPTION"] ?? ""),
-          instagram: String((lead.fields as any).INSTAGRAM ?? ""),
-          sector: String((lead.fields as any).SECTOR ?? ""),
-          address: String((lead.fields as any).Address ?? ""),
-          street: String((lead.fields as any).Street ?? ""),
-        },
-        subject: copy.subject,
-        emailBody: copy.emailBody,
-      };
+      return { recordId: lead.id, lead: leadFields, subject: copy.subject, emailBody: copy.emailBody };
     } catch (err) {
       return {
         recordId: lead.id,
-        lead: {
-          id: lead.id,
-          name: String(lead.fields["FULL NAME"] ?? ""),
-          company: String(lead.fields["company name"] ?? ""),
-          city: String(lead.fields.City ?? ""),
-          email,
-          phone: String((lead.fields as any).Phone ?? ""),
-          category: String((lead.fields as any).Category ?? ""),
-          url: String(lead.fields.URL ?? ""),
-          rank: lead.fields.Rank ?? "",
-          scoreReason: String(lead.fields.score_reason ?? ""),
-          leadStatus: String(lead.fields.lead_status ?? ""),
-          emailStatus: String(lead.fields["EMAIL STATUS"] ?? "Pending"),
-          tech: String((lead.fields as any).TECHNOLOGY ?? ""),
-          postalCode: String((lead.fields as any)["Postal code"] ?? ""),
-          state: String((lead.fields as any).State ?? ""),
-          keywords: String((lead.fields as any).KEYWORDS ?? ""),
-          linkedin: String((lead.fields as any).LINKEDIN ?? ""),
-          revenue: String((lead.fields as any).REVENUE ?? ""),
-          jobTitle: String((lead.fields as any)["JOB TITLE"] ?? ""),
-          headline: String((lead.fields as any).HEADLINE ?? ""),
-          seniority: String((lead.fields as any).SENIORITY ?? ""),
-          companySize: String((lead.fields as any)["COMPANY SIZE"] ?? ""),
-          companyDesc: String((lead.fields as any)["COMPANY DESCRIPTION"] ?? ""),
-          instagram: String((lead.fields as any).INSTAGRAM ?? ""),
-          sector: String((lead.fields as any).SECTOR ?? ""),
-          address: String((lead.fields as any).Address ?? ""),
-          street: String((lead.fields as any).Street ?? ""),
-        },
+        lead: leadFields,
         subject: `[GENERATION FAILED] ${err instanceof Error ? err.message : String(err)}`,
         emailBody: "",
       };
@@ -503,9 +499,10 @@ export async function sendPreviews(items: SendItem[]): Promise<OutreachResult> {
 
       // Guard 1: check current status — skip if Sent or already Processing
       const currentStatus = await fetchEmailStatus(baseId, tableId, item.recordId);
-      if (currentStatus === STATUS_SENT || currentStatus === STATUS_PROCESSING) {
+      const normalizedStatus = currentStatus?.trim();
+      if (normalizedStatus === "Sent" || normalizedStatus === "Processing") {
         result.skipped++;
-        result.errors.push(`${item.toEmail}: already ${currentStatus?.trim()} — skipped`);
+        result.errors.push(`${item.toEmail}: already ${normalizedStatus} — skipped`);
         return;
       }
 
@@ -566,7 +563,8 @@ export async function runOutreach(leadLimit = 10): Promise<OutreachResult> {
 
       // Guard 1: check current status
       const currentStatus = await fetchEmailStatus(baseId, tableId, lead.id);
-      if (currentStatus === STATUS_SENT || currentStatus === STATUS_PROCESSING) {
+      const normalizedStatus = currentStatus?.trim();
+      if (normalizedStatus === "Sent" || normalizedStatus === "Processing") {
         result.skipped++;
         return;
       }

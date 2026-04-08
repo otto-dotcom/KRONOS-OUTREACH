@@ -4,10 +4,10 @@ export const runtime = "edge";
 
 const AIRTABLE_API = "https://api.airtable.com/v0";
 
-// Use env vars with fallback to production values
 function getAirtableIds(): { base: string; table: string } {
-  const base = process.env.AIRTABLE_BASE_ID ?? "appLriEwWldpPTMPg";
-  const table = process.env.AIRTABLE_TABLE_ID ?? "tblLZkFo7Th7uyfWB";
+  const base = process.env.AIRTABLE_BASE_ID ?? "";
+  const table = process.env.AIRTABLE_TABLE_ID ?? "";
+  if (!base || !table) throw new Error("AIRTABLE_BASE_ID / AIRTABLE_TABLE_ID not set");
   return { base, table };
 }
 
