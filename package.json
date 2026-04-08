@@ -2,11 +2,13 @@
   "name": "kronos-outreach-root",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "vercel-build": "cd apps/dashboard && npm install --include=dev && npm run build",
-    "build": "cd apps/dashboard && npm install --include=dev && npm run build"
+  "dependencies": {
+    "next": "16.1.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
-  "devDependencies": {
-    "next": "16.1.6"
+  "scripts": {
+    "vercel-build": "next build apps/dashboard",
+    "build": "next build apps/dashboard"
   }
 }
