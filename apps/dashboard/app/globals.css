@@ -2,19 +2,48 @@
 @import "tailwindcss";
 
 @theme {
-  --color-k: #FF6B00;
-  --color-k-hover: #E66000;
-  --color-k-glow: rgba(255, 107, 0, 0.2);
-  --color-k-bg: #030303;
-  --color-k-card: #080808;
-  --color-k-border: #131313;
-  --color-k-muted: #333333;
-  --color-k-text: #F0F0F0;
+  --color-k: var(--color-k);
+  --color-k-bg: var(--color-bg);
+  --color-k-card: var(--color-card);
+  --color-k-border: var(--color-border);
+  --color-k-text: var(--color-text);
 }
 
 :root {
   --font-main: 'Outfit', sans-serif;
   --font-mono: 'Azeret Mono', monospace;
+
+  /* --- KRONOS BASE (Default) --- */
+  --color-k: #FF6B00;
+  --color-k-light: #FF9E5E;
+  --color-glow: rgba(255, 107, 0, 0.2);
+  --color-bg: #030303;
+  --color-card: #080808;
+  --color-border: #131313;
+  --color-text: #F0F0F0;
+  --color-text-dim: #888888;
+  --color-noise: rgba(255, 255, 255, 0.03);
+
+  /* --- HELIOS BRAND (Green/Clean) --- */
+  --color-h: #22C55E;
+  --color-h-hover: #16A34A;
+  --color-h-glow: rgba(34, 197, 94, 0.15);
+  --color-h-bg: #F8FFFE;
+  --color-h-card: #FFFFFF;
+  --color-h-border: #D1EAD8;
+  --color-h-text: #0F2319;
+}
+
+[data-theme='helios'] {
+  --color-k: var(--color-h);
+  --color-k-light: var(--color-h-hover);
+  --color-glow: var(--color-h-glow);
+  --color-bg: var(--color-h-bg);
+  --color-card: var(--color-h-card);
+  --color-border: var(--color-h-border);
+  --color-text: var(--color-h-text);
+  --color-text-dim: #6B7C6E;
+  --color-noise: rgba(34, 197, 94, 0.02);
 }
 
 * { 
@@ -24,21 +53,21 @@
 
 body {
   font-family: var(--font-main);
-  background: var(--color-k-bg);
-  color: var(--color-k-text);
+  background: var(--color-bg);
+  color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Noise Texture Overlay */
-body::before {
-  content: "";
+.noise {
   position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background: url("https://grainy-gradients.vercel.app/noise.svg");
-  opacity: 0.04;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  background-color: var(--color-noise);
   pointer-events: none;
-  z-index: 1000;
+  z-index: 100;
 }
 
 /* Brutal-Swiss Typography */
@@ -55,8 +84,8 @@ h1, h2, h3, .heading-brutal {
 /* Advanced Backgrounds */
 .mesh-bg {
   background: 
-    radial-gradient(at 0% 0%, rgba(255, 107, 0, 0.08) 0, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(255, 107, 0, 0.05) 0, transparent 50%);
+    radial-gradient(at 0% 0%, var(--color-glow) 0, transparent 50%),
+    radial-gradient(at 100% 100%, var(--color-glow) 0, transparent 50%);
 }
 
 /* High-Impact Composition */
@@ -69,16 +98,21 @@ h1, h2, h3, .heading-brutal {
 
 /* Glassmorphism V2 */
 .glass-panel {
-  background: rgba(8, 8, 8, 0.6);
+  background: var(--color-card);
   backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
 }
 
 .glass-panel-accent {
-  background: rgba(255, 107, 0, 0.02);
-  border: 1px solid rgba(255, 107, 0, 0.1);
-  box-shadow: 0 0 40px rgba(255, 107, 0, 0.03);
+  background: var(--color-glow);
+  border: 1px solid var(--color-k);
+  animation: pulseGlow 3s infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px var(--color-glow); }
+  50% { box-shadow: 0 0 40px var(--color-glow); }
 }
 
 /* Animations (Staggered Load) */

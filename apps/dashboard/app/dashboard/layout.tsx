@@ -34,15 +34,41 @@ function KronosLogoSmall() {
   );
 }
 
+function HeliosLogoSmall() {
+  return (
+    <svg width={28} height={28} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
+      <rect x="10" y="2" width="12" height="2" fill="var(--color-k)" />
+      <rect x="8" y="4" width="2" height="2" fill="var(--color-k)" />
+      <rect x="22" y="4" width="2" height="2" fill="var(--color-k)" />
+      <rect x="6" y="6" width="20" height="20" fill="var(--color-k)" opacity="0.1" />
+      <circle cx="16" cy="16" r="6" fill="var(--color-k)" />
+      <rect x="15" y="4" width="2" height="6" fill="var(--color-k)" />
+      <rect x="15" y="22" width="2" height="6" fill="var(--color-k)" />
+      <rect x="4" y="15" width="6" height="2" fill="var(--color-k)" />
+      <rect x="22" y="15" width="6" height="2" fill="var(--color-k)" />
+    </svg>
+  );
+}
+
 import { SwissBadge } from "./components";
+import { ProjectProvider, useProject } from "./ProjectContext";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <ProjectProvider>
+      <DashboardContent>{children}</DashboardContent>
+    </ProjectProvider>
+  );
+}
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { project, setProject } = useProject();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -61,15 +87,15 @@ export default function DashboardLayout({
         <div className="max-w-[1600px] mx-auto flex items-center justify-between glass-panel px-6 py-4 reveal">
           <div className="flex items-center gap-6 cursor-pointer group" onClick={() => router.push("/dashboard")}>
             <div className="relative">
-              <KronosLogoSmall />
+              {project === "kronos" ? <KronosLogoSmall /> : <HeliosLogoSmall />}
               <div className="absolute -inset-2 bg-k/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <div className="flex flex-col">
               <span className="text-k text-xs tracking-[0.4em] font-mono font-black">
-                KRONOS
+                {project.toUpperCase()}
               </span>
-              <span className="text-[#444] text-[8px] tracking-[0.2em] uppercase font-medium">
-                Autonomous Outreach Ops
+              <span className="text-k-text opacity-40 text-[8px] tracking-[0.2em] uppercase font-medium">
+                {project === "kronos" ? "Autonomous Outreach Ops" : "Clean Solar Intelligence"}
               </span>
             </div>
           </div>
@@ -100,9 +126,27 @@ export default function DashboardLayout({
           </nav>
 
           <div className="flex items-center gap-6">
+            {/* Project Switcher */}
+            <div className="flex items-center gap-2 p-1 bg-black/20 border border-white/5 rounded-none overflow-hidden">
+              <button 
+                onClick={() => setProject("kronos")}
+                className={`px-3 py-1 text-[7px] tracking-widest uppercase font-mono transition-all ${project === "kronos" ? "bg-k text-black" : "text-[#444] hover:text-white"}`}
+              >
+                Kronos
+              </button>
+              <button 
+                onClick={() => setProject("helios")}
+                className={`px-3 py-1 text-[7px] tracking-widest uppercase font-mono transition-all ${project === "helios" ? "bg-k text-black" : "text-[#444] hover:text-white"}`}
+              >
+                Helios
+              </button>
+            </div>
+
             <div className="hidden lg:flex flex-col items-end">
               <div className="cyber-tag mb-1">Status: Operational</div>
-              <div className="text-[7px] text-[#333] tracking-[0.3em] uppercase">Zurich // HQ</div>
+              <div className="text-[7px] text-text-dim tracking-[0.3em] uppercase">
+                {project === "kronos" ? "Zurich // HQ" : "Biel // Solar Lab"}
+              </div>
             </div>
             <div className="w-10 h-10 flex items-center justify-center border border-k/10 hover:border-k/40 transition-colors cursor-pointer" onClick={handleLogout}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#444] hover:text-k transition-colors">
