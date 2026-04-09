@@ -1,5 +1,3 @@
 {
-  "buildCommand": "next build apps/dashboard",
-  "outputDirectory": "apps/dashboard/.next",
-  "framework": "nextjs"
+  "ignoreCommand": "exit 1"
 }
