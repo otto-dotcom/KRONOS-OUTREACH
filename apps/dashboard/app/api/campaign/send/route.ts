@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendPreviews, SendItem } from "@/lib/outreach";
+import { sendPreviews, SendItem, type Project } from "@/lib/outreach";
 import { log } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-// Module-level lock — same protection as launch route.
-// The real guard is the per-lead Airtable re-check inside sendPreviews().
 let sending = false;
 
 export async function POST(req: NextRequest) {
-  let body: { emails?: unknown };
+  let body: { emails?: unknown; project?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -30,20 +28,21 @@ export async function POST(req: NextRequest) {
   }
 
   const emails = body.emails as SendItem[];
-  log.api("/api/campaign/send", "POST", { count: emails.length });
+  const project: Project = body.project === "helios" ? "helios" : "kronos";
+  log.api("/api/campaign/send", "POST", { count: emails.length, project });
   sending = true;
 
-  // Log each email before sending for audit trail
   for (const item of emails) {
     log.sent(item.recordId, item.toEmail, item.toEmail, item.wasEdited, item.wasRegenerated);
   }
 
   try {
-    const result = await sendPreviews(emails);
+    const result = await sendPreviews(emails, project);
     log.info("send_complete", {
       sent: result.sent,
       failed: result.failed,
       skipped: result.skipped,
+      project,
       editedCount: emails.filter((e) => e.wasEdited).length,
       regeneratedCount: emails.filter((e) => e.wasRegenerated).length,
     });

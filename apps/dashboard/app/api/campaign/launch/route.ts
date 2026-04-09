@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runOutreach } from "@/lib/outreach";
+import { runOutreach, type Project } from "@/lib/outreach";
 import { log } from "@/lib/logger";
 
 export const runtime = "nodejs";
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { leadLimit?: unknown };
+  let body: { leadLimit?: unknown; project?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -32,12 +32,13 @@ export async function POST(req: NextRequest) {
     Math.max(Math.floor(Number(body.leadLimit) || 10), 1),
     MAX_LEAD_LIMIT
   );
+  const project: Project = body.project === "helios" ? "helios" : "kronos";
 
-  log.api("/api/campaign/launch", "POST", { leadLimit });
+  log.api("/api/campaign/launch", "POST", { leadLimit, project });
   running = true;
 
   try {
-    const result = await runOutreach(leadLimit);
+    const result = await runOutreach(leadLimit, project);
     log.info("launch_complete", {
       sent: result.sent,
       failed: result.failed,

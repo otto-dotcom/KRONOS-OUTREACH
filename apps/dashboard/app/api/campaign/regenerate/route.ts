@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateEmailCopy, AirtableRecord } from "@/lib/outreach";
+import { generateEmailCopy, AirtableRecord, type Project } from "@/lib/outreach";
 import { log } from "@/lib/logger";
 
 export const maxDuration = 60;
@@ -8,7 +8,7 @@ const PLAIN_CONSTRAINT =
   "Rewrite this more conversationally. Maximum 2 short paragraphs. Only 1 link total (the Cal.com booking link — drop the website link). Use only <p> tags inside the wrapper div — no nested divs, no other HTML elements. Under 100 words total. Make it sound like a direct personal message, not an email template.";
 
 export async function POST(req: NextRequest) {
-  let body: { recordId?: string; leadData?: AirtableRecord["fields"]; mode?: string };
+  let body: { recordId?: string; leadData?: AirtableRecord["fields"]; mode?: string; project?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -20,21 +20,19 @@ export async function POST(req: NextRequest) {
   }
 
   const mode = body.mode === "plain" ? "plain" : "standard";
-  log.api("/api/campaign/regenerate", "POST", { recordId: body.recordId, mode });
+  const project: Project = body.project === "helios" ? "helios" : "kronos";
+  log.api("/api/campaign/regenerate", "POST", { recordId: body.recordId, mode, project });
   log.regen(body.recordId, String(body.leadData["company name"] ?? ""), mode);
 
-  // Reconstruct a minimal AirtableRecord for generateEmailCopy
-  const mockRecord: AirtableRecord = {
-    id: body.recordId,
-    fields: body.leadData,
-  };
+  const mockRecord: AirtableRecord = { id: body.recordId, fields: body.leadData };
 
   try {
     const copy = await generateEmailCopy(
       mockRecord,
+      project,
       mode === "plain" ? PLAIN_CONSTRAINT : undefined
     );
-    log.info("regenerate_complete", { recordId: body.recordId, mode });
+    log.info("regenerate_complete", { recordId: body.recordId, mode, project });
     return NextResponse.json({ ok: true, subject: copy.subject, emailBody: copy.emailBody });
   } catch (err) {
     log.error("regenerate_failed", err, { recordId: body.recordId });
