@@ -52,3 +52,4 @@ kronosautomations/
 *.tgz
 *.tar.gz
 .vercel
+*.tsbuildinfo
