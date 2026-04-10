@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+type Project = "kronos" | "helios";
+
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
@@ -8,11 +10,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "BREVO_API_KEY not configured" }, { status: 500 });
   }
 
+  const project = (req.nextUrl.searchParams.get("project") as Project) ?? "kronos";
+  const tag = project === "helios" ? "HELIOS_OUTREACH" : "KRONOS_OUTREACH";
   const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get("limit")) || 20, 1), 100);
 
   try {
-    // Fetch granular events for KRONOS_OUTREACH tag
-    const eventsUrl = `https://api.brevo.com/v3/smtp/statistics/events?limit=${limit}&tags=KRONOS_OUTREACH&sort=desc`;
+    const eventsUrl = `https://api.brevo.com/v3/smtp/statistics/events?limit=${limit}&tags=${tag}&sort=desc`;
     const eventsRes = await fetch(eventsUrl, {
       headers: {
         "api-key": apiKey,

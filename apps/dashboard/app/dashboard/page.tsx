@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { scoreDeliverability } from "@/lib/deliverability";
 import type { DeliverabilityReport } from "@/lib/deliverability";
@@ -308,6 +309,115 @@ function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
         </div>
       </div>
     );
+}
+
+function OverviewHero() {
+  const { project } = useProject();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState({ totalLeads: 0, emails: 0, opens: 0, clicks: 0, sms: 0 });
+
+  useEffect(() => {
+    async function loadSummary() {
+      setLoading(true);
+      try {
+        const [emailRes, leadsRes, smsRes] = await Promise.all([
+          fetch(`/api/analytics/email?days=7&project=${project ?? "kronos"}`),
+          fetch(`/api/analytics/leads?project=${project ?? "kronos"}`),
+          fetch(`/api/analytics/sms?days=7&project=${project ?? "kronos"}`),
+        ]);
+
+        const [emailData, leadsData, smsData] = await Promise.all([
+          emailRes.json(), leadsRes.json(), smsRes.json(),
+        ]);
+
+        setSummary({
+          totalLeads: leadsData.total || 0,
+          emails: emailData.totals?.delivered || 0,
+          opens: Math.round((emailData.openRate || 0) * ((emailData.totals?.delivered || 0) / 100)),
+          clicks: Math.round((emailData.clickRate || 0) * ((emailData.totals?.delivered || 0) / 100)),
+          sms: smsData.total || 0,
+        });
+      } catch (err) {
+        console.error("Failed to load overview summary:", err);
+      }
+      setLoading(false);
+    }
+
+    loadSummary();
+  }, [project]);
+
+  return (
+    <section className="glass-panel p-8 grid gap-6 lg:grid-cols-[1.5fr_1fr]" style={{ background: "rgba(17,17,19,0.72)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.12)" }}>
+      <div>
+        <div className="flex items-start justify-between gap-6 mb-6">
+          <div>
+            <p className="text-[10px] tracking-[0.35em] uppercase text-[#777]">Command center</p>
+            <h2 className="text-3xl font-bold tracking-tight" style={{ color: "var(--text-1)" }}>Kronos campaign funnel</h2>
+            <p className="mt-2 text-[12px] text-[#999] max-w-2xl">Live funnel summary for active outreach. Launch campaigns, inspect conversions, and see who clicked in one place.</p>
+          </div>
+          <div className="rounded-2xl border border-[color:var(--border)] bg-[#0B0B0D]/80 p-4">
+            <span className="text-[10px] tracking-[0.28em] uppercase text-[#777]">Project</span>
+            <div className="mt-2 text-[18px] font-bold uppercase" style={{ color: "var(--accent)" }}>{project === "helios" ? "HELIOS" : "KRONOS"}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {[
+            { label: "Leads", value: summary.totalLeads },
+            { label: "Emails sent", value: summary.emails },
+            { label: "Opens", value: summary.opens },
+            { label: "Clicks", value: summary.clicks },
+          ].map((item) => (
+            <div key={item.label} className="rounded-2xl border border-[color:var(--border)] bg-[#080808]/60 p-4">
+              <span className="text-[9px] tracking-[0.25em] uppercase text-[#777]">{item.label}</span>
+              <div className="mt-3 text-3xl font-bold text-white">{loading ? "—" : item.value.toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => document.getElementById("campaign-launcher")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="rounded-2xl bg-[#FF6B00] px-6 py-4 text-[11px] font-bold uppercase tracking-[0.25em] text-black hover:bg-[#ff8c33] transition"
+          >
+            Launch campaign
+          </button>
+          <button
+            onClick={() => router.push('/dashboard/analytics')}
+            className="rounded-2xl border border-[color:var(--border)] bg-transparent px-6 py-4 text-[11px] font-bold uppercase tracking-[0.25em] text-[#fff] hover:border-[#FF6B00] hover:text-[#FF6B00] transition"
+          >
+            Inspect campaign performance
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-[color:var(--border)] bg-[#0F0F11]/70 p-6" style={{ minHeight: 280 }}>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <span className="text-[10px] tracking-[0.2em] uppercase text-[#777]">Funnel health</span>
+          <span className="pill pill-accent">Realtime</span>
+        </div>
+        <div className="space-y-4">
+          {[
+            { label: "Delivered", value: summary.emails, color: "var(--accent)" },
+            { label: "Opened", value: summary.opens, color: "var(--success)" },
+            { label: "Clicked", value: summary.clicks, color: "var(--info)" },
+            { label: "SMS sent", value: summary.sms, color: "var(--warning)" },
+          ].map((item) => (
+            <div key={item.label}>
+              <div className="flex items-center justify-between text-[10px] uppercase text-[#777] mb-2">
+                <span>{item.label}</span>
+                <span>{loading ? "—" : item.value.toLocaleString()}</span>
+              </div>
+              <div className="h-3 rounded-full bg-[#111] overflow-hidden">
+                <div className="h-full" style={{ width: loading ? "0%" : `${Math.min(100, item.value / Math.max(summary.emails, 1) * 100)}%`, background: item.color, transition: "width 0.5s" }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 
@@ -641,7 +751,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
       const res = await fetch("/api/campaign/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadLimit }),
+        body: JSON.stringify({ leadLimit, project }),
         signal: controller.signal,
       });
 
@@ -749,7 +859,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
       const res = await fetch("/api/campaign/regenerate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recordId, leadData, mode: regenMode }),
+        body: JSON.stringify({ recordId, leadData, mode: regenMode, project }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Regeneration failed");
@@ -784,7 +894,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
       const res = await fetch("/api/campaign/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emails: payload }),
+        body: JSON.stringify({ emails: payload, project }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Send failed");
@@ -954,7 +1064,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
 
   /* ── LAUNCHER (default) ── */
   return (
-    <div className="card p-10 fade-up">
+    <div id="campaign-launcher" className="card p-10 fade-up">
       <SectionLabel icon={<IconRocket />} label="Initialize Outreach Protocol" />
       
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] items-end gap-8 bg-black/60 p-8 border border-white/5 relative group">
@@ -1014,6 +1124,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
    ═══════════════════════════════════════════════════════ */
 
 function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => void }) {
+  const { project } = useProject();
   const [data, setData] = useState<LeadsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1022,7 +1133,7 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/analytics/leads");
+      const res = await fetch(`/api/analytics/leads?project=${project ?? "kronos"}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setData(json);
@@ -1030,7 +1141,7 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
       setError(err instanceof Error ? err.message : "Failed to load");
     }
     setLoading(false);
-  }, []);
+  }, [project]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
@@ -1307,6 +1418,7 @@ function EmailActivityLog() {
 }
 
 function EmailAnalytics() {
+  const { project } = useProject();
   const [days, setDays] = useState(7);
   const [data, setData] = useState<EmailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1316,7 +1428,7 @@ function EmailAnalytics() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/analytics/email?days=${days}`);
+      const res = await fetch(`/api/analytics/email?days=${days}&project=${project ?? "kronos"}`);
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json.error);
@@ -1327,7 +1439,7 @@ function EmailAnalytics() {
       setError(err instanceof Error ? err.message : "Failed to load");
     }
     setLoading(false);
-  }, [days]);
+  }, [days, project]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
@@ -1404,6 +1516,7 @@ function EmailAnalytics() {
    ═══════════════════════════════════════════════════════ */
 
 function SmsAnalytics() {
+  const { project } = useProject();
   const [days, setDays] = useState(90);
   const [data, setData] = useState<SmsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1413,7 +1526,7 @@ function SmsAnalytics() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/analytics/sms?days=${days}`);
+      const res = await fetch(`/api/analytics/sms?days=${days}&project=${project ?? "kronos"}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setData(json);
@@ -1421,7 +1534,7 @@ function SmsAnalytics() {
       setError(err instanceof Error ? err.message : "Failed to load");
     }
     setLoading(false);
-  }, [days]);
+  }, [days, project]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
@@ -1543,9 +1656,10 @@ function DashboardPageInner() {
 
   return (
     <div className="space-y-6">
+      <OverviewHero />
       <CampaignLauncher onSelectLead={setSelectedLead} project={project ?? "kronos"} />
       <LeadsAnalytics onSelectLead={setSelectedLead} />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div id="analytics-panel" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <EmailAnalytics />
         <SmsAnalytics />
       </div>

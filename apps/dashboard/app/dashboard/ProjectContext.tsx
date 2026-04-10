@@ -20,11 +20,19 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [project, setProject] = useState<Project>(null);
 
   useEffect(() => {
-    // Sync with HTML attribute for CSS variables
+    const stored = window.localStorage.getItem("kronos-project");
+    if (stored === "kronos" || stored === "helios") {
+      setProject(stored);
+    }
+  }, []);
+
+  useEffect(() => {
     if (project) {
       document.documentElement.setAttribute("data-theme", project);
+      window.localStorage.setItem("kronos-project", project);
     } else {
       document.documentElement.removeAttribute("data-theme");
+      window.localStorage.removeItem("kronos-project");
     }
   }, [project]);
 

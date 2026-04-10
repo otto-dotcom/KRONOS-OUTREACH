@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useProject } from "./ProjectContext";
 import { useState } from "react";
@@ -234,7 +235,7 @@ function NavItem({ icon: Icon, label, path, active }: {
   icon: React.ElementType; label: string; path: string; active: boolean;
 }) {
   return (
-    <a
+    <Link
       href={path}
       title={label}
       style={{
@@ -267,7 +268,7 @@ function NavItem({ icon: Icon, label, path, active }: {
           width: 3, height: 20, background: "var(--accent)", borderRadius: 2,
         }} />
       )}
-    </a>
+    </Link>
   );
 }
 
@@ -278,7 +279,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const { project, setProject } = useProject();
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     router.push("/");
   }
 

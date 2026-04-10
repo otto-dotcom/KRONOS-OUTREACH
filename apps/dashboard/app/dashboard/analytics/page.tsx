@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useProject } from "../ProjectContext";
 import { BarChart2, Mail, Users, MousePointerClick, RefreshCw } from "lucide-react";
 import { BarChart, DonutChart, ProgressStat, RangeFilter, KpiCard } from "../components";
 
@@ -26,17 +28,27 @@ export default function AnalyticsPage() {
     bounce_rate: 0,
   });
 
+  const { project } = useProject();
+  const router = useRouter();
+  const [clickers, setClickers] = useState<Array<{ email: string; event: string; date: string; subject: string }>>([]);
+
   async function loadData() {
     setLoading(true);
     try {
-      const [statsRes, historyRes, leadsRes] = await Promise.all([
-        fetch(`/api/analytics/email?days=${days}`),
-        fetch(`/api/analytics/history`),
-        fetch(`/api/analytics/leads`),
+      const fetchUrl = (path: string) =>
+        fetch(`${path}?days=${days}&project=${project ?? "kronos"}`, { credentials: "include" });
+
+      const [statsRes, historyRes, leadsRes, eventsRes] = await Promise.all([
+        fetchUrl(`/api/analytics/email`),
+        fetch(`/api/analytics/history?project=${project ?? "kronos"}`, { credentials: "include" }),
+        fetchUrl(`/api/analytics/leads`),
+        fetch(`/api/analytics/email/events?limit=40&project=${project ?? "kronos"}`, { credentials: "include" }),
       ]);
-      const [statsData, historyData, leadsData] = await Promise.all([
-        statsRes.json(), historyRes.json(), leadsRes.json(),
+
+      const [statsData, historyData, leadsData, eventsData] = await Promise.all([
+        statsRes.json(), historyRes.json(), leadsRes.json(), eventsRes.json(),
       ]);
+
       if (statsRes.ok && leadsRes.ok) {
         setStats({
           total_leads: leadsData.total || 0,
@@ -49,13 +61,29 @@ export default function AnalyticsPage() {
         });
       }
       if (historyRes.ok) setHistory(historyData.history || []);
+
+      if (eventsRes.ok && Array.isArray(eventsData.events)) {
+        const clickEvents = eventsData.events
+          .filter((item: any) => {
+            const eventName = String(item.event || "").toLowerCase();
+            return eventName.includes("click") || eventName.includes("opened") || eventName.includes("delivered");
+          })
+          .slice(0, 8)
+          .map((item: any) => ({
+            email: String(item.email || item.recipient || item.to || "unknown"),
+            event: String(item.event || "unknown").toUpperCase(),
+            date: String(item.date || item.timestamp || ""),
+            subject: String(item.subject || item.campaign || ""),
+          }));
+        setClickers(clickEvents);
+      }
     } catch (err) {
       console.error("Failed to load analytics:", err);
     }
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [days]);
+  useEffect(() => { loadData(); }, [days, project]);
 
   const opens  = Math.round(stats.sent_emails * (stats.open_rate  / 100));
   const clicks = Math.round(stats.sent_emails * (stats.click_rate / 100));
@@ -78,13 +106,33 @@ export default function AnalyticsPage() {
 
       {/* ── Page header ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-1)", letterSpacing: "-0.02em", margin: 0 }}>
-            Analytics
-          </h1>
-          <p style={{ fontSize: 13, color: "var(--text-2)", marginTop: 3 }}>
-            Outreach performance · last {days} days
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <button
+            onClick={() => router.push('/dashboard')}
+            style={{
+              padding: "8px 12px",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              color: "var(--text-2)",
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            ← Back to Dashboard
+          </button>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-1)", letterSpacing: "-0.02em", margin: 0 }}>
+              Analytics
+            </h1>
+            <p style={{ fontSize: 13, color: "var(--text-2)", marginTop: 3 }}>
+              Outreach performance · last {days} days
+            </p>
+          </div>
         </div>
         <RangeFilter days={days} onChange={setDays} />
       </div>
