@@ -172,7 +172,7 @@ function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
-      <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-6xl h-fit max-h-[92vh] flex flex-col md:flex-row overflow-hidden relative">
+      <div className="card w-full max-w-6xl h-fit max-h-[92vh] flex flex-col md:flex-row overflow-hidden relative">
         
         {/* Sidebar: Profile Summary */}
         <div className="w-full md:w-80 border-r border-white/5 p-10 flex flex-col shrink-0">
@@ -425,7 +425,7 @@ function EmailCard({
 
   return (
     <div
-      className="bg-[#0D0D0D] border border-white/5 transition-all duration-300 hover:border-primary/30 fade-up"
+      className="card transition-all duration-300 hover:border-primary/30 fade-up"
       style={{ borderTopColor: TIER_COLOR[report.tier], borderTopWidth: "2px" }}
     >
       {/* Lead header */}
@@ -441,7 +441,7 @@ function EmailCard({
              {email.lead.seniority && (
                 <div className="px-1.5 py-0.5 bg-white/5 border border-white/10 text-[8px] text-[#666] font-bold uppercase">{email.lead.seniority}</div>
              )}
-             <div className="bg-[#0A0A0A] border border-[#1A1A1A] px-2 py-0.5 flex items-center gap-1.5">
+             <div className="bg-[#0A0A0A] border rounded-xl border-[color:var(--border)] px-2 py-0.5 flex items-center gap-1.5">
                 <span className="text-[9px] text-[#444] font-bold">RANK</span>
                 <span className="text-[#FF6B00] text-[10px] font-black">{email.lead.rank}</span>
              </div>
@@ -456,13 +456,13 @@ function EmailCard({
 
         {/* Info Tiles */}
         <div className="grid grid-cols-2 gap-2 mb-4">
-          <div className="bg-[#0A0A0A] border border-[#161616] p-2">
+          <div className="card-inset p-2">
             <span className="text-[8px] text-[#333] uppercase block mb-0.5 tracking-[0.1em]">Revenue / Size</span>
             <span className="text-[10px] text-[#888] truncate block font-medium uppercase">
               {email.lead.revenue || "—"} / {email.lead.companySize || "—"}
             </span>
           </div>
-          <div className="bg-[#0A0A0A] border border-[#161616] p-2">
+          <div className="card-inset p-2">
             <span className="text-[8px] text-[#333] uppercase block mb-0.5 tracking-[0.1em]">Industry / Seniority</span>
             <span className="text-[10px] text-[#888] truncate block font-medium uppercase font-semibold">
               {email.lead.sector || email.lead.category || "—"} · {email.lead.seniority || "—"}
@@ -510,7 +510,7 @@ function EmailCard({
             value={localSubject}
             onChange={(e) => setLocalSubject(e.target.value)}
             onBlur={commitSubject}
-            className="w-full bg-[#060606] border border-[#222] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#FF6B00] transition-colors"
+            className="w-full bg-[#060606] border rounded-lg border-[color:var(--border)] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#FF6B00] transition-colors"
           />
         )}
       </div>
@@ -546,13 +546,13 @@ function EmailCard({
               <iframe
                 srcDoc={email.emailBody}
                 sandbox="allow-same-origin"
-                className="w-full border border-[#1A1A1A] bg-white"
+                className="w-full border rounded-xl border-[color:var(--border)] bg-white"
                 style={{ height: "280px" }}
                 title="Email preview"
               />
               <button
                 onClick={() => setEditingBody(true)}
-                className="mt-2 text-[9px] tracking-[0.15em] text-[#555] hover:text-[#FF6B00] border border-[#1A1A1A] px-3 py-1.5 hover:border-[#FF6B00] transition-colors cursor-pointer"
+                className="mt-2 text-[9px] tracking-[0.15em] text-[#555] hover:text-[#FF6B00] border rounded-xl border-[color:var(--border)] px-3 py-1.5 hover:border-[#FF6B00] transition-colors cursor-pointer"
               >
                 EDIT RAW HTML
               </button>
@@ -563,7 +563,7 @@ function EmailCard({
               <textarea
                 value={localBody}
                 onChange={(e) => setLocalBody(e.target.value)}
-                className="w-full h-48 bg-[#060606] border border-[#222] text-[#AAA] text-[11px] px-3 py-2 font-mono resize-none focus:outline-none focus:border-[#FF6B00] transition-colors"
+                className="w-full h-48 bg-[#060606] border rounded-lg border-[color:var(--border)] text-[#AAA] text-[11px] px-3 py-2 font-mono resize-none focus:outline-none focus:border-[#FF6B00] transition-colors"
               />
               <button
                 onClick={commitBody}
@@ -585,14 +585,14 @@ function EmailCard({
             <button
               onClick={() => onRegenerate("standard")}
               disabled={email.regenerating}
-              className="text-[9px] tracking-[0.15em] px-3 py-1.5 border border-[#1A1A1A] text-[#777] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-colors cursor-pointer disabled:opacity-30"
+              className="text-[9px] tracking-[0.15em] px-3 py-1.5 border rounded-xl border-[color:var(--border)] text-[#777] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-colors cursor-pointer disabled:opacity-30"
             >
               {email.regenerating ? "GENERATING..." : "REGENERATE"}
             </button>
             <button
               onClick={() => onRegenerate("plain")}
               disabled={email.regenerating}
-              className="text-[9px] tracking-[0.15em] px-3 py-1.5 border border-[#1A1A1A] text-[#777] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-colors cursor-pointer disabled:opacity-30"
+              className="text-[9px] tracking-[0.15em] px-3 py-1.5 border rounded-xl border-[color:var(--border)] text-[#777] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-colors cursor-pointer disabled:opacity-30"
             >
               REGENERATE: PLAIN
             </button>
@@ -812,7 +812,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
   /* ── GENERATING ── */
   if (mode === "previewing") {
     return (
-      <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-12 flex flex-col items-center gap-4">
+      <div className="card p-12 flex flex-col items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 bg-[#FF6B00] blink" />
           <span className="text-[10px] tracking-[0.3em] text-[#888] uppercase">
@@ -827,7 +827,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
   /* ── SENDING ── */
   if (mode === "sending") {
     return (
-      <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-12 flex flex-col items-center gap-4">
+      <div className="card p-12 flex flex-col items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 bg-[#FF6B00] blink" />
           <span className="text-[10px] tracking-[0.3em] text-[#888] uppercase">
@@ -842,7 +842,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
   if (mode === "done" && sendResult) {
     const editedEmails = emails.filter((e) => e.edited);
     return (
-      <div className="bg-[#0D0D0D] border border-white/5 p-8 space-y-6">
+      <div className="card p-8 space-y-6">
         <SectionLabel icon={<IconRocket />} label="Campaign Complete" />
         <div className="flex items-center gap-3 p-4 border border-green-500/10 bg-green-500/5 text-green-400">
           <div className="w-1.5 h-1.5 bg-green-500" />
@@ -856,7 +856,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
           </span>
         </div>
         {editedEmails.length > 0 && (
-          <div className="border border-[#1A1A1A] p-4">
+          <div className="border rounded-xl border-[color:var(--border)] p-4">
             <div className="text-[10px] tracking-[0.2em] text-[#FF6B00] uppercase mb-3">
               Copy Edit Log — {editedEmails.length} email{editedEmails.length > 1 ? "s" : ""} modified
             </div>
@@ -891,7 +891,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
             setEmails([]);
             setSendResult(null);
           }}
-          className="w-full border border-[#1A1A1A] text-[10px] tracking-[0.3em] py-3 text-[#666] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-all cursor-pointer"
+          className="w-full border rounded-xl border-[color:var(--border)] text-[10px] tracking-[0.3em] py-3 text-[#666] hover:border-[#FF6B00] hover:text-[#FF6B00] transition-all cursor-pointer"
         >
           START NEW CAMPAIGN
         </button>
@@ -903,7 +903,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
   if (mode === "gallery") {
     return (
       <div>
-        <div className="bg-[#080808] border border-[#1A1A1A] px-5 py-3 flex items-center gap-4 mb-4 sticky top-0 z-10">
+        <div className="bg-[#080808] border rounded-xl border-[color:var(--border)] px-5 py-3 flex items-center gap-4 mb-4 sticky top-0 z-10">
           <button
             onClick={() => {
               setMode("launcher");
@@ -954,7 +954,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
 
   /* ── LAUNCHER (default) ── */
   return (
-    <div className="bg-[#0D0D0D] border border-white/5 p-10 fade-up">
+    <div className="card p-10 fade-up">
       <SectionLabel icon={<IconRocket />} label="Initialize Outreach Protocol" />
       
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] items-end gap-8 bg-black/60 p-8 border border-white/5 relative group">
@@ -969,7 +969,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
               max={50}
               value={leadLimit}
               onChange={(e) => setLeadLimit(Number(e.target.value))}
-              className="w-full bg-[#030303] border border-[#1A1A1A] text-[#FF6B00] px-6 py-5 text-3xl font-mono font-black tracking-tighter focus:outline-none focus:border-orange-500/50 transition-all"
+              className="w-full bg-[#030303] border rounded-xl border-[color:var(--border)] text-[#FF6B00] px-6 py-5 text-3xl font-mono font-black tracking-tighter focus:outline-none focus:border-orange-500/50 transition-all"
             />
             <div className="absolute right-5 top-1/2 -translate-y-1/2 text-[9px] text-[#222] font-mono tracking-widest">LEADS_TOTAL</div>
           </div>
@@ -1035,7 +1035,7 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
   return (
-    <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6">
+    <div className="card p-6">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -1067,7 +1067,7 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
           </div>
 
           {/* Lead scoring breakdown */}
-          <div className="bg-[#0A0A0A] border border-[#161616] p-5 mb-4">
+          <div className="card-inset p-5 mb-4">
             <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-4">Lead Score Breakdown</div>
             <DonutChart
               segments={[
@@ -1079,7 +1079,7 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
           </div>
 
           {/* Email pipeline progress */}
-          <div className="bg-[#0A0A0A] border border-[#161616] p-4 mb-4 space-y-3">
+          <div className="card-inset p-4 mb-4 space-y-3">
             <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-2">Outreach Pipeline</div>
             <ProgressStat label="Sent" value={data.by_email.sent} max={data.total} color="#22C55E" />
             <ProgressStat label="Pending" value={data.by_email.pending} max={data.total} color="#FF6B00" />
@@ -1126,7 +1126,7 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
                       {lead.emailStatus === "Sent" ? (
                         <span className="text-[8px] px-2 py-0.5 bg-green-950/30 border border-green-500/30 text-green-400 font-black tracking-widest glow-green">SENT</span>
                       ) : (
-                        <span className="text-[8px] px-2 py-0.5 bg-[#080808] border border-[#1A1A1A] text-[#444] group-hover:border-[#FF6B00]/40 group-hover:text-[#FF6B00] font-black tracking-widest transition-all">READY</span>
+                        <span className="text-[8px] px-2 py-0.5 bg-[#080808] border rounded-xl border-[color:var(--border)] text-[#444] group-hover:border-[#FF6B00]/40 group-hover:text-[#FF6B00] font-black tracking-widest transition-all">READY</span>
                       )}
                     </div>
                   </div>
@@ -1166,7 +1166,7 @@ function EmailTemplatePreview() {
   const [showPreview, setShowPreview] = useState(false);
 
   return (
-    <div className="bg-[#0A0A0A] border border-[#161616] p-4 mt-4">
+    <div className="card-inset p-4 mt-4">
       <button
         onClick={() => setShowPreview(!showPreview)}
         className="flex items-center gap-2 w-full cursor-pointer group"
@@ -1182,7 +1182,7 @@ function EmailTemplatePreview() {
 
       {showPreview && (
         <div className="mt-4 space-y-3 fade-up">
-          <div className="flex items-center gap-2 p-2 border border-[#1A1A1A] bg-[#060606]">
+          <div className="flex items-center gap-2 p-2 border rounded-xl border-[color:var(--border)] bg-[#060606]">
             <div className="w-1.5 h-1.5 bg-[#FF6B00] blink" />
             <span className="text-[9px] text-[#888] tracking-wider uppercase">
               AI-Generated via GPT-4o-mini // Plain-text style for inbox delivery
@@ -1190,17 +1190,17 @@ function EmailTemplatePreview() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-[10px]">
-            <div className="p-2 border border-[#161616]">
+            <div className="p-2 border rounded-lg border-[color:var(--border)]">
               <span className="text-[#666] uppercase tracking-wider">From</span>
               <p className="text-white mt-0.5 font-mono text-[11px]">otto@kronosbusiness.com</p>
             </div>
-            <div className="p-2 border border-[#161616]">
+            <div className="p-2 border rounded-lg border-[color:var(--border)]">
               <span className="text-[#666] uppercase tracking-wider">Subject</span>
               <p className="text-[#FF6B00] mt-0.5 font-mono text-[11px]">AI-generated per lead</p>
             </div>
           </div>
 
-          <div className="border border-[#222] overflow-hidden">
+          <div className="border rounded-lg border-[color:var(--border)] overflow-hidden">
             <div className="bg-[#1A1A1A] px-3 py-1.5 flex items-center justify-between">
               <span className="text-[9px] text-[#666] tracking-wider uppercase">HTML Preview</span>
               <div className="flex gap-1">
@@ -1221,7 +1221,7 @@ function EmailTemplatePreview() {
               { label: "Style", value: "Plain-text" },
               { label: "CTA", value: "Cal.com + Site" },
             ].map((item) => (
-              <div key={item.label} className="p-2 border border-[#161616] text-center">
+              <div key={item.label} className="p-2 border rounded-lg border-[color:var(--border)] text-center">
                 <div className="text-[9px] text-[#666] tracking-wider uppercase">{item.label}</div>
                 <div className="text-[10px] text-white mt-0.5">{item.value}</div>
               </div>
@@ -1266,7 +1266,7 @@ function EmailActivityLog() {
   };
 
   return (
-    <div className="bg-[#0A0A0A] border border-[#161616] p-4 mt-4">
+    <div className="card-inset p-4 mt-4">
       <div className="flex items-center justify-between mb-4">
         <span className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold">
           Live Outreach Log
@@ -1332,7 +1332,7 @@ function EmailAnalytics() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
   return (
-    <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6">
+    <div className="card p-6">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -1363,7 +1363,7 @@ function EmailAnalytics() {
             <Metric value={data.totals.requests} label="Total Emails Sent" highlight large />
           </div>
 
-          <div className="bg-[#0A0A0A] border border-[#161616] p-4 mb-4 space-y-3">
+          <div className="card-inset p-4 mb-4 space-y-3">
             <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-2">Conversion Funnel</div>
             <ProgressStat label="Delivered" value={data.totals.delivered} max={data.totals.requests} color="#FF6B00" />
             <ProgressStat label="Opened" value={data.totals.opens} max={data.totals.requests} color="#FF8C33" />
@@ -1426,7 +1426,7 @@ function SmsAnalytics() {
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
   return (
-    <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6">
+    <div className="card p-6">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -1457,7 +1457,7 @@ function SmsAnalytics() {
             <Metric value={data.total} label="Total SMS Sent" highlight large />
           </div>
 
-          <div className="bg-[#0A0A0A] border border-[#161616] p-5 mb-4">
+          <div className="card-inset p-5 mb-4">
             <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-4">Delivery Breakdown</div>
             <DonutChart
               segments={[
@@ -1469,7 +1469,7 @@ function SmsAnalytics() {
             />
           </div>
 
-          <div className="bg-[#0A0A0A] border border-[#161616] p-4 mb-4">
+          <div className="card-inset p-4 mb-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] tracking-[0.15em] text-[#888] uppercase">Delivery Rate</span>
               <span className="text-xl font-bold text-[#FF6B00]">{data.deliveryRate}%</span>
@@ -1501,7 +1501,7 @@ function SmsAnalytics() {
           )}
 
           {data.recent && data.recent.length > 0 && (
-            <div className="bg-[#0A0A0A] border border-[#161616] p-4">
+            <div className="card-inset p-4">
               <div className="text-[10px] tracking-[0.15em] text-[#999] uppercase font-semibold mb-3">Recent Messages</div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {data.recent.map((msg, i) => (

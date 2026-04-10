@@ -3,161 +3,126 @@
 import { useRouter, usePathname } from "next/navigation";
 import { useProject } from "./ProjectContext";
 import { useState } from "react";
+import {
+  LayoutDashboard, BarChart2, Database, MessageSquare,
+  Settings, Zap, LogOut, ChevronRight, ArrowLeftRight
+} from "lucide-react";
 
-/* ── Pixel Logos ─────────────────────────────────────────────────────────── */
-
-function KronosLogoSmall() {
+/* ── Logos ───────────────────────────────────────────────────────────────── */
+function KronosLogo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={28} height={28} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
-      <rect x="10" y="2" width="12" height="2" fill="#FF6B00" />
-      <rect x="8" y="4" width="2" height="2" fill="#FF6B00" />
-      <rect x="22" y="4" width="2" height="2" fill="#FF6B00" />
-      <rect x="6" y="6" width="2" height="2" fill="#FF6B00" />
-      <rect x="24" y="6" width="2" height="2" fill="#FF6B00" />
-      <rect x="4" y="8" width="2" height="4" fill="#FF6B00" />
-      <rect x="26" y="8" width="2" height="4" fill="#FF6B00" />
-      <rect x="4" y="12" width="2" height="4" fill="#FF6B00" />
-      <rect x="26" y="12" width="2" height="4" fill="#FF6B00" />
-      <rect x="4" y="16" width="2" height="4" fill="#FF6B00" />
-      <rect x="26" y="16" width="2" height="4" fill="#FF6B00" />
-      <rect x="4" y="20" width="2" height="2" fill="#FF6B00" />
-      <rect x="26" y="20" width="2" height="2" fill="#FF6B00" />
-      <rect x="6" y="22" width="2" height="2" fill="#FF6B00" />
-      <rect x="24" y="22" width="2" height="2" fill="#FF6B00" />
-      <rect x="8" y="24" width="2" height="2" fill="#FF6B00" />
-      <rect x="22" y="24" width="2" height="2" fill="#FF6B00" />
-      <rect x="10" y="26" width="12" height="2" fill="#FF6B00" />
-      <rect x="8" y="6" width="16" height="18" fill="#0D0D0D" />
-      <rect x="6" y="8" width="2" height="14" fill="#0D0D0D" />
-      <rect x="24" y="8" width="2" height="14" fill="#0D0D0D" />
-      <rect x="15" y="8" width="2" height="8" fill="#FF6B00" />
-      <rect x="15" y="14" width="6" height="2" fill="#FF6B00" opacity="0.7" />
-      <rect x="15" y="14" width="2" height="2" fill="#FFFFFF" />
-      <rect x="28" y="13" width="2" height="4" fill="#FF6B00" />
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
+      <rect x="10" y="2" width="12" height="2" fill="#F97316" />
+      <rect x="8"  y="4" width="2"  height="2" fill="#F97316" />
+      <rect x="22" y="4" width="2"  height="2" fill="#F97316" />
+      <rect x="6"  y="6" width="2"  height="2" fill="#F97316" />
+      <rect x="24" y="6" width="2"  height="2" fill="#F97316" />
+      <rect x="4"  y="8" width="2"  height="4" fill="#F97316" />
+      <rect x="26" y="8" width="2"  height="4" fill="#F97316" />
+      <rect x="4"  y="12" width="2" height="4" fill="#F97316" />
+      <rect x="26" y="12" width="2" height="4" fill="#F97316" />
+      <rect x="4"  y="16" width="2" height="4" fill="#F97316" />
+      <rect x="26" y="16" width="2" height="4" fill="#F97316" />
+      <rect x="4"  y="20" width="2" height="2" fill="#F97316" />
+      <rect x="26" y="20" width="2" height="2" fill="#F97316" />
+      <rect x="6"  y="22" width="2" height="2" fill="#F97316" />
+      <rect x="24" y="22" width="2" height="2" fill="#F97316" />
+      <rect x="8"  y="24" width="2" height="2" fill="#F97316" />
+      <rect x="22" y="24" width="2" height="2" fill="#F97316" />
+      <rect x="10" y="26" width="12" height="2" fill="#F97316" />
+      <rect x="8"  y="6"  width="16" height="18" fill="#09090B" />
+      <rect x="6"  y="8"  width="2"  height="14" fill="#09090B" />
+      <rect x="24" y="8"  width="2"  height="14" fill="#09090B" />
+      <rect x="15" y="8"  width="2"  height="8"  fill="#F97316" />
+      <rect x="15" y="14" width="6"  height="2"  fill="#F97316" opacity="0.7" />
+      <rect x="15" y="14" width="2"  height="2"  fill="#fff" />
     </svg>
   );
 }
 
-function KronosLogoLarge() {
+function HeliosLogo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={72} height={72} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
-      <rect x="10" y="2" width="12" height="2" fill="#FF6B00" />
-      <rect x="8" y="4" width="2" height="2" fill="#FF6B00" />
-      <rect x="22" y="4" width="2" height="2" fill="#FF6B00" />
-      <rect x="6" y="6" width="2" height="2" fill="#FF6B00" />
-      <rect x="24" y="6" width="2" height="2" fill="#FF6B00" />
-      <rect x="4" y="8" width="2" height="4" fill="#FF6B00" />
-      <rect x="26" y="8" width="2" height="4" fill="#FF6B00" />
-      <rect x="4" y="12" width="2" height="4" fill="#FF6B00" />
-      <rect x="26" y="12" width="2" height="4" fill="#FF6B00" />
-      <rect x="4" y="16" width="2" height="4" fill="#FF6B00" />
-      <rect x="26" y="16" width="2" height="4" fill="#FF6B00" />
-      <rect x="4" y="20" width="2" height="2" fill="#FF6B00" />
-      <rect x="26" y="20" width="2" height="2" fill="#FF6B00" />
-      <rect x="6" y="22" width="2" height="2" fill="#FF6B00" />
-      <rect x="24" y="22" width="2" height="2" fill="#FF6B00" />
-      <rect x="8" y="24" width="2" height="2" fill="#FF6B00" />
-      <rect x="22" y="24" width="2" height="2" fill="#FF6B00" />
-      <rect x="10" y="26" width="12" height="2" fill="#FF6B00" />
-      <rect x="8" y="6" width="16" height="18" fill="#0D0D0D" />
-      <rect x="6" y="8" width="2" height="14" fill="#0D0D0D" />
-      <rect x="24" y="8" width="2" height="14" fill="#0D0D0D" />
-      <rect x="15" y="8" width="2" height="8" fill="#FF6B00" />
-      <rect x="15" y="14" width="6" height="2" fill="#FF6B00" opacity="0.7" />
-      <rect x="15" y="14" width="2" height="2" fill="#FFFFFF" />
-      <rect x="28" y="13" width="2" height="4" fill="#FF6B00" />
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
+      <circle cx="16" cy="16" r="6"   fill="#16A34A" />
+      <rect x="15" y="4"  width="2" height="6" fill="#16A34A" />
+      <rect x="15" y="22" width="2" height="6" fill="#16A34A" />
+      <rect x="4"  y="15" width="6" height="2" fill="#16A34A" />
+      <rect x="22" y="15" width="6" height="2" fill="#16A34A" />
+      <rect x="7"  y="7"  width="2" height="2" fill="#16A34A" opacity="0.55" />
+      <rect x="23" y="7"  width="2" height="2" fill="#16A34A" opacity="0.55" />
+      <rect x="7"  y="23" width="2" height="2" fill="#16A34A" opacity="0.55" />
+      <rect x="23" y="23" width="2" height="2" fill="#16A34A" opacity="0.55" />
     </svg>
   );
 }
 
-function HeliosLogoSmall() {
-  return (
-    <svg width={28} height={28} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
-      <circle cx="16" cy="16" r="6" fill="#22C55E" />
-      <rect x="15" y="4" width="2" height="6" fill="#22C55E" />
-      <rect x="15" y="22" width="2" height="6" fill="#22C55E" />
-      <rect x="4" y="15" width="6" height="2" fill="#22C55E" />
-      <rect x="22" y="15" width="6" height="2" fill="#22C55E" />
-      <rect x="7" y="7" width="2" height="2" fill="#22C55E" opacity="0.6" />
-      <rect x="23" y="7" width="2" height="2" fill="#22C55E" opacity="0.6" />
-      <rect x="7" y="23" width="2" height="2" fill="#22C55E" opacity="0.6" />
-      <rect x="23" y="23" width="2" height="2" fill="#22C55E" opacity="0.6" />
-    </svg>
-  );
-}
-
-function HeliosLogoLarge() {
-  return (
-    <svg width={72} height={72} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
-      <circle cx="16" cy="16" r="6" fill="#22C55E" />
-      <rect x="15" y="4" width="2" height="6" fill="#22C55E" />
-      <rect x="15" y="22" width="2" height="6" fill="#22C55E" />
-      <rect x="4" y="15" width="6" height="2" fill="#22C55E" />
-      <rect x="22" y="15" width="6" height="2" fill="#22C55E" />
-      <rect x="7" y="7" width="2" height="2" fill="#22C55E" opacity="0.6" />
-      <rect x="23" y="7" width="2" height="2" fill="#22C55E" opacity="0.6" />
-      <rect x="7" y="23" width="2" height="2" fill="#22C55E" opacity="0.6" />
-      <rect x="23" y="23" width="2" height="2" fill="#22C55E" opacity="0.6" />
-    </svg>
-  );
-}
-
-/* ── Jarvis Mini-Chat ────────────────────────────────────────────────────── */
+/* ── JARVIS mini-chat ─────────────────────────────────────────────────────── */
 function JarvisMiniChat({ onSelectProject }: { onSelectProject: (p: "kronos" | "helios") => void }) {
   const [input, setInput] = useState("");
-  const [log, setLog] = useState<string[]>([
-    "Jarvis online. Which operation are we running today?"
-  ]);
+  const [log, setLog]   = useState<string[]>(["JARVIS online — which operation today?"]);
 
-  function handleInput(e: React.FormEvent) {
+  function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const val = input.trim().toLowerCase();
     if (!val) return;
     setLog(prev => [...prev, `> ${input}`]);
     setInput("");
-
     setTimeout(() => {
-      if (val.includes("kronos") || val.includes("real estate") || val.includes("swiss") || val.includes("re")) {
-        setLog(prev => [...prev, "Initializing KRONOS node — Swiss Real Estate Outreach Ops."]);
-        setTimeout(() => onSelectProject("kronos"), 800);
-      } else if (val.includes("helios") || val.includes("solar") || val.includes("italian") || val.includes("energy")) {
-        setLog(prev => [...prev, "Initializing HELIOS lab — Clean Solar Intelligence."]);
-        setTimeout(() => onSelectProject("helios"), 800);
+      if (val.includes("kronos") || val.includes("swiss") || val.includes("re")) {
+        setLog(prev => [...prev, "Initialising KRONOS — Swiss RE outreach."]);
+        setTimeout(() => onSelectProject("kronos"), 700);
+      } else if (val.includes("helios") || val.includes("solar") || val.includes("ital")) {
+        setLog(prev => [...prev, "Initialising HELIOS — Solar intelligence."]);
+        setTimeout(() => onSelectProject("helios"), 700);
       } else {
-        setLog(prev => [...prev, "Specify project: KRONOS (Swiss RE) or HELIOS (Solar)."]);
+        setLog(prev => [...prev, "Specify: KRONOS or HELIOS."]);
       }
-    }, 300);
+    }, 280);
   }
 
   return (
-    <div className="w-full max-w-md mx-auto mt-10">
-      <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl overflow-hidden">
-        {/* Terminal header */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 bg-white/2">
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
-            <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
-            <div className="w-2.5 h-2.5 rounded-full bg-[#28C840]" />
+    <div className="w-full max-w-sm mx-auto">
+      <div style={{
+        background: "rgba(9,9,11,0.92)",
+        border: "1px solid rgba(255,255,255,0.09)",
+        borderRadius: 12,
+        overflow: "hidden",
+        backdropFilter: "blur(24px)",
+      }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "10px 14px",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+        }}>
+          <div style={{ display: "flex", gap: 5 }}>
+            {["#FF5F57","#FFBD2E","#28C840"].map(c => (
+              <div key={c} style={{ width: 9, height: 9, borderRadius: "50%", background: c }} />
+            ))}
           </div>
-          <span className="text-[9px] text-white/30 font-mono tracking-widest uppercase ml-2">JARVIS // COMMAND INTERFACE</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: "0.18em", marginLeft: 4 }}>
+            JARVIS // COMMAND
+          </span>
         </div>
-        {/* Log */}
-        <div className="p-4 min-h-[80px] max-h-[120px] overflow-y-auto font-mono text-[11px] space-y-1">
+        <div style={{ padding: "10px 14px", minHeight: 64, maxHeight: 100, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
           {log.map((line, i) => (
-            <div key={i} className={line.startsWith(">") ? "text-white/80" : "text-[#22C55E]/80"}>
+            <div key={i} style={{
+              fontFamily: "var(--font-mono)", fontSize: 11,
+              color: line.startsWith(">") ? "rgba(255,255,255,0.75)" : "#22C55E",
+            }}>
               {line}
             </div>
           ))}
         </div>
-        {/* Input */}
-        <form onSubmit={handleInput} className="flex items-center gap-2 px-4 pb-4">
-          <span className="text-[#22C55E] font-mono text-xs">›</span>
+        <form onSubmit={submit} style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 14px 12px" }}>
+          <span style={{ color: "#22C55E", fontFamily: "var(--font-mono)", fontSize: 13 }}>›</span>
           <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder="type 'kronos' or 'helios'..."
-            className="flex-1 bg-transparent text-white text-xs font-mono focus:outline-none placeholder:text-white/20"
+            value={input} onChange={e => setInput(e.target.value)}
+            placeholder="type 'kronos' or 'helios'…"
             autoFocus
+            style={{
+              flex: 1, background: "transparent", border: "none", outline: "none",
+              color: "rgba(255,255,255,0.8)", fontFamily: "var(--font-mono)", fontSize: 11,
+            }}
           />
         </form>
       </div>
@@ -165,109 +130,150 @@ function JarvisMiniChat({ onSelectProject }: { onSelectProject: (p: "kronos" | "
   );
 }
 
-/* ── Business Selector ──────────────────────────────────────────────────── */
+/* ── Business Selector ───────────────────────────────────────────────────── */
 function BusinessSelector({ onSelect }: { onSelect: (p: "kronos" | "helios") => void }) {
   return (
-    <div className="fixed inset-0 bg-[#020202] overflow-hidden flex flex-col">
-      {/* Ambient top glow */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+    <div style={{ position: "fixed", inset: 0, background: "#09090B", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Subtle top line */}
+      <div style={{ position: "absolute", inset: "0 0 auto 0", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)" }} />
 
-      {/* Header tag */}
-      <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20 text-[8px] tracking-[0.5em] text-white/20 uppercase font-mono">
-        UNIFIED OUTREACH ARCHITECTURE · v5.0.0
+      {/* Version tag */}
+      <div style={{ position: "absolute", top: 28, left: "50%", transform: "translateX(-50%)", fontFamily: "var(--font-mono)", fontSize: 9, color: "rgba(255,255,255,0.18)", letterSpacing: "0.45em", textTransform: "uppercase", zIndex: 20, whiteSpace: "nowrap" }}>
+        UNIFIED OUTREACH ARCHITECTURE · v5.1
       </div>
 
-      {/* Main selector — horizontal split */}
-      <div className="flex flex-col md:flex-row flex-1 mt-12 md:mt-0">
-        {/* KRONOS – left panel */}
-        <div
-          onClick={() => onSelect("kronos")}
-          className="relative flex-1 group cursor-pointer overflow-hidden border-r border-white/5 transition-all duration-700"
-        >
-          {/* Gradient glow */}
-          <div className="absolute inset-0 bg-[#050505]" />
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_20%_40%,rgba(255,107,0,0.15)_0%,transparent_60%)]" />
-          {/* Grid paper */}
-          <div className="absolute inset-0 grid-paper opacity-[0.04]" />
-          {/* Scanline at right edge */}
-          <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#FF6B00]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      {/* Split panels */}
+      <div style={{ display: "flex", flex: 1, marginTop: 48 }}>
 
-          <div className="relative h-full flex flex-col items-center justify-center p-12 text-center">
-            {/* Logo orb */}
-            <div className="mb-8 p-5 rounded-2xl bg-black border border-[#FF6B00]/15 shadow-[0_0_60px_rgba(255,107,0,0.05)] group-hover:border-[#FF6B00]/50 group-hover:shadow-[0_0_80px_rgba(255,107,0,0.15)] transition-all duration-700 fade-up">
-              <KronosLogoLarge />
+        {/* KRONOS */}
+        <div className="selector-side" onClick={() => onSelect("kronos")} style={{ borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ position: "absolute", inset: 0, background: "#0A0A0C" }} />
+          <div className="group-kronos" style={{ position: "absolute", inset: 0, opacity: 0, transition: "opacity 0.5s", background: "radial-gradient(ellipse at 20% 45%, rgba(249,115,22,0.12) 0%, transparent 60%)" }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={e => (e.currentTarget.style.opacity = "0")}
+          />
+          <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: "0 40px", textAlign: "center" }}>
+            <div className="fade-up" style={{
+              marginBottom: 32, padding: 18,
+              background: "#09090B", border: "1px solid rgba(249,115,22,0.15)",
+              borderRadius: 16, transition: "border-color 0.4s, box-shadow 0.4s",
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(249,115,22,0.5)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 48px rgba(249,115,22,0.12)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(249,115,22,0.15)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            >
+              <KronosLogo size={64} />
             </div>
-
-            <div className="space-y-3 slide-in">
-              <h2 className="text-5xl md:text-7xl font-black tracking-[0.35em] font-mono text-white">KRONOS</h2>
-              <div className="text-[10px] tracking-[0.3em] uppercase font-mono text-[#555] leading-loose">
-                Autonomous Outreach Ops<br />
-                Swiss Real Estate Intelligence
-              </div>
-              <div className="text-[8px] tracking-[0.4em] text-[#333] font-mono mt-4">[ ACCESS_NODE_ZURICH ]</div>
-            </div>
-
-            <div className="mt-10 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-3 group-hover:translate-y-0">
-              <div className="px-8 py-3 bg-[#FF6B00] text-black text-[10px] font-black tracking-[0.3em] uppercase">
-                Initialize Session
-              </div>
+            <div className="slide-in">
+              <h2 style={{ fontSize: "clamp(40px,7vw,72px)", fontWeight: 800, letterSpacing: "-0.02em", color: "#F4F4F5", lineHeight: 1, margin: 0, fontFamily: "var(--font-sans)" }}>
+                KRONOS
+              </h2>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#52525B", letterSpacing: "0.25em", textTransform: "uppercase", marginTop: 12, lineHeight: 1.8 }}>
+                Swiss Real Estate<br />Autonomous Outreach Ops
+              </p>
             </div>
           </div>
         </div>
 
-        {/* HELIOS – right panel */}
-        <div
-          onClick={() => onSelect("helios")}
-          className="relative flex-1 group cursor-pointer overflow-hidden transition-all duration-700"
-        >
-          <div className="absolute inset-0 bg-[#F7FFFC]" />
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_at_80%_60%,rgba(34,197,94,0.12)_0%,transparent_60%)]" />
-          {/* Subtle dot grid */}
-          <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, #D1EAD8 1px, transparent 1px)", backgroundSize: "24px 24px", opacity: 0.4 }} />
-          <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#22C55E]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-          <div className="relative h-full flex flex-col items-center justify-center p-12 text-center text-[#0F2319]">
-            <div className="mb-8 p-5 rounded-2xl bg-white border border-[#22C55E]/20 shadow-[0_0_60px_rgba(34,197,94,0.06)] group-hover:border-[#22C55E]/60 group-hover:shadow-[0_0_80px_rgba(34,197,94,0.18)] transition-all duration-700 fade-up">
-              <HeliosLogoLarge />
+        {/* HELIOS */}
+        <div className="selector-side" onClick={() => onSelect("helios")}>
+          <div style={{ position: "absolute", inset: 0, background: "#F0FDF4" }} />
+          <div style={{ position: "absolute", inset: 0, opacity: 0, transition: "opacity 0.5s", background: "radial-gradient(ellipse at 80% 55%, rgba(22,163,74,0.10) 0%, transparent 60%)" }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={e => (e.currentTarget.style.opacity = "0")}
+          />
+          <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: "0 40px", textAlign: "center" }}>
+            <div className="fade-up" style={{
+              marginBottom: 32, padding: 18,
+              background: "#fff", border: "1px solid rgba(22,163,74,0.18)",
+              borderRadius: 16, transition: "border-color 0.4s, box-shadow 0.4s",
+            }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(22,163,74,0.55)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 48px rgba(22,163,74,0.10)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(22,163,74,0.18)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+            >
+              <HeliosLogo size={64} />
             </div>
-
-            <div className="space-y-3 slide-in">
-              <h2 className="text-5xl md:text-7xl font-black tracking-[0.35em] font-mono text-[#0F2319]">HELIOS</h2>
-              <div className="text-[10px] tracking-[0.3em] uppercase font-mono text-[#7A9E84] leading-loose">
-                Clean Solar Intelligence<br />
-                Italian Energy Lab
-              </div>
-              <div className="text-[8px] tracking-[0.4em] text-[#AABDAD] font-mono mt-4">[ ACCESS_NODE_BIEL ]</div>
-            </div>
-
-            <div className="mt-10 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-3 group-hover:translate-y-0">
-              <div className="px-8 py-3 bg-[#22C55E] text-white text-[10px] font-black tracking-[0.3em] uppercase">
-                Initialize Session
-              </div>
+            <div className="slide-in">
+              <h2 style={{ fontSize: "clamp(40px,7vw,72px)", fontWeight: 800, letterSpacing: "-0.02em", color: "#111827", lineHeight: 1, margin: 0, fontFamily: "var(--font-sans)" }}>
+                HELIOS
+              </h2>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#6B7280", letterSpacing: "0.25em", textTransform: "uppercase", marginTop: 12, lineHeight: 1.8 }}>
+                Italian Solar Intelligence<br />Clean Energy Pipeline
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom: Jarvis mini-chat */}
-      <div className="absolute bottom-0 left-0 right-0 pb-10 px-6 z-20 fade-in">
+      {/* JARVIS command input */}
+      <div className="fade-in" style={{ position: "absolute", bottom: 32, left: 0, right: 0, padding: "0 24px", zIndex: 20 }}>
         <JarvisMiniChat onSelectProject={onSelect} />
       </div>
 
-      {/* Center divider dot */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex flex-col items-center gap-2 z-20 pointer-events-none">
-        <div className="w-px h-20 bg-gradient-to-b from-transparent to-white/10" />
-        <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-        <div className="w-px h-20 bg-gradient-to-t from-transparent to-white/10" />
+      {/* Center divider mark */}
+      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, pointerEvents: "none", zIndex: 20 }}>
+        <div style={{ width: 1, height: 60, background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.08))" }} />
+        <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(255,255,255,0.15)" }} />
+        <div style={{ width: 1, height: 60, background: "linear-gradient(to top, transparent, rgba(255,255,255,0.08))" }} />
       </div>
     </div>
   );
 }
 
-/* ── Dashboard Shell ─────────────────────────────────────────────────────── */
+/* ── Nav config ──────────────────────────────────────────────────────────── */
+const NAV = [
+  { icon: LayoutDashboard, label: "Overview",    path: "/dashboard" },
+  { icon: BarChart2,       label: "Analytics",   path: "/dashboard/analytics" },
+  { icon: Database,        label: "Lead Base",   path: "/dashboard/database" },
+  { icon: MessageSquare,   label: "JARVIS",      path: "/dashboard/chat" },
+  { icon: Zap,             label: "Automations", path: "/dashboard/automations" },
+  { icon: Settings,        label: "Settings",    path: "/dashboard/settings" },
+];
 
+/* ── Sidebar tooltip ─────────────────────────────────────────────────────── */
+function NavItem({ icon: Icon, label, path, active }: {
+  icon: React.ElementType; label: string; path: string; active: boolean;
+}) {
+  return (
+    <a
+      href={path}
+      title={label}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        width: 40, height: 40, borderRadius: 10,
+        background: active ? "var(--accent-dim)" : "transparent",
+        color: active ? "var(--accent)" : "var(--text-3)",
+        transition: "background 0.15s, color 0.15s",
+        position: "relative",
+        textDecoration: "none",
+      }}
+      onMouseEnter={e => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.background = "var(--surface-2)";
+          (e.currentTarget as HTMLElement).style.color = "var(--text-1)";
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.background = "transparent";
+          (e.currentTarget as HTMLElement).style.color = "var(--text-3)";
+        }
+      }}
+    >
+      <Icon size={18} strokeWidth={active ? 2.25 : 1.75} />
+      {/* Active indicator */}
+      {active && (
+        <div style={{
+          position: "absolute", left: -12, top: "50%", transform: "translateY(-50%)",
+          width: 3, height: 20, background: "var(--accent)", borderRadius: 2,
+        }} />
+      )}
+    </a>
+  );
+}
+
+/* ── Dashboard Shell ─────────────────────────────────────────────────────── */
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
+  const router   = useRouter();
   const pathname = usePathname();
   const { project, setProject } = useProject();
 
@@ -276,98 +282,130 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     router.push("/");
   }
 
-  const isActive = (path: string) => pathname === path;
-
-  // ── Business Selector (project not chosen yet) ──
   if (project === null) {
     return <BusinessSelector onSelect={setProject} />;
   }
 
-  // ── Full Dashboard Shell ──
+  const isHelios = project === "helios";
+  const activeLabel = NAV.find(n => pathname === n.path)?.label ?? "Overview";
+
   return (
-    <div className="min-h-screen bg-k-bg mesh-bg grid-paper">
-      <div className="fixed top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-k to-transparent opacity-30 z-[60]" />
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
 
-      <header className="fixed top-0 left-0 w-full z-50 px-8 py-6">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between glass-panel px-6 py-4 reveal">
-          <div className="flex items-center gap-5 cursor-pointer group" onClick={() => router.push("/dashboard")}>
-            <div className="relative">
-              {project === "kronos" ? <KronosLogoSmall /> : <HeliosLogoSmall />}
-              <div className="absolute -inset-2 bg-k/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-k text-xs tracking-[0.4em] font-mono font-black">{project.toUpperCase()}</span>
-              <span className="text-k-text opacity-40 text-[8px] tracking-[0.2em] uppercase font-medium">
-                {project === "kronos" ? "Autonomous Outreach Ops" : "Clean Solar Intelligence"}
-              </span>
-            </div>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-10">
-            {[
-              { label: "Control", path: "/dashboard" },
-              { label: "Intelligence", path: "/dashboard/analytics" },
-              { label: "Settings", path: "/dashboard/settings" },
-              { label: "Automations", path: "/dashboard/automations" },
-              { label: "LeadBase", path: "/dashboard/database" },
-              { label: "Jarvis", path: "/dashboard/chat" },
-            ].map((item) => (
-              <a
-                key={item.path}
-                href={item.path}
-                className={`text-[9px] tracking-[0.3em] font-mono transition-all uppercase font-bold relative group ${
-                  isActive(item.path) ? "text-k" : "text-text-dim hover:text-white"
-                }`}
-              >
-                {item.label}
-                {isActive(item.path) && <div className="absolute -bottom-1 left-0 w-full h-[1px] bg-k" />}
-                <div className="absolute -bottom-1 left-0 w-0 h-[1px] bg-white group-hover:w-full transition-all" />
-              </a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-4">
-            {/* Project switcher */}
-            <div className="flex items-center gap-1 p-1 bg-black/20 border border-white/5">
-              <button
-                onClick={() => setProject("kronos")}
-                className={`px-3 py-1 text-[7px] tracking-widest uppercase font-mono transition-all ${project === "kronos" ? "bg-k text-black" : "text-text-dim hover:text-white"}`}
-              >
-                Kronos
-              </button>
-              <button
-                onClick={() => setProject("helios")}
-                className={`px-3 py-1 text-[7px] tracking-widest uppercase font-mono transition-all ${project === "helios" ? "bg-k text-black" : "text-text-dim hover:text-white"}`}
-              >
-                Helios
-              </button>
-            </div>
-
-            <div className="hidden lg:flex flex-col items-end">
-              <div className="cyber-tag mb-1">Status: Operational</div>
-              <div className="text-[7px] text-text-dim tracking-[0.3em] uppercase">
-                {project === "kronos" ? "Zurich // HQ" : "Biel // Solar Lab"}
-              </div>
-            </div>
-
-            {/* Logout */}
-            <div className="w-10 h-10 flex items-center justify-center border border-k/10 hover:border-k/40 transition-colors cursor-pointer" onClick={handleLogout}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-dim hover:text-k transition-colors">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </div>
-          </div>
+      {/* ── Sidebar ──────────────────────────────────────────────────────── */}
+      <aside style={{
+        width: 64, display: "flex", flexDirection: "column", alignItems: "center",
+        paddingTop: 14, paddingBottom: 14, gap: 0, flexShrink: 0,
+        background: "var(--surface-1)",
+        borderRight: "1px solid var(--border)",
+        zIndex: 50,
+      }}>
+        {/* Logo */}
+        <div
+          style={{ padding: "6px 0 18px", cursor: "pointer" }}
+          onClick={() => router.push("/dashboard")}
+          title={project === "kronos" ? "KRONOS" : "HELIOS"}
+        >
+          {isHelios ? <HeliosLogo size={28} /> : <KronosLogo size={28} />}
         </div>
-      </header>
 
-      <main className="pt-32 pb-20 px-8 max-w-[1600px] mx-auto min-h-screen">
-        {children}
-      </main>
+        {/* Nav items */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, width: "100%", padding: "0 12px" }}>
+          {NAV.map(({ icon, label, path }) => (
+            <NavItem key={path} icon={icon} label={label} path={path} active={pathname === path} />
+          ))}
+        </div>
 
-      <div className="fixed left-4 bottom-8 rotate-90 origin-left text-[8px] text-text-dim tracking-[0.4em] uppercase font-mono pointer-events-none">
-        JARVIS_Core: V.5.0.0 // Outreach_Engine
+        {/* Project toggle + logout */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%", padding: "0 12px" }}>
+          <button
+            onClick={() => setProject(isHelios ? "kronos" : "helios")}
+            title={`Switch to ${isHelios ? "KRONOS" : "HELIOS"}`}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 40, height: 40, borderRadius: 10, border: "none", cursor: "pointer",
+              background: "transparent", color: "var(--text-3)",
+              transition: "background 0.15s, color 0.15s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLElement).style.color = "var(--text-1)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
+          >
+            <ArrowLeftRight size={16} strokeWidth={1.75} />
+          </button>
+
+          <button
+            onClick={handleLogout}
+            title="Sign out"
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 40, height: 40, borderRadius: 10, border: "none", cursor: "pointer",
+              background: "transparent", color: "var(--text-3)",
+              transition: "background 0.15s, color 0.15s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.10)"; (e.currentTarget as HTMLElement).style.color = "#EF4444"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
+          >
+            <LogOut size={16} strokeWidth={1.75} />
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main area ────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+        {/* Top bar */}
+        <header style={{
+          height: 52, display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "0 20px",
+          background: "var(--surface-1)",
+          borderBottom: "1px solid var(--border)",
+          flexShrink: 0,
+        }}>
+          {/* Breadcrumb */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>
+              {activeLabel}
+            </span>
+          </div>
+
+          {/* Right: status + project toggle */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span className="dot-live" />
+              <span style={{ fontSize: 12, color: "var(--text-2)", fontWeight: 500 }}>Operational</span>
+            </div>
+
+            <div style={{ width: 1, height: 16, background: "var(--border)" }} />
+
+            {/* Project switcher pills */}
+            <div style={{
+              display: "flex", gap: 2, padding: 3,
+              background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8,
+            }}>
+              {(["kronos","helios"] as const).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setProject(p)}
+                  style={{
+                    padding: "3px 10px", border: "none", cursor: "pointer",
+                    borderRadius: 6, fontSize: 11, fontWeight: 600,
+                    textTransform: "capitalize",
+                    background: project === p ? "var(--accent)" : "transparent",
+                    color: project === p ? "#fff" : "var(--text-2)",
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+          {children}
+        </main>
       </div>
     </div>
   );

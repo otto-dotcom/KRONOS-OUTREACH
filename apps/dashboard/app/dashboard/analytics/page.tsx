@@ -1,19 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BarChart2, Mail, Users, MousePointerClick, RefreshCw } from "lucide-react";
+import { BarChart, DonutChart, ProgressStat, RangeFilter, KpiCard } from "../components";
 
 export const dynamic = "force-dynamic";
-import {
-  SectionLabel,
-  Metric,
-  DonutChart,
-  BarChart,
-  ProgressStat,
-  RangeFilter,
-  IconRocket,
-  IconDatabase,
-  IconMail
-} from "../components";
 
 interface HistoryItem {
   id: string;
@@ -24,234 +15,260 @@ interface HistoryItem {
 }
 
 export default function AnalyticsPage() {
-  const [days, setDays] = useState(30);
+  const [days, setDays]       = useState(30);
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [stats, setStats] = useState({
+  const [stats, setStats]     = useState({
     total_leads: 0,
     sent_emails: 0,
-    open_rate: 0,
-    click_rate: 0,
-    bounce_rate: 0
+    open_rate:   0,
+    click_rate:  0,
+    bounce_rate: 0,
   });
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [statsRes, historyRes, leadsRes] = await Promise.all([
-          fetch(`/api/analytics/email?days=${days}`),
-          fetch(`/api/analytics/history`),
-          fetch(`/api/analytics/leads`)
-        ]);
-
-        const statsData = await statsRes.json();
-        const historyData = await historyRes.json();
-        const leadsData = await leadsRes.json();
-
-        if (statsRes.ok && leadsRes.ok) {
-           setStats({
-              total_leads: leadsData.total || 0,
-              sent_emails: statsData.totals?.delivered || 0,
-              open_rate: parseFloat(statsData.openRate || "0"),
-              click_rate: parseFloat(statsData.clickRate || "0"),
-              bounce_rate: statsData.totals?.delivered > 0
-                ? parseFloat(((statsData.totals.bounces / statsData.totals.delivered) * 100).toFixed(1))
-                : 0
-           });
-        }
-        if (historyRes.ok) setHistory(historyData.history || []);
-      } catch (err) {
-        console.error("Failed to load analytics:", err);
-      } finally {
-        setLoading(false);
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [statsRes, historyRes, leadsRes] = await Promise.all([
+        fetch(`/api/analytics/email?days=${days}`),
+        fetch(`/api/analytics/history`),
+        fetch(`/api/analytics/leads`),
+      ]);
+      const [statsData, historyData, leadsData] = await Promise.all([
+        statsRes.json(), historyRes.json(), leadsRes.json(),
+      ]);
+      if (statsRes.ok && leadsRes.ok) {
+        setStats({
+          total_leads: leadsData.total || 0,
+          sent_emails: statsData.totals?.delivered || 0,
+          open_rate:   parseFloat(statsData.openRate || "0"),
+          click_rate:  parseFloat(statsData.clickRate || "0"),
+          bounce_rate: statsData.totals?.delivered > 0
+            ? parseFloat(((statsData.totals.bounces / statsData.totals.delivered) * 100).toFixed(1))
+            : 0,
+        });
       }
+      if (historyRes.ok) setHistory(historyData.history || []);
+    } catch (err) {
+      console.error("Failed to load analytics:", err);
     }
-    loadData();
-  }, [days]);
+    setLoading(false);
+  }
 
+  useEffect(() => { loadData(); }, [days]);
+
+  const opens  = Math.round(stats.sent_emails * (stats.open_rate  / 100));
+  const clicks = Math.round(stats.sent_emails * (stats.click_rate / 100));
+  const bounces = Math.round(stats.sent_emails * (stats.bounce_rate / 100));
+
+  /* ── Loading ── */
   if (loading) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 bg-k blink" />
-          <span className="text-[10px] tracking-[0.3em] text-text-dim uppercase">
-            Loading Intelligence Data...
-          </span>
+      <div style={{ height: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <RefreshCw size={16} style={{ color: "var(--accent)", animation: "spin 0.8s linear infinite" }} />
+          <span style={{ fontSize: 13, color: "var(--text-2)", fontWeight: 500 }}>Loading analytics…</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 fade-up">
-      {/* Header with Title - Remotron Style */}
-      <div className="flex justify-between items-end mb-8">
+    <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* ── Page header ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 bg-k blink" />
-            <span className="text-[10px] tracking-[0.3em] text-text-dim uppercase">ANALYTICS // v2.1.0</span>
-          </div>
-          <h1 className="text-4xl font-bold tracking-tighter" style={{ fontFamily: "var(--font-mono), monospace" }}>
-            INTELLI<span className="text-k">GENCE</span>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text-1)", letterSpacing: "-0.02em", margin: 0 }}>
+            Analytics
           </h1>
+          <p style={{ fontSize: 13, color: "var(--text-2)", marginTop: 3 }}>
+            Outreach performance · last {days} days
+          </p>
         </div>
-        <div className="text-right">
-          <div className="text-[10px] text-text-dim tracking-widest uppercase mb-2">Temporal Scope</div>
-          <RangeFilter days={days} onChange={setDays} />
-        </div>
+        <RangeFilter days={days} onChange={setDays} />
       </div>
 
-      {/* Stats Row - Remotron Style */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: "Total Leads", value: stats.total_leads.toLocaleString(), color: "text-white" },
-          { label: "Emails Sent", value: stats.sent_emails.toLocaleString(), color: "text-k" },
-          { label: "Open Rate", value: `${stats.open_rate}%`, color: "text-white" },
-          { label: "Click Rate", value: `${stats.click_rate}%`, color: "text-k" },
-        ].map((stat, i) => (
-          <div key={i} className="bg-k-card border border-k-border p-6 glow fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
-            <div className={`text-3xl font-bold ${stat.color} mb-1`}>{stat.value}</div>
-            <div className="text-[9px] tracking-[0.2em] text-text-dim uppercase">{stat.label}</div>
-          </div>
-        ))}
+      {/* ── KPI row ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+        <KpiCard
+          label="Total Leads"
+          value={stats.total_leads.toLocaleString()}
+          icon={<Users size={18} />}
+          iconVariant="info"
+        />
+        <KpiCard
+          label="Emails Delivered"
+          value={stats.sent_emails.toLocaleString()}
+          icon={<Mail size={18} />}
+          iconVariant="accent"
+        />
+        <KpiCard
+          label="Open Rate"
+          value={`${stats.open_rate}%`}
+          icon={<BarChart2 size={18} />}
+          iconVariant="success"
+          deltaType={stats.open_rate >= 20 ? "up" : stats.open_rate >= 10 ? "neutral" : "down"}
+          delta={`${stats.open_rate}%`}
+        />
+        <KpiCard
+          label="Click Rate"
+          value={`${stats.click_rate}%`}
+          icon={<MousePointerClick size={18} />}
+          iconVariant="warning"
+          deltaType={stats.click_rate >= 3 ? "up" : "neutral"}
+          delta={`${stats.click_rate}%`}
+        />
       </div>
 
-      {/* Main Content Area - Remotron Style */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Engagement Feed */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs tracking-[0.4em] text-k uppercase font-bold">Engagement Metrics</h2>
-            <div className="h-px bg-k-border flex-1 mx-4" />
-          </div>
+      {/* ── Main grid ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }}>
 
-          <div className="bg-k-card border border-k-border p-8 glow">
-            <h3 className="text-[10px] tracking-widest text-text-dim text-center uppercase mb-8">Conversion Funnel</h3>
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 w-full">
-              {[
-                { label: "Emails Delivered", value: stats.sent_emails, rate: 100, color: "var(--color-text-dim)" },
-                { label: "Total Opens", value: Math.round(stats.sent_emails * (stats.open_rate / 100)) || 0, rate: stats.open_rate, color: "white" },
-                { label: "Verified Clicks", value: Math.round(stats.sent_emails * (stats.click_rate / 100)) || 0, rate: stats.click_rate, color: "var(--color-k)" }
-              ].map((step, i, arr) => (
-                <div key={step.label} className="flex-1 flex flex-col items-center relative w-full group">
-                  {i < arr.length - 1 && (
-                    <div className="hidden md:block absolute top-[25%] left-[65%] w-full h-px bg-k-border overflow-hidden">
-                       <div className="h-full bg-k w-1/2 opacity-20 group-hover:opacity-100 transition-opacity animate-[slideRight_2s_infinite]" />
-                    </div>
-                  )}
-                  <div className="w-16 h-16 rounded-full border-2 bg-black/40 flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 shadow-[0_0_15px_rgba(0,0,0,0.5)] z-10" style={{ borderColor: step.color }}>
-                    <span className="text-sm font-bold font-mono" style={{ color: step.color }}>{step.rate}%</span>
-                  </div>
-                  <div className="text-xl font-black text-white font-mono">{step.value}</div>
-                  <div className="text-[9px] tracking-[0.2em] uppercase text-text-dim mt-2">{step.label}</div>
-                </div>
-              ))}
+        {/* ── Left: funnel + chart ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Conversion funnel */}
+          <div style={{
+            background: "var(--surface-1)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "20px 22px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>Conversion Funnel</span>
+              <span style={{ fontSize: 11, color: "var(--text-3)" }}>{stats.sent_emails} sent</span>
             </div>
-            <style jsx>{`
-              @keyframes slideRight {
-                0% { transform: translateX(-100%); }
-                100% { transform: translateX(200%); }
-              }
-            `}</style>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <ProgressStat label="Delivered" value={stats.sent_emails} max={stats.sent_emails} color="var(--accent)" />
+              <ProgressStat label="Opened"    value={opens}  max={stats.sent_emails} color="var(--success)" />
+              <ProgressStat label="Clicked"   value={clicks} max={stats.sent_emails} color="var(--info)" />
+              <ProgressStat label="Bounced"   value={bounces} max={stats.sent_emails} color="var(--danger)" />
+            </div>
           </div>
 
-          <div className="bg-k-card border border-k-border p-6">
-            <h3 className="text-xs tracking-[0.3em] text-text-dim uppercase font-bold mb-6">Campaign Velocity</h3>
+          {/* Weekly bar chart */}
+          <div style={{
+            background: "var(--surface-1)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "20px 22px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>Campaign Velocity</span>
+              <span style={{ fontSize: 11, color: "var(--text-3)" }}>Weekly distribution</span>
+            </div>
             <BarChart
-              height={180}
+              height={140}
               data={[
-                { label: "W1", bars: [{ value: 45, color: "var(--color-k)" }] },
-                { label: "W2", bars: [{ value: 65, color: "var(--color-k)" }] },
-                { label: "W3", bars: [{ value: 80, color: "var(--color-k)" }] },
-                { label: "W4", bars: [{ value: 55, color: "var(--color-k)" }] },
+                { label: "W1", bars: [{ value: Math.round(stats.sent_emails * 0.22), color: "var(--accent)" }] },
+                { label: "W2", bars: [{ value: Math.round(stats.sent_emails * 0.28), color: "var(--accent)" }] },
+                { label: "W3", bars: [{ value: Math.round(stats.sent_emails * 0.31), color: "var(--accent)" }] },
+                { label: "W4", bars: [{ value: Math.round(stats.sent_emails * 0.19), color: "var(--accent)" }] },
               ]}
             />
-            <div className="mt-4 flex justify-between items-center text-[9px] text-text-dim uppercase tracking-widest">
-              <span>Weekly Distribution</span>
-              <span className="text-k">{stats.sent_emails} Total</span>
-            </div>
           </div>
         </div>
 
-        {/* Right Column: System Stats */}
-        <div className="space-y-6">
-          <div className="bg-k-card border border-k-border p-6 glow">
-            <h3 className="text-xs tracking-[0.3em] text-k uppercase font-bold mb-6">System Intelligence</h3>
-            <div className="space-y-4">
-              <div className="p-4 border border-k-border bg-black/20">
-                <div className="text-[9px] text-text-dim uppercase tracking-widest mb-2">Database Size</div>
-                <div className="text-2xl font-bold text-white">{stats.total_leads}</div>
-              </div>
-              <div className="p-4 border border-k-border bg-black/20">
-                <div className="text-[9px] text-text-dim uppercase tracking-widest mb-2">Active Campaigns</div>
-                <div className="text-2xl font-bold text-k">{Math.ceil(stats.sent_emails / 10)}</div>
-              </div>
-              <div className="p-4 border border-k-border bg-black/20">
-                <div className="text-[9px] text-text-dim uppercase tracking-widest mb-2">Success Rate</div>
-                <div className="text-2xl font-bold text-white">{(100 - stats.bounce_rate).toFixed(1)}%</div>
-              </div>
-            </div>
+        {/* ── Right: breakdown + status ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Donut breakdown */}
+          <div style={{
+            background: "var(--surface-1)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "20px 22px",
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)", display: "block", marginBottom: 16 }}>
+              Engagement Breakdown
+            </span>
+            <DonutChart
+              size={110}
+              segments={[
+                { value: opens,                                   color: "var(--success)", label: "Opened" },
+                { value: clicks,                                  color: "var(--accent)",  label: "Clicked" },
+                { value: Math.max(stats.sent_emails - opens, 0), color: "var(--surface-3)", label: "No open" },
+              ].filter(s => s.value > 0)}
+            />
           </div>
 
-          <div className="bg-k-card border border-k-border p-6">
-            <h3 className="text-xs tracking-[0.3em] text-text-dim uppercase font-bold mb-6">Protocol Status</h3>
-            <div className="flex items-center justify-between p-3 border border-k-border bg-black/20 mb-4">
-              <span className="text-[9px] text-text-dim uppercase tracking-widest">SMTP Engine</span>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-green-500 blink" />
-                <span className="text-[9px] text-green-500 uppercase tracking-widest">Active</span>
+          {/* System status */}
+          <div style={{
+            background: "var(--surface-1)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "20px 22px", display: "flex", flexDirection: "column", gap: 10,
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)", marginBottom: 4 }}>System Status</span>
+            {[
+              { label: "SMTP Engine", ok: true },
+              { label: "AI Copy Gen", ok: true },
+              { label: "Airtable Sync", ok: true },
+            ].map(({ label, ok }) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 12px", background: "var(--surface-2)", borderRadius: 8 }}>
+                <span style={{ fontSize: 12, color: "var(--text-2)", fontWeight: 500 }}>{label}</span>
+                <span className={`pill pill-${ok ? "success" : "danger"}`}>
+                  <span className={ok ? "dot-live" : ""} style={{ width: 5, height: 5 }} />
+                  {ok ? "Online" : "Offline"}
+                </span>
               </div>
-            </div>
-            <div className="flex items-center justify-between p-3 border border-k-border bg-black/20">
-              <span className="text-[9px] text-text-dim uppercase tracking-widest">AI Copy Gen</span>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-green-500 blink" />
-                <span className="text-[9px] text-green-500 uppercase tracking-widest">Active</span>
+            ))}
+          </div>
+
+          {/* Quick stats */}
+          <div style={{
+            background: "var(--surface-1)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "20px 22px",
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)", display: "block", marginBottom: 12 }}>Quick Stats</span>
+            {[
+              { label: "Lead Database",    value: stats.total_leads.toLocaleString() },
+              { label: "Delivery Rate",    value: `${(100 - stats.bounce_rate).toFixed(1)}%` },
+              { label: "Active Campaigns", value: String(Math.max(Math.ceil(stats.sent_emails / 10), 0)) },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+                <span style={{ fontSize: 12, color: "var(--text-2)", fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-1)", letterSpacing: "-0.02em" }}>{value}</span>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* SENT HISTORY TABLE - Remotron Style */}
-      <div className="bg-k-card border border-k-border p-6 glow">
-         <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xs tracking-[0.4em] text-k uppercase font-bold">Communication Log</h2>
-            <div className="h-px bg-k-border flex-1 mx-4" />
-            <div className="px-3 py-1 bg-black/20 border border-k-border text-k text-[9px] font-bold tracking-widest uppercase">
-               {history.length} Records
-            </div>
-         </div>
+      {/* ── Sent history table ── */}
+      <div style={{
+        background: "var(--surface-1)", border: "1px solid var(--border)",
+        borderRadius: 14, overflow: "hidden",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>Communication Log</span>
+          <span className="pill pill-neutral">{history.length} records</span>
+        </div>
 
-         {history.length === 0 ? (
-            <div className="py-16 text-center">
-               <div className="text-[10px] text-text-dim tracking-[0.3em] uppercase">No Communications Logged</div>
+        {history.length === 0 ? (
+          <div style={{ padding: "48px 20px", textAlign: "center" }}>
+            <span style={{ fontSize: 13, color: "var(--text-3)" }}>No history yet</span>
+          </div>
+        ) : (
+          <div style={{ maxHeight: 360, overflowY: "auto" }} className="custom-scrollbar">
+            {/* Table header */}
+            <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 1fr auto", gap: 0, padding: "8px 20px", borderBottom: "1px solid var(--border)" }}>
+              {["Date", "Company", "Subject", "Status"].map(h => (
+                <span key={h} style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>{h}</span>
+              ))}
             </div>
-         ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-               {history.slice(0, 10).map((item, i) => (
-                  <div key={item.id} className="bg-black/10 border border-k-border p-4 flex items-center gap-4 group hover:border-k/30 transition-all" style={{ animationDelay: `${i * 0.05}s` }}>
-                     <div className="w-12 h-12 bg-black/20 border border-k-border flex items-center justify-center text-k font-bold text-[9px] uppercase tracking-widest ring-1 ring-transparent group-hover:ring-k/20 transition-all">
-                        {new Date(item.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                           <span className="text-[11px] font-bold text-white uppercase tracking-wider truncate">{item.company}</span>
-                           <span className="text-[9px] text-text-dim uppercase font-mono">{new Date(item.sentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        <div className="text-[10px] text-text-dim truncate">{item.subject}</div>
-                     </div>
-                     <div className="text-right shrink-0">
-                        <div className="flex items-center gap-2">
-                           <div className="w-1.5 h-1.5 bg-green-500" />
-                           <span className="text-[9px] text-green-500 uppercase tracking-widest font-bold">Sent</span>
-                        </div>
-                     </div>
-                  </div>
-               ))}
-            </div>
-         )}
+            {history.slice(0, 50).map((item) => (
+              <div
+                key={item.id}
+                className="trow"
+                style={{ display: "grid", gridTemplateColumns: "120px 1fr 1fr auto", gap: 0, padding: "11px 20px" }}
+              >
+                <span style={{ fontSize: 12, color: "var(--text-2)", fontWeight: 500, fontFamily: "var(--font-mono)" }}>
+                  {new Date(item.sentAt).toLocaleDateString("en-CH", { day: "2-digit", month: "short" })}
+                </span>
+                <span style={{ fontSize: 13, color: "var(--text-1)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>
+                  {item.company}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>
+                  {item.subject}
+                </span>
+                <span className="pill pill-success" style={{ fontSize: 11 }}>Sent</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
