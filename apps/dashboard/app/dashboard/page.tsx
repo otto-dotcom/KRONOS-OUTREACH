@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { scoreDeliverability } from "@/lib/deliverability";
 import type { DeliverabilityReport } from "@/lib/deliverability";
 import type { EmailPreview } from "@/lib/outreach";
+import { useProject } from "./ProjectContext";
 
 /* ═══════════════════════════════════════════════════════
    TYPES
@@ -360,11 +361,13 @@ function EmailCard({
   onUpdate,
   onRegenerate,
   onSelectLead,
+  project,
 }: {
   email: GalleryEmail;
   onUpdate: (updates: Partial<GalleryEmail>) => void;
   onRegenerate: (mode: "standard" | "plain") => void;
   onSelectLead?: (lead: LeadInfo) => void;
+  project?: string;
 }) {
   const report = useMemo(
     () => scoreDeliverability(email.subject, email.emailBody),
@@ -374,6 +377,27 @@ function EmailCard({
   const [editingBody, setEditingBody] = useState(false);
   const [localSubject, setLocalSubject] = useState(email.subject);
   const [localBody, setLocalBody] = useState(email.emailBody);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSaveToMemory() {
+    setSaving(true);
+    try {
+      await fetch("/api/memory/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project: project ?? "kronos",
+          company: email.lead.company,
+          subject: email.subject,
+          body: email.emailBody,
+          notes: "Manually saved from email review page.",
+        }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch { /**/ } finally { setSaving(false); }
+  }
 
   useEffect(() => {
     setLocalSubject(email.subject);
@@ -572,8 +596,20 @@ function EmailCard({
             >
               REGENERATE: PLAIN
             </button>
+            {/* Save to Jarvis Memory */}
+            <button
+              onClick={handleSaveToMemory}
+              disabled={saving || saved}
+              className={`text-[9px] tracking-[0.15em] px-3 py-1.5 border transition-colors cursor-pointer disabled:opacity-50 ml-auto ${
+                saved
+                  ? "border-purple-500/60 text-purple-400 bg-purple-500/10"
+                  : "border-purple-500/20 text-purple-500/60 hover:border-purple-500 hover:text-purple-400"
+              }`}
+            >
+              {saved ? "✓ SAVED TO MEMORY" : saving ? "SAVING..." : "🧠 SAVE TO MEMORY"}
+            </button>
             {email.regenerated && (
-              <span className="ml-auto text-[9px] tracking-[0.15em] text-[#444]">↺ REGENERATED</span>
+              <span className="text-[9px] tracking-[0.15em] text-[#444]">↺ REGENERATED</span>
             )}
           </>
         )}
@@ -582,7 +618,7 @@ function EmailCard({
   );
 }
 
-function CampaignLauncher({ onSelectLead }: { onSelectLead?: (lead: LeadInfo) => void }) {
+function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: LeadInfo) => void; project?: string }) {
   const [mode, setMode] = useState<GalleryMode>("launcher");
   const [leadLimit, setLeadLimit] = useState(10);
   const [emails, setEmails] = useState<GalleryEmail[]>([]);
@@ -908,6 +944,7 @@ function CampaignLauncher({ onSelectLead }: { onSelectLead?: (lead: LeadInfo) =>
               onSelectLead={onSelectLead}
               onUpdate={(upd) => updateEmail(e.recordId, upd)}
               onRegenerate={(m) => handleRegenerate(e.recordId, m)}
+              project={project}
             />
           ))}
         </div>
@@ -1499,12 +1536,14 @@ function SmsAnalytics() {
    MAIN DASHBOARD
    ═══════════════════════════════════════════════════════ */
 
-export default function DashboardPage() {
+
+function DashboardPageInner() {
+  const { project } = useProject();
   const [selectedLead, setSelectedLead] = useState<LeadInfo | null>(null);
 
   return (
     <div className="space-y-6">
-      <CampaignLauncher onSelectLead={setSelectedLead} />
+      <CampaignLauncher onSelectLead={setSelectedLead} project={project ?? "kronos"} />
       <LeadsAnalytics onSelectLead={setSelectedLead} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <EmailAnalytics />
@@ -1517,9 +1556,13 @@ export default function DashboardPage() {
 
       <div className="flex items-center justify-center gap-2 pt-4 pb-2">
         <div className="w-1 h-1 bg-[#1A1A1A]" />
-        <span className="text-[9px] tracking-[0.2em] text-[#1A1A1A] uppercase">Kronos Automations</span>
+        <span className="text-[9px] tracking-[0.2em] text-[#1A1A1A] uppercase">JARVIS // Unified Outreach Engine</span>
         <div className="w-1 h-1 bg-[#1A1A1A]" />
       </div>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  return <DashboardPageInner />;
 }

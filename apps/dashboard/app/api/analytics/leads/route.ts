@@ -1,12 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
 const AIRTABLE_API = "https://api.airtable.com/v0";
 
-function getAirtableIds(): { base: string; table: string } {
-  const base = process.env.AIRTABLE_BASE_ID ?? "";
-  const table = process.env.AIRTABLE_TABLE_ID ?? "";
+function getAirtableIds(project: string): { base: string; table: string } {
+  let base = process.env.AIRTABLE_BASE_ID ?? "";
+  let table = process.env.AIRTABLE_TABLE_ID ?? "";
+  if (project === "helios") {
+    base = process.env.HELIOS_AIRTABLE_BASE_ID || base;
+    table = process.env.HELIOS_AIRTABLE_TABLE_ID || table;
+  }
   if (!base || !table) throw new Error("AIRTABLE_BASE_ID / AIRTABLE_TABLE_ID not set");
   return { base, table };
 }
@@ -67,13 +71,15 @@ async function fetchAll(apiKey: string, base: string, table: string): Promise<Ai
   return records;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   if (!apiKey) {
     return NextResponse.json({ error: "Airtable API key not configured" }, { status: 500 });
   }
 
-  const { base, table } = getAirtableIds();
+  const { searchParams } = new URL(req.url);
+  const project = searchParams.get("project") ?? "kronos";
+  const { base, table } = getAirtableIds(project);
 
   try {
     const records = await fetchAll(apiKey, base, table);

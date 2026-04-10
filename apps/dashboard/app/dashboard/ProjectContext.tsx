@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-type Project = "kronos" | "helios";
+type Project = "kronos" | "helios" | null;
 
 interface ProjectContextType {
   project: Project;
@@ -11,20 +11,24 @@ interface ProjectContextType {
 }
 
 const ProjectContext = createContext<ProjectContextType>({
-  project: "kronos",
+  project: null,
   setProject: () => {},
   brandColor: "#FF6B00"
 });
 
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
-  const [project, setProject] = useState<Project>("kronos");
+  const [project, setProject] = useState<Project>(null);
 
   useEffect(() => {
     // Sync with HTML attribute for CSS variables
-    document.documentElement.setAttribute("data-theme", project);
+    if (project) {
+      document.documentElement.setAttribute("data-theme", project);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
   }, [project]);
 
-  const brandColor = project === "kronos" ? "#FF6B00" : "#22C55E";
+  const brandColor = project === "helios" ? "#22C55E" : "#FF6B00";
 
   return (
     <ProjectContext.Provider value={{ project, setProject, brandColor }}>

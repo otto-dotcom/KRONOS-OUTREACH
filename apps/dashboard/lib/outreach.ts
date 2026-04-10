@@ -312,7 +312,7 @@ export async function generateEmailCopy(
   // 1. Fetch dynamic directives from Settings table (project-specific key)
   let systemPrompt = config.systemPrompt;
   try {
-    const key = project === "helios" ? "helios_copy_directives" : "copy_directives";
+    const key = "email_prompt";
     const settingsUrl = `${AIRTABLE_API}/${config.baseId}/Settings?filterByFormula={Key}='${key}'`;
     const settingsRes = await fetchWithTimeout(settingsUrl, {
       headers: { Authorization: `Bearer ${airtableKey}` },

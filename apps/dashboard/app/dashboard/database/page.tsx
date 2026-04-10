@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useProject } from "../ProjectContext";
 
 /* ─── Types ──────────────────────────────────────────── */
 
@@ -66,9 +67,9 @@ interface EmailState {
 
 /* ─── Small UI helpers ───────────────────────────────── */
 
-function Dot({ on, color = "#FF6B00" }: { on: boolean; color?: string }) {
+function Dot({ on, color = "var(--color-k)" }: { on: boolean; color?: string }) {
   return (
-    <div className="w-2 h-2 rounded-none" style={{ backgroundColor: on ? color : "#1E1E1E" }} />
+    <div className="w-2 h-2 rounded-none" style={{ backgroundColor: on ? color : "var(--color-border)" }} />
   );
 }
 
@@ -78,12 +79,12 @@ function StatCard({
   label: string; value: string | number; sub?: string; accent?: boolean;
 }) {
   return (
-    <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-5">
-      <div className={`text-3xl font-bold mb-1 ${accent ? "text-[#FF6B00]" : "text-white"}`}>
+    <div className="bg-k-card border border-k-border p-5">
+      <div className={`text-3xl font-bold mb-1 ${accent ? "text-k" : "text-white"}`}>
         {value}
       </div>
-      <div className="text-[9px] tracking-[0.2em] text-[#555] uppercase">{label}</div>
-      {sub && <div className="text-[9px] text-[#FF6B00] mt-1">{sub}</div>}
+      <div className="text-[9px] tracking-[0.2em] text-text-dim uppercase">{label}</div>
+      {sub && <div className="text-[9px] text-k mt-1">{sub}</div>}
     </div>
   );
 }
@@ -108,9 +109,13 @@ function Field({ label, value, link }: { label: string; value?: string; link?: b
 function CompanyModal({
   row,
   onClose,
+  project,
+  brandColor,
 }: {
   row: LeadRow;
   onClose: () => void;
+  project: string;
+  brandColor: string;
 }) {
   const [email, setEmail] = useState<EmailState>({
     generating: false,
@@ -152,7 +157,7 @@ function CompanyModal({
       const res = await fetch("/api/campaign/regenerate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recordId: row.id, leadData }),
+        body: JSON.stringify({ recordId: row.id, leadData, project }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
@@ -190,6 +195,7 @@ function CompanyModal({
             wasEdited: false,
             wasRegenerated: true,
           }],
+          project,
         }),
       });
       const data = await res.json();
@@ -241,24 +247,24 @@ function CompanyModal({
         <div className="flex flex-1 overflow-hidden">
 
           {/* Left: Lead info */}
-          <div className="w-80 shrink-0 border-r border-[#1A1A1A] overflow-y-auto p-6 space-y-6">
+          <div className="w-80 shrink-0 border-r border-k-border overflow-y-auto p-6 space-y-6">
 
             {/* Rank */}
-            <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-4">
+            <div className="bg-k-card border border-k-border p-4">
               <div className="text-[8px] tracking-[0.25em] text-[#444] uppercase mb-2">Rank</div>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-[#FF6B00]">{row.rank}</span>
+                <span className="text-3xl font-bold text-k">{row.rank}</span>
                 <span className="text-[10px] text-[#444]">/10</span>
               </div>
               <div className="flex gap-1 mt-2">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className={`flex-1 h-1.5 ${i < row.rank ? "bg-[#FF6B00]" : "bg-[#1A1A1A]"}`} />
+                  <div key={i} className={`flex-1 h-1.5 ${i < row.rank ? "bg-k" : "bg-k-border"}`} />
                 ))}
               </div>
             </div>
 
             {/* Engagement */}
-            <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-4 space-y-3">
+            <div className="bg-k-card border border-k-border p-4 space-y-3">
               <div className="text-[8px] tracking-[0.25em] text-[#444] uppercase mb-1">Brevo Status</div>
               {[
                 { label: "Delivered", on: row.delivered, color: "#4ade80" },
@@ -446,6 +452,7 @@ function CompanyModal({
 /* ─── Main Database Page ─────────────────────────────── */
 
 export default function DatabasePage() {
+  const { project, brandColor } = useProject();
   const [rows, setRows] = useState<LeadRow[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -457,7 +464,9 @@ export default function DatabasePage() {
   const [selected, setSelected] = useState<LeadRow | null>(null);
 
   useEffect(() => {
-    fetch("/api/analytics/database")
+    if (!project) return;
+    setLoading(true);
+    fetch(`/api/analytics/database?project=${project}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.error) { setError(data.error); return; }
@@ -466,7 +475,7 @@ export default function DatabasePage() {
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [project]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -549,7 +558,12 @@ export default function DatabasePage() {
     <>
       {/* Company modal */}
       {selected && (
-        <CompanyModal row={selected} onClose={() => setSelected(null)} />
+        <CompanyModal 
+          row={selected} 
+          onClose={() => setSelected(null)} 
+          project={project || "kronos"}
+          brandColor={brandColor}
+        />
       )}
 
       <div className="space-y-8 fade-up">
@@ -557,13 +571,13 @@ export default function DatabasePage() {
         <div className="flex justify-between items-end">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 bg-[#FF6B00] blink" />
+              <div className="w-2 h-2 bg-k blink" />
               <span className="text-[10px] tracking-[0.3em] text-[#999] uppercase">
                 Database // Airtable × Brevo
               </span>
             </div>
-            <h1 className="text-4xl font-bold tracking-tighter" style={{ fontFamily: "var(--font-pixel), monospace" }}>
-              LEAD<span className="text-[#FF6B00]">BASE</span>
+            <h1 className="text-4xl font-bold tracking-tighter" style={{ fontFamily: "var(--font-mono), monospace" }}>
+              LEAD<span className="text-k">BASE</span>
             </h1>
           </div>
           <div className="text-right text-[9px] text-[#444] tracking-widest uppercase">
@@ -583,21 +597,21 @@ export default function DatabasePage() {
 
         {/* Funnel bar */}
         {summary && summary.total > 0 && (
-          <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-4">
+          <div className="bg-k-card border border-k-border p-4">
             <div className="text-[9px] text-[#555] uppercase tracking-widest mb-2">Funnel</div>
             <div className="flex gap-0.5 h-2">
               <div className="h-full bg-[#2a2a2a]"
                 style={{ width: `${(summary.delivered / summary.total) * 100}%` }} />
-              <div className="h-full bg-[#FF6B00] opacity-70"
+              <div className="h-full bg-k opacity-70"
                 style={{ width: `${(summary.opened / summary.total) * 100}%` }} />
-              <div className="h-full bg-[#FF6B00]"
+              <div className="h-full bg-k"
                 style={{ width: `${(summary.clicked / summary.total) * 100}%` }} />
             </div>
             <div className="flex gap-5 mt-2">
               {[
                 { label: "Delivered", color: "#2a2a2a", val: summary.delivered },
-                { label: "Opened", color: "#FF6B00", val: summary.opened },
-                { label: "Clicked", color: "#FF6B00", val: summary.clicked },
+                { label: "Opened", color: "var(--color-k)", val: summary.opened },
+                { label: "Clicked", color: "var(--color-k)", val: summary.clicked },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-1.5">
                   <div className="w-2 h-2" style={{ backgroundColor: item.color }} />

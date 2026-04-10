@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
-import { fetchSentArchive } from "@/lib/outreach";
+import { NextRequest, NextResponse } from "next/server";
+import { fetchSentArchive, Project } from "@/lib/outreach";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const archive = await fetchSentArchive(50);
+    const project = (req.nextUrl.searchParams.get("project") as Project) ?? "kronos";
+    const archive = await fetchSentArchive(50, project);
     const history = archive.map((rec) => ({
       id: rec.id,
       company: String(rec.fields["company name"] ?? "Unknown"),

@@ -4,22 +4,24 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
+// Sanitize commit message: strip shell metacharacters
+function sanitizeMessage(raw: string): string {
+    return raw.replace(/[`$\\|;&<>(){}!]/g, '').trim().slice(0, 200) || 'Dashboard Automated Commit';
+}
+
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { message = 'Dashboard Automated Commit' } = body;
+        const message = sanitizeMessage(body.message ?? '');
 
         console.log('[Git API] Orchestrating Git sequence...');
 
-        // Warning: Executing git commands from Node backend in production should be tightly secured.
-        // Ensure this endpoint is protected by Auth middleware.
-
-        // 1. Add all changes
         await execAsync('git add .', { cwd: process.cwd() });
 
-        // 2. Commit
-        const { stdout: commitStdout, stderr: commitStderr } = await execAsync(`git commit -m "${message}"`, { cwd: process.cwd() }).catch(e => {
-            // If nothing to commit, it throws an error. Handle gracefully.
+        const { stdout: commitStdout } = await execAsync(
+            `git commit -m "${message}"`,
+            { cwd: process.cwd() }
+        ).catch(e => {
             if (e.message.includes('nothing to commit')) {
                 return { stdout: 'nothing to commit', stderr: '' };
             }
@@ -30,7 +32,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true, message: 'Nothing to commit.' });
         }
 
-        // 3. Push
         await execAsync('git push origin HEAD', { cwd: process.cwd() });
 
         return NextResponse.json({

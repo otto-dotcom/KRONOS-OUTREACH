@@ -1,0 +1,7 @@
+{
+	email admin@kronosautomations.com
+}
+
+n8n.kronosautomations.com {
+	reverse_proxy kronos-n8n:5678
+}

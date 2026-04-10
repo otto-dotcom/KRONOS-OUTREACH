@@ -9,6 +9,9 @@ export async function GET(req: NextRequest) {
   }
 
   const days = Math.min(Math.max(Number(req.nextUrl.searchParams.get("days")) || 7, 1), 365);
+  const project = req.nextUrl.searchParams.get("project") ?? "kronos";
+  const tag = project === "helios" ? "HELIOS_OUTREACH" : "KRONOS_OUTREACH";
+  
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(endDate.getDate() - days);
@@ -16,7 +19,7 @@ export async function GET(req: NextRequest) {
   const fmt = (d: Date) => d.toISOString().split("T")[0];
 
   try {
-    const statsUrl = `https://api.brevo.com/v3/smtp/statistics/reports?startDate=${fmt(startDate)}&endDate=${fmt(endDate)}&tag=KRONOS_OUTREACH`;
+    const statsUrl = `https://api.brevo.com/v3/smtp/statistics/reports?startDate=${fmt(startDate)}&endDate=${fmt(endDate)}&tag=${tag}`;
     const statsRes = await fetch(statsUrl, {
       headers: {
         "api-key": apiKey,

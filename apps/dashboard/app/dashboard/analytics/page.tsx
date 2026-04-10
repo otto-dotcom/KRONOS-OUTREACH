@@ -127,27 +127,33 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="bg-k-card border border-k-border p-8 glow">
-            <div className="flex flex-col md:flex-row gap-8 items-center">
-              <div className="shrink-0">
-                <DonutChart
-                  segments={[
-                    { label: "Opened", value: stats.open_rate, color: "var(--color-k)" },
-                    { label: "Unopened", value: 100 - stats.open_rate, color: "#161616" }
-                  ]}
-                  size={180}
-                />
-              </div>
-              <div className="flex-1 space-y-6 w-full">
-                <ProgressStat label="Open Rate" value={stats.open_rate} max={100} color="var(--color-k)" />
-                <ProgressStat label="Click Rate" value={stats.click_rate} max={100} color="var(--color-k)" />
-                <ProgressStat label="Bounce Rate" value={stats.bounce_rate} max={100} color="var(--color-text-dim)" />
-                <div className="pt-4 border-t border-k-border">
-                  <p className="text-[9px] text-text-dim uppercase tracking-wider">
-                    System Status: {stats.click_rate > 5 ? '✓ OPTIMAL' : '⚠ CALIBRATING'}
-                  </p>
+            <h3 className="text-[10px] tracking-widest text-text-dim text-center uppercase mb-8">Conversion Funnel</h3>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 w-full">
+              {[
+                { label: "Emails Delivered", value: stats.sent_emails, rate: 100, color: "var(--color-text-dim)" },
+                { label: "Total Opens", value: Math.round(stats.sent_emails * (stats.open_rate / 100)) || 0, rate: stats.open_rate, color: "white" },
+                { label: "Verified Clicks", value: Math.round(stats.sent_emails * (stats.click_rate / 100)) || 0, rate: stats.click_rate, color: "var(--color-k)" }
+              ].map((step, i, arr) => (
+                <div key={step.label} className="flex-1 flex flex-col items-center relative w-full group">
+                  {i < arr.length - 1 && (
+                    <div className="hidden md:block absolute top-[25%] left-[65%] w-full h-px bg-k-border overflow-hidden">
+                       <div className="h-full bg-k w-1/2 opacity-20 group-hover:opacity-100 transition-opacity animate-[slideRight_2s_infinite]" />
+                    </div>
+                  )}
+                  <div className="w-16 h-16 rounded-full border-2 bg-black/40 flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 shadow-[0_0_15px_rgba(0,0,0,0.5)] z-10" style={{ borderColor: step.color }}>
+                    <span className="text-sm font-bold font-mono" style={{ color: step.color }}>{step.rate}%</span>
+                  </div>
+                  <div className="text-xl font-black text-white font-mono">{step.value}</div>
+                  <div className="text-[9px] tracking-[0.2em] uppercase text-text-dim mt-2">{step.label}</div>
                 </div>
-              </div>
+              ))}
             </div>
+            <style jsx>{`
+              @keyframes slideRight {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(200%); }
+              }
+            `}</style>
           </div>
 
           <div className="bg-k-card border border-k-border p-6">

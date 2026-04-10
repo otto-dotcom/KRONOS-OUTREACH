@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { fetchSentArchive } from "@/lib/outreach";
+import { NextRequest, NextResponse } from "next/server";
+import { fetchSentArchive, Project } from "@/lib/outreach";
 
 export const runtime = "nodejs";
 
@@ -22,14 +22,14 @@ interface Engagement {
   clickedAt?: string;
 }
 
-/** Paginate Brevo events for KRONOS_OUTREACH tag (cap at 500). */
-async function fetchAllBrevoEvents(apiKey: string): Promise<BrevoEvent[]> {
+/** Paginate Brevo events for outreach tag (cap at 500). */
+async function fetchAllBrevoEvents(apiKey: string, tag: string): Promise<BrevoEvent[]> {
   const events: BrevoEvent[] = [];
   let offset = 0;
   const limit = 100;
 
   while (offset < 500) {
-    const url = `${BREVO_API}/smtp/statistics/events?limit=${limit}&offset=${offset}&tags=KRONOS_OUTREACH&sort=desc`;
+    const url = `${BREVO_API}/smtp/statistics/events?limit=${limit}&offset=${offset}&tags=${tag}&sort=desc`;
     const res = await fetch(url, {
       headers: { "api-key": apiKey, Accept: "application/json" },
     });
@@ -44,16 +44,20 @@ async function fetchAllBrevoEvents(apiKey: string): Promise<BrevoEvent[]> {
   return events;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const brevoKey = process.env.BREVO_API_KEY;
   if (!brevoKey) {
     return NextResponse.json({ error: "BREVO_API_KEY not set" }, { status: 500 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const project = (searchParams.get("project") as Project) ?? "kronos";
+  const tag = project === "helios" ? "HELIOS_OUTREACH" : "KRONOS_OUTREACH";
+
   try {
     const [brevoEvents, sentLeads] = await Promise.all([
-      fetchAllBrevoEvents(brevoKey),
-      fetchSentArchive(300),
+      fetchAllBrevoEvents(brevoKey, tag),
+      fetchSentArchive(300, project),
     ]);
 
     // Group Brevo events by recipient email
