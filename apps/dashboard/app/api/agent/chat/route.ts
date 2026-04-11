@@ -586,9 +586,6 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
     case "send_sms": result = await toolSendSms(String(args.to ?? ""), String(args.body ?? ""), String(args.project ?? "kronos")); break;
     case "save_to_memory": result = await toolSaveToMemory(String(args.project ?? "kronos"), String(args.company ?? ""), String(args.subject ?? ""), String(args.body ?? ""), args.notes as string | undefined); break;
     case "read_logs": result = await toolReadLogs(Number(args.limit ?? 20)); break;
-    case "list_n8n_workflows": result = await toolListN8nWorkflows(); break;
-    case "trigger_n8n_workflow": result = await toolTriggerN8nWorkflow(String(args.workflow_id ?? ""), args.payload as Record<string, unknown> | undefined); break;
-    case "get_n8n_executions": result = await toolGetN8nExecutions(args.workflow_id as string | undefined, Number(args.limit ?? 10)); break;
     default: result = { error: `Unknown tool: ${name}` };
   }
 
