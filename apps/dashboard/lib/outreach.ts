@@ -24,7 +24,7 @@ interface ProjectConfig {
 }
 
 const KRONOS_SYSTEM_PROMPT = `You are a cold email specialist writing on behalf of KRONOS Automations.
-KRONOS is an AI automation consultancy. We work with Swiss real estate agencies to map and automate the manual, repetitive parts of their business — follow-up sequences, lead qualification, client onboarding, mandate tracking — so their consultants spend time on work that actually requires a human.
+KRONOS is an AI lead generation consultancy. We work with Swiss real estate agencies that have an inconsistent or insufficient flow of seller and buyer leads. We audit their acquisition setup, create content for them, and run Meta ads and other paid campaigns with their budget — generating a predictable flow of seller and buyer consultations. We also build custom tools, analytics dashboards, and other automations tailored to their business.
 
 LANGUAGE RULE — ABSOLUTE: Write 100% in English. No exceptions. Do not use French, German, Italian, or any other language regardless of the lead's city, region, or name. If you write in any other language you have failed this task.
 GREETING: 'Hello {Name},' if name available, otherwise 'Hello,'
@@ -32,14 +32,18 @@ GREETING: 'Hello {Name},' if name available, otherwise 'Hello,'
 GOAL: 4-5 sentences max. Reads like a real person sent it, not a marketing blast.
 
 CONTENT PROTOCOL:
-1. HOOK: One specific observation about their agency, city, or market segment. Show you know the Swiss RE space — mandate competition, referral dependency, follow-up gaps. NEVER open with 'I noticed', 'I came across', or 'I hope this email finds you well'.
-2. PROBLEM: One concrete operational pain — agents losing warm seller contacts because there is no follow-up system, time wasted on unqualified inquiries that never convert, or a mandate pipeline that resets to zero every quarter because it runs entirely on referrals.
-3. SOLUTION: One sentence framing KRONOS as an automation consulting partner — we audit the workflow, identify what can be automated, and build it. The outcome is that your team handles fewer manual tasks and more high-value client conversations.
+1. HOOK: One specific observation about their agency, city, or local market. Show you know the Swiss RE space — how competitive mandates are, how saturated the portals are, how dependent most agencies are on referrals. NEVER open with 'I noticed', 'I came across', or 'I hope this email finds you well'.
+2. PROBLEM: Describe ONE specific moment when the lead generation pain actually happens — not the category, but the scene. Pick one and make it feel real:
+   - It's the start of a new quarter and the pipeline is empty. The last three mandates came from referrals that won't repeat. There's no lever to pull to change that.
+   - They're paying for Homegate and ImmoScout listings but waiting for sellers to come to them — every month the budget goes out and the number of inbound seller inquiries stays unpredictable.
+   - A competitor agency in the same city is picking up mandates they should be winning. They're running ads, showing up in feeds, generating consultations. Meanwhile this agency has no paid acquisition in place at all.
+   Choose the scene that fits the lead's city, size, or profile. Write it as if you observed their situation specifically, not as a generic industry problem.
+3. SOLUTION: One sentence — KRONOS consults their acquisition strategy, runs their paid campaigns (Meta + other channels), and builds the digital infrastructure to turn ad spend into a consistent flow of seller and buyer consultations.
 4. CTA: Close with two plain-text links — one to book a call, one to the website.
 
 TONE: Direct, confident, no fluff. No exclamation marks. No ALL CAPS.
 
-SUBJECT LINE: Max 50 chars, sentence case. Patterns: '{Agency} automation audit', '{Name}, a question about your workflow', 'Reducing manual work at {Agency}', '{City} RE agencies + AI automation'.
+SUBJECT LINE: Max 50 chars, sentence case. Patterns: '{Agency} — seller lead acquisition', '{Name}, where are your seller leads coming from?', 'Paid acquisition for {Agency}', '{City} agencies running Meta ads for mandates'.
 NEVER: generic 'quick question', 'following up', 'touching base'.
 
 DELIVERABILITY RULES (non-negotiable — Gmail Primary tab placement depends on these):
@@ -69,8 +73,12 @@ GOAL: 4-5 sentences max. Reads like a real person sent it, not a marketing blast
 
 CONTENT PROTOCOL:
 1. HOOK: One specific observation about their company, region, or the Swiss solar market. Show you understand the space — subsidy complexity (Pronovo, cantonal programs), quote-to-install conversion gaps, or the volume of unqualified inbound inquiries. NEVER open with 'I noticed', 'I came across', or 'I hope this email finds you well'.
-2. PROBLEM: One concrete operational pain — teams spending hours on subsidy paperwork instead of installations, losing warm leads because there is no follow-up after the initial site visit, or project timelines slipping because handoffs between sales and technical teams are manual.
-3. SOLUTION: One sentence framing HELIOS as an intelligence and process consulting partner — we map the pipeline, identify where time is lost, and build the systems to fix it. The outcome is faster project cycles and fewer dropped leads.
+2. PROBLEM: Describe ONE specific moment when the pain actually happens — not the category of pain, but the scene. Pick one from below and make it feel real:
+   - A homeowner books a site visit, your technician drives out, measures the roof, and sends the quote — then silence. Two weeks later the homeowner installed with a competitor who followed up the next day.
+   - Your sales team closes a quote and hands it to installation — but the installer doesn't have the Pronovo paperwork ready, so the project sits for three weeks waiting on a form that should have been triggered automatically at close.
+   - Someone submits an inquiry from your website about a 12kWp system. Your team calls them back two days later and learns they already went with someone else — because you had no same-day response in place.
+   Choose the scene that fits the lead's profile. Write it as if you watched it happen at their company, not as a general industry problem.
+3. SOLUTION: One sentence framing HELIOS as an intelligence and process consulting partner — we map where the pipeline breaks, build the fix, and hand it back to your team. The outcome: fewer dropped leads, faster installs, less time on paperwork.
 4. CTA: Close with two plain-text links — one to book a call, one to the website.
 
 TONE: Direct, grounded, technically credible. No exclamation marks. No ALL CAPS.
@@ -119,7 +127,7 @@ function getProjectConfig(project: Project): ProjectConfig {
         `AND(
           {EMAIL} != "",
           {EMAIL STATUS} != "Sent",
-          {EMAIL STATUS} != "Processing ",
+          {EMAIL STATUS} != "Processing",
           {Rank} >= 5
         )`
       ),
@@ -402,10 +410,17 @@ async function sendEmail(toEmail: string, copy: EmailCopy, config: ProjectConfig
   }
 }
 
-// Airtable EMAIL STATUS choice values
-const STATUS_SENT       = "Sent";
-const STATUS_PROCESSING = "Processing ";  // trailing space — existing Airtable choice
-const STATUS_FAILED     = "Failed ";      // trailing space — existing Airtable choice
+// Airtable EMAIL STATUS values
+// KRONOS: singleSelect — trailing space is baked into the choice name
+// HELIOS: singleLineText — plain strings, no trailing spaces
+const STATUS_SENT = "Sent";
+
+function statusProcessing(project: Project): string {
+  return project === "helios" ? "Processing" : "Processing ";
+}
+function statusFailed(project: Project): string {
+  return project === "helios" ? "Failed" : "Failed ";
+}
 
 async function fetchEmailStatus(baseId: string, tableId: string, recordId: string): Promise<string | null> {
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
@@ -422,23 +437,23 @@ async function fetchEmailStatus(baseId: string, tableId: string, recordId: strin
   }
 }
 
-async function markProcessing(baseId: string, tableId: string, recordId: string): Promise<void> {
+async function markProcessing(baseId: string, tableId: string, recordId: string, project: Project): Promise<void> {
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ fields: { "EMAIL STATUS": STATUS_PROCESSING } }),
+    body: JSON.stringify({ fields: { "EMAIL STATUS": statusProcessing(project) } }),
   });
   if (!res.ok) throw new Error(`markProcessing failed: ${res.status}`);
 }
 
-async function markFailed(baseId: string, tableId: string, recordId: string): Promise<void> {
+async function markFailed(baseId: string, tableId: string, recordId: string, project: Project): Promise<void> {
   const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   try {
     const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
       method: "PATCH",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ fields: { "EMAIL STATUS": STATUS_FAILED } }),
+      body: JSON.stringify({ fields: { "EMAIL STATUS": statusFailed(project) } }),
     });
     if (!res.ok) {
       console.error(`markFailed CRITICAL: could not release lock for ${recordId} (${res.status})`);
@@ -448,12 +463,15 @@ async function markFailed(baseId: string, tableId: string, recordId: string): Pr
   }
 }
 
+// HELIOS schema only has: EMAIL STATUS, EMAIL_SUBJECT, SENT MAIL
+// KRONOS also has: DATE_SENT, ORIGINAL_SUBJECT, ORIGINAL_BODY
 async function markSent(
   baseId: string,
   tableId: string,
   recordId: string,
   subject: string,
   emailBody: string,
+  project: Project,
   originalSubject?: string,
   originalBody?: string
 ): Promise<void> {
@@ -462,17 +480,20 @@ async function markSent(
     "EMAIL STATUS": STATUS_SENT,
     EMAIL_SUBJECT: subject,
     "SENT MAIL": emailBody,
-    DATE_SENT: new Date().toISOString(),
   };
-  if (originalSubject && originalSubject !== subject) fields["ORIGINAL_SUBJECT"] = originalSubject;
-  if (originalBody && originalBody !== emailBody) fields["ORIGINAL_BODY"] = originalBody;
+  // KRONOS-only fields (HELIOS table doesn't have these)
+  if (project !== "helios") {
+    fields["DATE_SENT"] = new Date().toISOString();
+    if (originalSubject && originalSubject !== subject) fields["ORIGINAL_SUBJECT"] = originalSubject;
+    if (originalBody && originalBody !== emailBody) fields["ORIGINAL_BODY"] = originalBody;
+  }
 
   const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ fields }),
   });
-  if (!res.ok) throw new Error(`Airtable markSent failed: ${res.status}`);
+  if (!res.ok) throw new Error(`Airtable markSent failed: ${res.status} — ${await res.text().catch(() => "")}`);
 }
 
 function mapLeadFields(lead: AirtableRecord): EmailPreview["lead"] {
@@ -560,7 +581,7 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
       }
 
       try {
-        await markProcessing(config.baseId, config.tableId, item.recordId);
+        await markProcessing(config.baseId, config.tableId, item.recordId, project);
       } catch {
         result.skipped++;
         result.errors.push(`${item.toEmail}: could not claim record — skipped`);
@@ -569,10 +590,10 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
 
       try {
         await sendEmail(item.toEmail, { subject: item.subject, emailBody: item.emailBody }, config);
-        await markSent(config.baseId, config.tableId, item.recordId, item.subject, item.emailBody, item.originalSubject, item.originalBody);
+        await markSent(config.baseId, config.tableId, item.recordId, item.subject, item.emailBody, project, item.originalSubject, item.originalBody);
         result.sent++;
       } catch (err) {
-        await markFailed(config.baseId, config.tableId, item.recordId);
+        await markFailed(config.baseId, config.tableId, item.recordId, project);
         result.failed++;
         result.errors.push(`${item.toEmail}: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -604,7 +625,7 @@ export async function runOutreach(leadLimit = 10, project: Project = "kronos"): 
       }
 
       try {
-        await markProcessing(config.baseId, config.tableId, lead.id);
+        await markProcessing(config.baseId, config.tableId, lead.id, project);
       } catch {
         result.skipped++;
         return;
@@ -613,10 +634,10 @@ export async function runOutreach(leadLimit = 10, project: Project = "kronos"): 
       try {
         const copy = await generateEmailCopy(lead, project);
         await sendEmail(email, copy, config);
-        await markSent(config.baseId, config.tableId, lead.id, copy.subject, copy.emailBody);
+        await markSent(config.baseId, config.tableId, lead.id, copy.subject, copy.emailBody, project);
         result.sent++;
       } catch (err) {
-        await markFailed(config.baseId, config.tableId, lead.id);
+        await markFailed(config.baseId, config.tableId, lead.id, project);
         result.failed++;
         result.errors.push(`${email}: ${err instanceof Error ? err.message : String(err)}`);
       }
