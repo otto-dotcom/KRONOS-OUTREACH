@@ -175,6 +175,127 @@ function MessageRenderer({ content, brandColor, project }: {
           }
         }
 
+        // ── ui-table card ────────────────────────────────────────────
+        if (part.startsWith("```ui-table")) {
+          try {
+            const jsonStr = part.replace(/^```ui-table\n?/, "").replace(/```$/, "").trim();
+            const t = JSON.parse(jsonStr);
+            return (
+              <div key={i} className="my-3 rounded-xl border overflow-hidden" style={{ borderColor: `${brandColor}30` }}>
+                <div className="px-4 py-2 flex items-center gap-2 text-[8px] uppercase tracking-widest font-bold border-b"
+                  style={{ borderColor: `${brandColor}20`, backgroundColor: `${brandColor}10`, color: brandColor }}>
+                  <AirtableIcon size={12} />
+                  <span>{t.title || "Records"}</span>
+                  {t.rows?.length != null && <span className="ml-auto text-white/30">{t.rows.length} rows</span>}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-white/5">
+                        {t.columns?.map((col: string, ci: number) => (
+                          <th key={ci} className="px-4 py-2 text-left text-[9px] uppercase tracking-widest text-white/30 font-bold whitespace-nowrap">{col}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {t.rows?.map((row: (string | number)[], ri: number) => (
+                        <tr key={ri} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                          {row.map((cell, ci) => (
+                            <td key={ci} className="px-4 py-2.5 text-white/75 whitespace-nowrap">{String(cell)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          } catch {
+            return <p key={i} className="text-red-400 text-xs my-1">Failed to render table.</p>;
+          }
+        }
+
+        // ── ui-contact card ──────────────────────────────────────────
+        if (part.startsWith("```ui-contact")) {
+          try {
+            const jsonStr = part.replace(/^```ui-contact\n?/, "").replace(/```$/, "").trim();
+            const c = JSON.parse(jsonStr);
+            return (
+              <div key={i} className="my-3 rounded-xl border overflow-hidden" style={{ borderColor: "#0092FF40", background: "rgba(0,146,255,0.04)" }}>
+                <div className="px-4 py-2 flex items-center gap-2 text-[8px] uppercase tracking-widest font-bold border-b border-[#0092FF20]"
+                  style={{ backgroundColor: "rgba(0,146,255,0.10)", color: "#0092FF" }}>
+                  <BrevoIcon size={12} />
+                  <span>Brevo Contact</span>
+                  {c.blacklisted && <span className="ml-auto px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">BLACKLISTED</span>}
+                </div>
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-white font-black text-sm">{c.name || c.email}</p>
+                      <p className="text-white/40 text-[11px] mt-0.5">{c.email}</p>
+                    </div>
+                    <div className="text-right text-[9px] text-white/30">
+                      {c.lastActivity && <span>Last active: {c.lastActivity}</span>}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: "Opens", val: c.opens ?? "—", color: "#60A5FA" },
+                      { label: "Clicks", val: c.clicks ?? "—", color: brandColor },
+                      { label: "Lists", val: Array.isArray(c.lists) ? c.lists.join(", ") : (c.lists ?? "—"), color: "#A78BFA" },
+                    ].map(m => (
+                      <div key={m.label} className="text-center p-2 rounded-lg bg-white/5">
+                        <div className="text-[8px] text-white/30 uppercase tracking-wider mb-1">{m.label}</div>
+                        <div className="text-sm font-black font-mono" style={{ color: m.color }}>{m.val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          } catch {
+            return <p key={i} className="text-red-400 text-xs my-1">Failed to render contact card.</p>;
+          }
+        }
+
+        // ── ui-campaign card ─────────────────────────────────────────
+        if (part.startsWith("```ui-campaign")) {
+          try {
+            const jsonStr = part.replace(/^```ui-campaign\n?/, "").replace(/```$/, "").trim();
+            const camp = JSON.parse(jsonStr);
+            const statusColor = camp.status === "sent" ? "#22C55E" : camp.status === "draft" ? "#F59E0B" : "#888";
+            return (
+              <div key={i} className="my-3 rounded-xl border overflow-hidden" style={{ borderColor: "#0092FF40" }}>
+                <div className="px-4 py-2 flex items-center justify-between text-[8px] uppercase tracking-widest font-bold border-b border-[#0092FF20]"
+                  style={{ backgroundColor: "rgba(0,146,255,0.08)", color: "#0092FF" }}>
+                  <div className="flex items-center gap-2"><BrevoIcon size={12} /><span>Campaign Report</span></div>
+                  <span className="px-2 py-0.5 rounded-full font-bold" style={{ background: `${statusColor}20`, color: statusColor }}>{camp.status?.toUpperCase()}</span>
+                </div>
+                <div className="p-4">
+                  <p className="text-white font-black text-sm mb-1">{camp.name}</p>
+                  {camp.sentDate && <p className="text-white/30 text-[10px] mb-3">Sent {camp.sentDate}</p>}
+                  <div className="grid grid-cols-5 gap-2">
+                    {[
+                      { label: "Sent", val: camp.sent ?? 0, color: "#fff" },
+                      { label: "Delivered", val: camp.delivered ?? "—", color: "#22C55E" },
+                      { label: "Opens", val: camp.opens != null ? `${camp.opens} (${camp.openRate}%)` : "—", color: "#60A5FA" },
+                      { label: "Clicks", val: camp.clicks != null ? `${camp.clicks} (${camp.clickRate}%)` : "—", color: brandColor },
+                      { label: "Bounced", val: camp.bounced ?? 0, color: "#F87171" },
+                    ].map(m => (
+                      <div key={m.label} className="text-center p-2 rounded-lg bg-white/5">
+                        <div className="text-[8px] text-white/25 uppercase tracking-wider mb-1">{m.label}</div>
+                        <div className="text-xs font-black font-mono leading-tight" style={{ color: m.color }}>{m.val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          } catch {
+            return <p key={i} className="text-red-400 text-xs my-1">Failed to render campaign card.</p>;
+          }
+        }
+
         // ── ui-status card ───────────────────────────────────────────
         if (part.startsWith("```ui-status")) {
           try {
