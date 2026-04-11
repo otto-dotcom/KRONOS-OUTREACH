@@ -5,59 +5,91 @@ import * as path from "path";
 
 export const runtime = "nodejs";
 
+// Whitelist — only these project values are allowed as directory names
+const ALLOWED_PROJECTS = new Set(["kronos", "helios"]);
+
+// Resolve the absolute allowed root and ensure paths never escape it
+const MEMORY_ROOT = path.resolve(process.cwd(), "..", "..", "data", "memory");
+
+function safeMemoryPath(project: string, filename?: string): string | null {
+  if (!ALLOWED_PROJECTS.has(project)) return null;
+  const projectDir = path.resolve(MEMORY_ROOT, project);
+  // Guard: resolved path must start with MEMORY_ROOT
+  if (!projectDir.startsWith(MEMORY_ROOT + path.sep) && projectDir !== MEMORY_ROOT) return null;
+  if (!filename) return projectDir;
+  const filePath = path.resolve(projectDir, filename);
+  if (!filePath.startsWith(projectDir + path.sep)) return null;
+  return filePath;
+}
+
 /**
  * POST /api/memory/save
  * Save high-performing email copy to local memory (data/memory/{project}/)
- * Called from the email review page when user clicks "Save to Memory"
  */
 export async function POST(req: NextRequest) {
   try {
-    const { project, company, subject, body, notes } = await req.json();
+    const body = await req.json();
+    const { project, company, subject, body: emailBody, notes } = body;
 
-    if (!project || !company || !subject || !body) {
+    if (!project || !company || !subject || !emailBody) {
       return NextResponse.json({ error: "Missing required fields: project, company, subject, body" }, { status: 400 });
+    }
+
+    // Strict project whitelist — prevents path traversal
+    if (!ALLOWED_PROJECTS.has(project)) {
+      log.error("memory_save_invalid_project", new Error("Invalid project"), { project });
+      return NextResponse.json({ error: "Invalid project" }, { status: 400 });
+    }
+
+    const memoryDir = safeMemoryPath(project);
+    if (!memoryDir) {
+      return NextResponse.json({ error: "Invalid project path" }, { status: 400 });
     }
 
     log.info("memory_save_request", { project, company });
 
-    const memoryDir = path.join(process.cwd(), "..", "..", "data", "memory", project);
     await fs.mkdir(memoryDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    // Strict filename sanitization — alphanumeric + underscore only
     const safeName = company.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
     const filename = `${timestamp}_${safeName}.md`;
 
+    const filePath = safeMemoryPath(project, filename);
+    if (!filePath) {
+      return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
+    }
+
     const content = `---
 project: ${project}
-company: ${company}
-subject: "${subject.replace(/"/g, '\\"')}"
+company: ${company.replace(/[^\w\s.-]/g, "")}
+subject: "${subject.replace(/"/g, '\\"').slice(0, 500)}"
 saved_at: ${new Date().toISOString()}
 type: high_performing_copy
 source: email_review
 ---
 
-# ${company}
+# ${company.replace(/[^\w\s.-]/g, "")}
 
 ## Subject
-${subject}
+${subject.slice(0, 500)}
 
 ## Body
 \`\`\`html
-${body}
+${emailBody.slice(0, 50000)}
 \`\`\`
 
 ## Notes
-${notes || "Manually saved from email review page."}
+${(notes ?? "Manually saved from email review page.").slice(0, 2000)}
 `;
 
-    await fs.writeFile(path.join(memoryDir, filename), content, "utf-8");
+    await fs.writeFile(filePath, content, "utf-8");
     log.info("memory_saved", { project, company, filename });
 
     return NextResponse.json({ ok: true, filename });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
     log.error("memory_save_failed", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to save memory entry" }, { status: 500 });
   }
 }
 
@@ -68,9 +100,16 @@ ${notes || "Manually saved from email review page."}
 export async function GET(req: NextRequest) {
   const project = req.nextUrl.searchParams.get("project") ?? "kronos";
 
-  try {
-    const memoryDir = path.join(process.cwd(), "..", "..", "data", "memory", project);
+  if (!ALLOWED_PROJECTS.has(project)) {
+    return NextResponse.json({ error: "Invalid project" }, { status: 400 });
+  }
 
+  const memoryDir = safeMemoryPath(project);
+  if (!memoryDir) {
+    return NextResponse.json({ error: "Invalid project path" }, { status: 400 });
+  }
+
+  try {
     try {
       await fs.access(memoryDir);
     } catch {
@@ -78,7 +117,11 @@ export async function GET(req: NextRequest) {
     }
 
     const files = await fs.readdir(memoryDir);
-    const mdFiles = files.filter(f => f.endsWith(".md")).sort().reverse().slice(0, 50);
+    const mdFiles = files
+      .filter(f => f.endsWith(".md") && /^[\w\-. ]+$/.test(f))
+      .sort()
+      .reverse()
+      .slice(0, 50);
 
     const entries = mdFiles.map(f => ({
       filename: f,
@@ -87,7 +130,7 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({ entries, count: entries.length });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Failed to list memory entries" }, { status: 500 });
   }
 }

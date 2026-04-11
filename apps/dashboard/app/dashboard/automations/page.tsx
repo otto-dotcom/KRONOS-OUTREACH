@@ -1,24 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useProject } from "../ProjectContext";
 
 export default function AutomationsPage() {
+  const { project } = useProject();
   const [isRunning, setIsRunning] = useState(false);
-  const [lastResult, setLastResult] = useState<any>(null);
+  const [lastResult, setLastResult] = useState<{ sent?: number; failed?: number; skipped?: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function triggerOutreach() {
     setIsRunning(true);
     setError(null);
+    setLastResult(null);
     try {
-      // In a real scenario, this might call a different internal endpoint or we use the secret
-      // For this interface, we assume the user is authenticated via cookie, so we might need a protected wrapper
-      const res = await fetch("/api/campaign/launch", { method: "POST" });
+      const res = await fetch("/api/campaign/launch", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project: project ?? "kronos", leadLimit: 10 }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to trigger");
       setLastResult(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsRunning(false);
     }
@@ -85,9 +91,22 @@ export default function AutomationsPage() {
           )}
 
           {lastResult && (
-            <div className="p-5 glass-panel-accent border border-k/20 text-k text-[9px] font-mono whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
-              <span className="font-bold block mb-2 text-white">[EXECUTION_DUMP]</span>
-              {JSON.stringify(lastResult, null, 2)}
+            <div className="p-5 glass-panel-accent border border-k/20 text-[10px] font-mono leading-relaxed">
+              <span className="font-bold block mb-3 text-white tracking-widest">[PIPELINE COMPLETE]</span>
+              <div className="flex gap-6">
+                <div>
+                  <div className="text-[8px] text-[#555] uppercase tracking-widest mb-1">Sent</div>
+                  <div className="text-green-400 text-lg font-black">{lastResult.sent ?? 0}</div>
+                </div>
+                <div>
+                  <div className="text-[8px] text-[#555] uppercase tracking-widest mb-1">Failed</div>
+                  <div className="text-red-400 text-lg font-black">{lastResult.failed ?? 0}</div>
+                </div>
+                <div>
+                  <div className="text-[8px] text-[#555] uppercase tracking-widest mb-1">Skipped</div>
+                  <div className="text-[#555] text-lg font-black">{lastResult.skipped ?? 0}</div>
+                </div>
+              </div>
             </div>
           )}
         </div>

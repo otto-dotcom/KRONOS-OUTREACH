@@ -19,6 +19,9 @@ function getAirtableConfig(project: string) {
 
 export async function GET(req: NextRequest) {
   const project = req.nextUrl.searchParams.get("project") ?? "kronos";
+  if (!new Set(["kronos", "helios"]).has(project)) {
+    return NextResponse.json({ error: "Invalid project" }, { status: 400 });
+  }
   const { baseId, apiKey } = getAirtableConfig(project);
   
   if (!baseId || !apiKey) {
@@ -54,10 +57,28 @@ export async function GET(req: NextRequest) {
   }
 }
 
+const ALLOWED_PROJECTS = new Set(["kronos", "helios"]);
+const MAX_PROMPT_LENGTH = 8000;
+
 export async function POST(req: NextRequest) {
   const project = req.nextUrl.searchParams.get("project") ?? "kronos";
+
+  // Validate project scope
+  if (!ALLOWED_PROJECTS.has(project)) {
+    return NextResponse.json({ error: "Invalid project" }, { status: 400 });
+  }
+
   const { baseId, apiKey } = getAirtableConfig(project);
-  const { email_prompt, sms_prompt } = await req.json();
+
+  let email_prompt: string | undefined;
+  let sms_prompt: string | undefined;
+  try {
+    const body = await req.json();
+    email_prompt = typeof body.email_prompt === "string" ? body.email_prompt.slice(0, MAX_PROMPT_LENGTH) : undefined;
+    sms_prompt   = typeof body.sms_prompt   === "string" ? body.sms_prompt.slice(0, MAX_PROMPT_LENGTH)   : undefined;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
   if (!baseId || !apiKey) return NextResponse.json({ error: "Airtable not configured" }, { status: 500 });
 

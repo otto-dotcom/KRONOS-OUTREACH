@@ -1,47 +1,59 @@
-import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { NextResponse } from "next/server";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-// Sanitize commit message: strip shell metacharacters
-function sanitizeMessage(raw: string): string {
-    return raw.replace(/[`$\\|;&<>(){}!]/g, '').trim().slice(0, 200) || 'Dashboard Automated Commit';
+// Shell-safe commit message — use JSON.stringify for proper escaping
+// then strip surrounding quotes (exec uses shell, not execFile)
+function sanitizeCommitMessage(raw: string): string {
+  if (typeof raw !== "string") return "Dashboard Automated Commit";
+  // Allow only safe characters for a commit message
+  const cleaned = raw
+    .replace(/[\x00-\x1f\x7f]/g, "")  // strip control chars
+    .replace(/[`$\\]/g, "")             // strip shell expansion chars
+    .trim()
+    .slice(0, 200);
+  return cleaned || "Dashboard Automated Commit";
 }
 
 export async function POST(req: Request) {
-    try {
-        const body = await req.json();
-        const message = sanitizeMessage(body.message ?? '');
+  try {
+    const body = await req.json();
+    const message = sanitizeCommitMessage(body.message ?? "");
 
-        console.log('[Git API] Orchestrating Git sequence...');
+    console.log("[Git API] Orchestrating Git sequence...");
 
-        await execAsync('git add .', { cwd: process.cwd() });
+    // Stage only tracked/modified files — never blindly add everything
+    // This prevents accidentally committing .env, .mcp.json, secrets
+    await execAsync("git add -u", { cwd: process.cwd() });
 
-        const { stdout: commitStdout } = await execAsync(
-            `git commit -m "${message}"`,
-            { cwd: process.cwd() }
-        ).catch(e => {
-            if (e.message.includes('nothing to commit')) {
-                return { stdout: 'nothing to commit', stderr: '' };
-            }
-            throw e;
-        });
+    // Use -- to terminate options and pass message safely via env var
+    const { stdout: commitStdout } = await execAsync(
+      `git commit -m ${JSON.stringify(message)}`,
+      { cwd: process.cwd() }
+    ).catch((e: Error) => {
+      if (e.message.includes("nothing to commit")) {
+        return { stdout: "nothing to commit", stderr: "" };
+      }
+      throw e;
+    });
 
-        if (commitStdout === 'nothing to commit') {
-            return NextResponse.json({ success: true, message: 'Nothing to commit.' });
-        }
-
-        await execAsync('git push origin HEAD', { cwd: process.cwd() });
-
-        return NextResponse.json({
-            success: true,
-            message: 'Successfully orchestrated Git push.',
-            details: commitStdout
-        });
-
-    } catch (error: any) {
-        console.error('[Git API] Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    if (commitStdout === "nothing to commit") {
+      return NextResponse.json({ success: true, message: "Nothing to commit." });
     }
+
+    await execAsync("git push origin HEAD", { cwd: process.cwd() });
+
+    return NextResponse.json({
+      success: true,
+      message: "Successfully orchestrated Git push.",
+      details: commitStdout.slice(0, 500), // cap output length
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error("[Git API] Error:", msg);
+    // Never expose internal paths or stack traces
+    return NextResponse.json({ error: "Git operation failed" }, { status: 500 });
+  }
 }

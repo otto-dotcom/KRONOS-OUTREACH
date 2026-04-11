@@ -230,26 +230,26 @@ const NAV = [
   { icon: Settings,        label: "Settings",    path: "/dashboard/settings" },
 ];
 
-/* ── Sidebar tooltip ─────────────────────────────────────────────────────── */
+/* ── Nav item with label ─────────────────────────────────────────────────── */
 function NavItem({ icon: Icon, label, path, active }: {
   icon: React.ElementType; label: string; path: string; active: boolean;
 }) {
   return (
     <Link
       href={path}
-      title={label}
       style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        width: 40, height: 40, borderRadius: 10,
-        background: active ? "var(--accent-dim)" : "transparent",
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "9px 12px", borderRadius: 10,
+        background: active ? "rgba(249,115,22,0.12)" : "transparent",
         color: active ? "var(--accent)" : "var(--text-3)",
         transition: "background 0.15s, color 0.15s",
         position: "relative",
         textDecoration: "none",
+        width: "100%",
       }}
       onMouseEnter={e => {
         if (!active) {
-          (e.currentTarget as HTMLElement).style.background = "var(--surface-2)";
+          (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
           (e.currentTarget as HTMLElement).style.color = "var(--text-1)";
         }
       }}
@@ -260,14 +260,15 @@ function NavItem({ icon: Icon, label, path, active }: {
         }
       }}
     >
-      <Icon size={18} strokeWidth={active ? 2.25 : 1.75} />
-      {/* Active indicator */}
+      {/* Active bar */}
       {active && (
         <div style={{
-          position: "absolute", left: -12, top: "50%", transform: "translateY(-50%)",
-          width: 3, height: 20, background: "var(--accent)", borderRadius: 2,
+          position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)",
+          width: 3, height: 20, background: "var(--accent)", borderRadius: "0 2px 2px 0",
         }} />
       )}
+      <Icon size={16} strokeWidth={active ? 2.25 : 1.75} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: 12, fontWeight: active ? 600 : 500, letterSpacing: "0.01em" }}>{label}</span>
     </Link>
   );
 }
@@ -291,120 +292,153 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const activeLabel = NAV.find(n => pathname === n.path)?.label ?? "Overview";
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)", position: "relative" }}>
+
+      {/* ── Global ambient orbs ───────────────────────────────────────────── */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+        {/* Orange orb — top left */}
+        <div style={{
+          position: "absolute", width: 700, height: 700, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 70%)",
+          top: -200, left: -100,
+        }} />
+        {/* Purple orb — bottom right */}
+        <div style={{
+          position: "absolute", width: 600, height: 600, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(139,92,246,0.055) 0%, transparent 70%)",
+          bottom: -200, right: 0,
+        }} />
+        {/* Blue accent — center right */}
+        <div style={{
+          position: "absolute", width: 400, height: 400, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(59,130,246,0.04) 0%, transparent 70%)",
+          top: "40%", right: "20%",
+        }} />
+      </div>
 
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
       <aside style={{
-        width: 64, display: "flex", flexDirection: "column", alignItems: "center",
-        paddingTop: 14, paddingBottom: 14, gap: 0, flexShrink: 0,
-        background: "var(--surface-1)",
-        borderRight: "1px solid var(--border)",
-        zIndex: 50,
+        width: 200, display: "flex", flexDirection: "column",
+        paddingTop: 16, paddingBottom: 16, gap: 0, flexShrink: 0,
+        background: "rgba(9,9,11,0.80)",
+        backdropFilter: "blur(24px) saturate(160%)",
+        WebkitBackdropFilter: "blur(24px) saturate(160%)",
+        borderRight: "1px solid rgba(255,255,255,0.07)",
+        zIndex: 50, position: "relative",
       }}>
-        {/* Logo */}
+        {/* Top shine line */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)", pointerEvents: "none" }} />
+
+        {/* Logo + project name */}
         <div
-          style={{ padding: "6px 0 18px", cursor: "pointer" }}
+          style={{ padding: "4px 16px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
           onClick={() => router.push("/dashboard")}
-          title={project === "kronos" ? "KRONOS" : "HELIOS"}
         >
-          {isHelios ? <HeliosLogo size={28} /> : <KronosLogo size={28} />}
+          {isHelios ? <HeliosLogo size={26} /> : <KronosLogo size={26} />}
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-0.01em", color: "var(--text-1)" }}>
+              {isHelios ? "HELIOS" : "KRONOS"}
+            </div>
+            <div style={{ fontSize: 9, color: "var(--text-3)", fontFamily: "var(--font-mono)", letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 1 }}>
+              {isHelios ? "Solar Intel" : "RE Outreach"}
+            </div>
+          </div>
         </div>
 
+        {/* Divider */}
+        <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "0 16px 12px" }} />
+
         {/* Nav items */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, width: "100%", padding: "0 12px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, padding: "0 8px" }}>
           {NAV.map(({ icon, label, path }) => (
             <NavItem key={path} icon={icon} label={label} path={path} active={pathname === path} />
           ))}
         </div>
 
-        {/* Project toggle + logout */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%", padding: "0 12px" }}>
+        {/* Divider */}
+        <div style={{ height: 1, background: "rgba(255,255,255,0.05)", margin: "12px 16px 8px" }} />
+
+        {/* Bottom: project switcher + logout */}
+        <div style={{ padding: "0 8px", display: "flex", flexDirection: "column", gap: 2 }}>
+          {/* Switch project */}
           <button
             onClick={() => setProject(isHelios ? "kronos" : "helios")}
-            title={`Switch to ${isHelios ? "KRONOS" : "HELIOS"}`}
             style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              width: 40, height: 40, borderRadius: 10, border: "none", cursor: "pointer",
-              background: "transparent", color: "var(--text-3)",
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "9px 12px", borderRadius: 10, border: "none", cursor: "pointer",
+              background: "transparent", color: "var(--text-3)", width: "100%",
               transition: "background 0.15s, color 0.15s",
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLElement).style.color = "var(--text-1)"; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "var(--text-1)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
           >
-            <ArrowLeftRight size={16} strokeWidth={1.75} />
+            <ArrowLeftRight size={16} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 500 }}>Switch to {isHelios ? "KRONOS" : "HELIOS"}</span>
           </button>
 
+          {/* Logout */}
           <button
             onClick={handleLogout}
-            title="Sign out"
             style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              width: 40, height: 40, borderRadius: 10, border: "none", cursor: "pointer",
-              background: "transparent", color: "var(--text-3)",
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "9px 12px", borderRadius: 10, border: "none", cursor: "pointer",
+              background: "transparent", color: "var(--text-3)", width: "100%",
               transition: "background 0.15s, color 0.15s",
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(239,68,68,0.10)"; (e.currentTarget as HTMLElement).style.color = "#EF4444"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
           >
-            <LogOut size={16} strokeWidth={1.75} />
+            <LogOut size={16} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 500 }}>Sign Out</span>
           </button>
         </div>
       </aside>
 
       {/* ── Main area ────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
 
         {/* Top bar */}
         <header style={{
           height: 52, display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "0 20px",
-          background: "var(--surface-1)",
-          borderBottom: "1px solid var(--border)",
+          padding: "0 24px",
+          background: "rgba(9,9,11,0.60)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
           flexShrink: 0,
         }}>
           {/* Breadcrumb */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>
-              {activeLabel}
-            </span>
+            <span style={{ fontSize: 12, color: "var(--text-3)" }}>KRONOS-OUTREACH</span>
+            <ChevronRight size={12} style={{ color: "var(--text-3)" }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>{activeLabel}</span>
           </div>
 
-          {/* Right: status + project toggle */}
+          {/* Right: status + project badge */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span className="dot-live" />
-              <span style={{ fontSize: 12, color: "var(--text-2)", fontWeight: 500 }}>Operational</span>
+              <span style={{ fontSize: 11, color: "var(--text-2)", fontWeight: 500, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>OPERATIONAL</span>
             </div>
 
-            <div style={{ width: 1, height: 16, background: "var(--border)" }} />
+            <div style={{ width: 1, height: 16, background: "rgba(255,255,255,0.08)" }} />
 
-            {/* Project switcher pills */}
+            {/* Project badge */}
             <div style={{
-              display: "flex", gap: 2, padding: 3,
-              background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8,
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "4px 10px 4px 6px",
+              background: "var(--accent-dim)", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 20,
             }}>
-              {(["kronos","helios"] as const).map(p => (
-                <button
-                  key={p}
-                  onClick={() => setProject(p)}
-                  style={{
-                    padding: "3px 10px", border: "none", cursor: "pointer",
-                    borderRadius: 6, fontSize: 11, fontWeight: 600,
-                    textTransform: "capitalize",
-                    background: project === p ? "var(--accent)" : "transparent",
-                    color: project === p ? "#fff" : "var(--text-2)",
-                    transition: "background 0.15s, color 0.15s",
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
+              {isHelios ? <HeliosLogo size={14} /> : <KronosLogo size={14} />}
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.05em" }}>
+                {isHelios ? "HELIOS" : "KRONOS"}
+              </span>
             </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: 24 }} className="custom-scrollbar">
           {children}
         </main>
       </div>

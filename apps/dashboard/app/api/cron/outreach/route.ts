@@ -4,16 +4,26 @@ import { runOutreach } from "@/lib/outreach";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+// Constant-time comparison — prevents timing-based secret brute-force
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ba = enc.encode(a.padEnd(512));
+  const bb = enc.encode(b.padEnd(512));
+  let diff = 0;
+  for (let i = 0; i < 512; i++) diff |= ba[i] ^ bb[i];
+  return diff === 0 && a.length === b.length;
+}
+
 // Vercel Cron sends: Authorization: Bearer <CRON_SECRET>
-// This route is intentionally excluded from the cookie-auth middleware.
+// This route is intentionally excluded from cookie-auth middleware.
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
   }
 
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${cronSecret}`) {
+  const auth = req.headers.get("authorization") ?? "";
+  if (!timingSafeEqual(auth, `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
