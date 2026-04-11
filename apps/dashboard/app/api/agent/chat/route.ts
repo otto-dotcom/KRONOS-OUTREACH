@@ -42,7 +42,7 @@ CRITICAL: singleSelect values are case-sensitive. Never cross project data strea
 4. STOP / ABORT / DO NOT SEND → halt all pending tool calls immediately.
 5. Cross-check Airtable status with Brevo events before reporting analytics.
 
-━━━ TOOL CATALOGUE (23 tools) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━ TOOL CATALOGUE (22 tools) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## PIPELINE INTELLIGENCE
 **get_leads_stats** (project)
@@ -612,9 +612,18 @@ async function toolGetLeadsStats(project: string) {
       { label: "failed", f: `{EMAIL STATUS} = "Failed "` },
     ];
     const counts: Record<string, number> = {};
+    // Paginate to get accurate counts for large tables (KRONOS has 880+ records)
     await Promise.all(queries.map(async ({ label, f }) => {
-      const data = await airtableGet(`${AIRTABLE_API}/${baseId}/${tableId}?filterByFormula=${encodeURIComponent(f)}&pageSize=100&fields[]=EMAIL`) as { records: unknown[] };
-      counts[label] = data.records?.length ?? 0;
+      let total = 0;
+      let offset: string | undefined;
+      do {
+        const params = new URLSearchParams({ filterByFormula: f, pageSize: "100", "fields[]": "EMAIL" });
+        if (offset) params.set("offset", offset);
+        const data = await airtableGet(`${AIRTABLE_API}/${baseId}/${tableId}?${params.toString()}`) as { records: unknown[]; offset?: string };
+        total += data.records?.length ?? 0;
+        offset = data.offset;
+      } while (offset);
+      counts[label] = total;
     }));
     const top = await airtableGet(`${AIRTABLE_API}/${baseId}/${tableId}?filterByFormula=${encodeURIComponent(`AND({EMAIL} != "", {EMAIL STATUS} != "Sent", {Rank} >= 7)`)}&maxRecords=5&sort[0][field]=Rank&sort[0][direction]=desc&fields[]=FULL NAME&fields[]=company name&fields[]=City&fields[]=Rank&fields[]=score_reason`) as { records: Array<{ id: string; fields: Record<string, unknown> }> };
     return {
@@ -687,6 +696,7 @@ async function toolAirtableUpdateLead(project: string, recordId: string, fields:
   const { baseId, tableId } = airtableIds(project);
   if (!baseId || !tableId) return { error: `${project} Airtable not configured` };
   if (!recordId.startsWith("rec")) return { error: "record_id must start with 'rec'" };
+  if (!fields || Object.keys(fields).length === 0) return { error: "fields object is empty — nothing to update" };
   try {
     log.info("tool_airtable_update_lead", { project, recordId, fields });
     const data = await airtablePatch(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, { fields }) as { id: string; fields: Record<string, unknown> };
@@ -700,6 +710,7 @@ async function toolAirtableUpdateLead(project: string, recordId: string, fields:
 async function toolAirtableCreateLead(project: string, fields: Record<string, unknown>) {
   const { baseId, tableId } = airtableIds(project);
   if (!baseId || !tableId) return { error: `${project} Airtable not configured` };
+  if (!fields["company name"] && !fields["EMAIL"]) return { error: "At minimum 'company name' or 'EMAIL' must be provided" };
   try {
     log.info("tool_airtable_create_lead", { project, fields });
     const data = await airtablePost(`${AIRTABLE_API}/${baseId}/${tableId}`, { fields }) as { id: string; fields: Record<string, unknown> };
@@ -807,7 +818,7 @@ async function toolBrevoListContacts(limit = 25, offset = 0, listId?: number) {
 async function toolBrevoGetCampaigns(limit = 10, type = "classic") {
   try {
     log.info("tool_brevo_get_campaigns", { limit, type });
-    const data = await brevoGet(`/emailCampaigns?type=${type}&limit=${limit}&sort=desc`);
+    const data = await brevoGet(`/emailCampaigns?type=${type}&limit=${limit}&sort=modifiedDate&order=desc`);
     return {
       total: data.count,
       campaigns: data.campaigns?.map((c: any) => ({
@@ -872,6 +883,9 @@ async function toolBrevoGetSmtpEvents(email?: string, limit = 50, startDate?: st
 }
 
 async function toolBrevoSendTransactional(toEmail: string, toName: string, subject: string, htmlContent: string, project = "kronos") {
+  if (!toEmail || !toEmail.includes("@")) return { error: "Invalid or missing to_email address" };
+  if (!subject.trim()) return { error: "subject is required" };
+  if (!htmlContent.trim()) return { error: "html_content is required" };
   const senderEmail = project === "helios" ? "otto@heliosbusiness.it" : "otto@kronosbusiness.com";
   const senderName = project === "helios" ? "Otto from HELIOS" : "Otto from KRONOS";
   try {
@@ -1089,7 +1103,7 @@ export async function POST(req: NextRequest) {
     const msg = data.choices[0].message;
 
     if (!msg.tool_calls?.length) {
-      return NextResponse.json({ content: msg.content, role: "assistant" });
+      return NextResponse.json({ content: msg.content ?? "No response generated.", role: "assistant" });
     }
 
     msgs.push({ role: "assistant", content: msg.content, tool_calls: msg.tool_calls });

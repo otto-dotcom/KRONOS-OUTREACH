@@ -69,6 +69,19 @@ interface Message {
   content: string;
 }
 
+/* ── Inline markdown renderer ──────────────────────────────────────────── */
+function renderInline(text: string, brandColor: string): React.ReactNode {
+  // Split on **bold** patterns
+  const segments = text.split(/(\*\*[^*]+\*\*)/g);
+  if (segments.length === 1) return text;
+  return segments.map((seg, k) => {
+    if (seg.startsWith("**") && seg.endsWith("**")) {
+      return <strong key={k} style={{ color: brandColor, fontWeight: 800 }}>{seg.slice(2, -2)}</strong>;
+    }
+    return seg;
+  });
+}
+
 /* ── Renderer: Parses UI Blocks ────────────────────────────────────────── */
 
 function MessageRenderer({ content, brandColor, project }: {
@@ -199,7 +212,7 @@ function MessageRenderer({ content, brandColor, project }: {
                     </thead>
                     <tbody>
                       {t.rows?.map((row: (string | number)[], ri: number) => (
-                        <tr key={ri} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                        <tr key={ri} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                           {row.map((cell, ci) => (
                             <td key={ci} className="px-4 py-2.5 text-white/75 whitespace-nowrap">{String(cell)}</td>
                           ))}
@@ -322,29 +335,28 @@ function MessageRenderer({ content, brandColor, project }: {
         const lines = part.split("\n");
         return lines.map((line, j) => {
           if (!line.trim()) return <div key={`${i}-${j}`} className="h-2" />;
-          if (line.startsWith("### ")) return <h3 key={`${i}-${j}`} className="text-white font-black text-sm uppercase tracking-widest mt-4 mb-2">{line.replace("### ", "")}</h3>;
-          if (line.startsWith("## ")) return <h2 key={`${i}-${j}`} className="text-white font-black uppercase tracking-widest mt-4 mb-2" style={{ fontSize: "13px" }}>{line.replace("## ", "")}</h2>;
+          if (line.startsWith("### ")) return <h3 key={`${i}-${j}`} className="text-white font-black text-sm uppercase tracking-widest mt-4 mb-2">{renderInline(line.replace("### ", ""), brandColor)}</h3>;
+          if (line.startsWith("## ")) return <h2 key={`${i}-${j}`} className="text-white font-black uppercase tracking-widest mt-4 mb-2" style={{ fontSize: "13px" }}>{renderInline(line.replace("## ", ""), brandColor)}</h2>;
           if (line.startsWith("- ") || line.startsWith("* ")) {
             return (
               <div key={`${i}-${j}`} className="flex items-start gap-2 my-1">
-                <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: brandColor }} />
-                <p className="text-sm text-white/85 leading-relaxed">{line.substring(2)}</p>
+                <div className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ backgroundColor: brandColor }} />
+                <p className="text-sm text-white/85 leading-relaxed">{renderInline(line.substring(2), brandColor)}</p>
               </div>
             );
           }
           if (/^\d+\./.test(line)) {
-            const [num, ...rest] = line.split(". ");
+            const dotIdx = line.indexOf(". ");
+            const num = line.slice(0, dotIdx);
+            const rest = line.slice(dotIdx + 2);
             return (
               <div key={`${i}-${j}`} className="flex items-start gap-2 my-1">
                 <span className="text-[10px] font-black shrink-0 mt-0.5" style={{ color: brandColor }}>{num}.</span>
-                <p className="text-sm text-white/85 leading-relaxed">{rest.join(". ")}</p>
+                <p className="text-sm text-white/85 leading-relaxed">{renderInline(rest, brandColor)}</p>
               </div>
             );
           }
-          if (line.startsWith("**") && line.endsWith("**")) {
-            return <p key={`${i}-${j}`} className="text-white font-black text-sm my-1">{line.replace(/\*\*/g, "")}</p>;
-          }
-          return <p key={`${i}-${j}`} className="text-sm text-white/85 leading-relaxed my-1">{line}</p>;
+          return <p key={`${i}-${j}`} className="text-sm text-white/85 leading-relaxed my-1">{renderInline(line, brandColor)}</p>;
         });
       })}
     </>
@@ -368,12 +380,15 @@ function LoadingDots({ color }: { color: string }) {
 
 /* ── Quick Action Pills ─────────────────────────────────────────────────── */
 const QUICK_ACTIONS = [
-  { label: "Pipeline Status", icon: "📊", prompt: "What is the current status of the lead pipeline?" },
-  { label: "Who Clicked", icon: "👆", prompt: "Show me who clicked our emails — render as lead cards." },
-  { label: "Email Analytics", icon: "📈", prompt: "Show me email delivery and open rate analytics." },
-  { label: "Recent Sends", icon: "📨", prompt: "What were the last 5 emails we sent? Show subjects." },
-  { label: "Preview Campaign", icon: "✨", prompt: "Generate previews for the top 5 leads." },
-  { label: "Check Logs", icon: "🔍", prompt: "Read the latest operation logs." },
+  { label: "Pipeline Status", icon: "📊", prompt: "Give me the full pipeline status — total, sent, ready, priority. Show top leads as lead cards." },
+  { label: "Who Engaged", icon: "👆", prompt: "Show me all leads who opened or clicked our emails. Render each as a lead card." },
+  { label: "Email Analytics", icon: "📈", prompt: "Show email analytics for the last 30 days as an analytics card." },
+  { label: "Recent Sends", icon: "📨", prompt: "Show the last 10 emails we sent as a table: company, city, subject, rank." },
+  { label: "Campaigns", icon: "📣", prompt: "List our Brevo email campaigns with stats. Show as campaign cards." },
+  { label: "Preview Campaign", icon: "✨", prompt: "Generate email copy previews for the top 5 leads. Don't send anything." },
+  { label: "Top Priority Leads", icon: "🎯", prompt: "List all priority leads that haven't been emailed yet. Show as a table." },
+  { label: "Check Bounces", icon: "⚠️", prompt: "Check Brevo SMTP events for bounce events in the last 7 days." },
+  { label: "SMTP Events", icon: "🔍", prompt: "Get the last 50 Brevo SMTP events and summarise: how many delivered, opened, clicked, bounced?" },
 ];
 
 /* ── Main Component ─────────────────────────────────────────────────────── */
@@ -383,7 +398,7 @@ export default function AgentChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: `Jarvis online. Intelligence layer active for **${(project ?? "SYSTEM").toUpperCase()}**.\n\nSecure neural link established. I have access to Airtable leads, Brevo analytics, SMS via Twilio, and Obsidian memory. What needs to be done?`
+      content: `JARVIS online. Intelligence core active for **${(project ?? "SYSTEM").toUpperCase()}**.\n\n22 tools armed: Airtable read/write, Brevo contacts/campaigns/SMTP events, transactional send, Twilio SMS, Obsidian memory.\n\nWhat needs to be done?`
     }
   ]);
   const [input, setInput] = useState("");
@@ -457,7 +472,7 @@ export default function AgentChat() {
             <div className="flex items-center gap-2 mt-1">
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: brandColor }} />
               <p className="text-[10px] text-white/40 tracking-[0.2em] font-mono uppercase">
-                {project}_environment · GPT-4o-mini · 13 tools active
+                {project}_environment · GPT-4o-mini · 22 tools active
               </p>
             </div>
           </div>
