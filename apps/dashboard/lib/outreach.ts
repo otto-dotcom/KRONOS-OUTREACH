@@ -262,12 +262,12 @@ export async function fetchSentArchive(limit = 100, project: Project = "kronos")
   const config = getProjectConfig(project);
   const airtableKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   const formula = encodeURIComponent(`{EMAIL STATUS} = "Sent"`);
-  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=last_modified&sort[0][direction]=desc`;
+  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=Rank&sort[0][direction]=desc`;
 
   const res = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${airtableKey}` },
   });
-  if (!res.ok) throw new Error(`Archive fetch failed: ${res.status}`);
+  if (!res.ok) throw new Error(`Archive fetch failed: ${res.status} — ${await res.text().catch(() => "")}`);
 
   const data = (await res.json()) as { records: AirtableRecord[] };
   return data.records ?? [];
@@ -277,7 +277,7 @@ export async function fetchSentArchive(limit = 100, project: Project = "kronos")
 async function fetchEditingExamples(config: ProjectConfig, limit = 3): Promise<string> {
   const airtableKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   const formula = encodeURIComponent(`AND({ORIGINAL_SUBJECT} != "", {ORIGINAL_SUBJECT} != {EMAIL_SUBJECT})`);
-  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=last_modified&sort[0][direction]=desc`;
+  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=Rank&sort[0][direction]=desc`;
 
   try {
     const res = await fetchWithTimeout(url, { headers: { Authorization: `Bearer ${airtableKey}` } });

@@ -298,21 +298,31 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
         {/* Orange orb — top left */}
         <div style={{
-          position: "absolute", width: 700, height: 700, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(249,115,22,0.07) 0%, transparent 70%)",
-          top: -200, left: -100,
+          position: "absolute", width: 900, height: 900, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(249,115,22,0.28) 0%, rgba(249,115,22,0.08) 35%, transparent 70%)",
+          top: -300, left: -200,
+          filter: "blur(40px)",
         }} />
         {/* Purple orb — bottom right */}
         <div style={{
-          position: "absolute", width: 600, height: 600, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(139,92,246,0.055) 0%, transparent 70%)",
-          bottom: -200, right: 0,
+          position: "absolute", width: 700, height: 700, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(139,92,246,0.22) 0%, rgba(139,92,246,0.06) 40%, transparent 70%)",
+          bottom: -250, right: -100,
+          filter: "blur(40px)",
         }} />
         {/* Blue accent — center right */}
         <div style={{
+          position: "absolute", width: 500, height: 500, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(59,130,246,0.18) 0%, rgba(59,130,246,0.04) 50%, transparent 70%)",
+          top: "35%", right: "15%",
+          filter: "blur(30px)",
+        }} />
+        {/* Amber accent — center */}
+        <div style={{
           position: "absolute", width: 400, height: 400, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(59,130,246,0.04) 0%, transparent 70%)",
-          top: "40%", right: "20%",
+          background: "radial-gradient(circle, rgba(251,191,36,0.10) 0%, transparent 65%)",
+          top: "20%", left: "45%",
+          filter: "blur(35px)",
         }} />
       </div>
 

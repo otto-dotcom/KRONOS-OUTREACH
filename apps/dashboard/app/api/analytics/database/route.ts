@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
         eng.opened = true;
         if (!eng.openedAt) eng.openedAt = ev.date;
       }
-      if (ev.event === "clicks") {
+      if (ev.event === "clicks" || ev.event === "click") {
         eng.clicked = true;
         if (!eng.clickedAt) eng.clickedAt = ev.date;
       }

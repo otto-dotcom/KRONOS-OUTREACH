@@ -322,9 +322,9 @@ function OverviewHero() {
       setLoading(true);
       try {
         const [emailRes, leadsRes, smsRes] = await Promise.all([
-          fetch(`/api/analytics/email?days=7&project=${project ?? "kronos"}`),
-          fetch(`/api/analytics/leads?project=${project ?? "kronos"}`),
-          fetch(`/api/analytics/sms?days=7&project=${project ?? "kronos"}`),
+          fetch(`/api/analytics/email?days=7&project=${project ?? "kronos"}`, { credentials: "include" }),
+          fetch(`/api/analytics/leads?project=${project ?? "kronos"}`, { credentials: "include" }),
+          fetch(`/api/analytics/sms?days=7&project=${project ?? "kronos"}`, { credentials: "include" }),
         ]);
 
         const [emailData, leadsData, smsData] = await Promise.all([
@@ -1133,7 +1133,7 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/analytics/leads?project=${project ?? "kronos"}`);
+      const res = await fetch(`/api/analytics/leads?project=${project ?? "kronos"}`, { credentials: "include" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setData(json);
@@ -1428,7 +1428,7 @@ function EmailAnalytics() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/analytics/email?days=${days}&project=${project ?? "kronos"}`);
+      const res = await fetch(`/api/analytics/email?days=${days}&project=${project ?? "kronos"}`, { credentials: "include" });
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json.error);
@@ -1526,7 +1526,7 @@ function SmsAnalytics() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/analytics/sms?days=${days}&project=${project ?? "kronos"}`);
+      const res = await fetch(`/api/analytics/sms?days=${days}&project=${project ?? "kronos"}`, { credentials: "include" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setData(json);

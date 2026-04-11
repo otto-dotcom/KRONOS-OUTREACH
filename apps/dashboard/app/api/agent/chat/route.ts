@@ -60,10 +60,14 @@ Multiple blocks are allowed. Lead cards with "id" link to the Lead Base page.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━ AIRTABLE SCHEMA ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Fields: EMAIL STATUS (Sent/Processing/Failed/pending), Rank (1-10),
-        lead_status (priority/medium/low), City, URL, Category,
-        company name, FULL NAME, EMAIL, score_reason, DATE_SENT, EMAIL_SUBJECT.
-singleSelect values are case-sensitive — use exact case.
+KRONOS fields: EMAIL STATUS (singleSelect: Sent/Processing/Failed/pending),
+  Rank (1-10), lead_status (singleSelect: priority/medium/low),
+  City, URL, Category, company name, FULL NAME, EMAIL,
+  score_reason, SENT MAIL, EMAIL_SUBJECT, SMS STATUS.
+HELIOS fields: EMAIL STATUS (text: Sent/Processing), Rank (1-10),
+  lead_status (text), City, URL, Category, company name, FULL NAME,
+  EMAIL, Phone, score_reason, SENT MAIL, EMAIL_SUBJECT, CALL STATUS.
+CRITICAL: singleSelect values are case-sensitive — use exact case.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━ THINKING MODEL (internal, before every response) ━━━━━━━━━━━━━━━━
@@ -370,10 +374,11 @@ async function toolGetRecentSent(project: string, limit = 10) {
   const cap = Math.min(limit, 25);
   try {
     log.info("tool_get_recent_sent", { project, limit: cap });
-    const data = await airtableGet(`${AIRTABLE_API}/${baseId}/${tableId}?filterByFormula=${encodeURIComponent(`{EMAIL STATUS} = "Sent"`)}&maxRecords=${cap}&sort[0][field]=DATE_SENT&sort[0][direction]=desc&fields[]=FULL NAME&fields[]=company name&fields[]=City&fields[]=EMAIL_SUBJECT&fields[]=DATE_SENT&fields[]=Rank`) as { records: Array<{ id: string; fields: Record<string, unknown> }> };
+    // Sort by Rank (DATE_SENT field doesn't exist in Airtable schema)
+    const data = await airtableGet(`${AIRTABLE_API}/${baseId}/${tableId}?filterByFormula=${encodeURIComponent(`{EMAIL STATUS} = "Sent"`)}&maxRecords=${cap}&sort[0][field]=Rank&sort[0][direction]=desc&fields[]=FULL NAME&fields[]=company name&fields[]=City&fields[]=EMAIL_SUBJECT&fields[]=SENT MAIL&fields[]=Rank`) as { records: Array<{ id: string; fields: Record<string, unknown> }> };
     return {
       project, count: data.records.length,
-      sent: data.records.map(r => ({ id: r.id, company: r.fields["company name"], city: r.fields["City"], subject: r.fields["EMAIL_SUBJECT"], date: r.fields["DATE_SENT"], rank: r.fields["Rank"] })),
+      sent: data.records.map(r => ({ id: r.id, company: r.fields["company name"], city: r.fields["City"], subject: r.fields["EMAIL_SUBJECT"], sentAt: r.fields["SENT MAIL"], rank: r.fields["Rank"] })),
     };
   } catch (err) {
     log.error("tool_get_recent_sent_failed", err, { project });

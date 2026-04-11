@@ -299,6 +299,7 @@ export default function AgentChat() {
       const res = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ messages: [...messages, userMessage], project }),
       });
 

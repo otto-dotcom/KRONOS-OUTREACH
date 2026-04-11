@@ -16,7 +16,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!project) return;
     setLoading(true);
-    fetch(`/api/settings?project=${project}`)
+    fetch(`/api/settings?project=${project}`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         setEmailPrompt(data.email_prompt || "");
@@ -34,6 +34,7 @@ export default function SettingsPage() {
       const res = await fetch(`/api/settings?project=${project}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email_prompt: emailPrompt, sms_prompt: smsPrompt }),
       });
       if (res.ok) {
@@ -93,7 +94,7 @@ export default function SettingsPage() {
           className={`pb-2 px-1 text-[10px] tracking-widest uppercase font-bold transition-colors border-b-2`}
           style={{
             borderColor: activeTab === "email" ? brandColor : "transparent",
-            color: activeTab === "email" ? "white" : "var(--color-text-dim)"
+            color: activeTab === "email" ? "white" : "var(--text-2)"
           }}
         >
           Email Agent
@@ -103,7 +104,7 @@ export default function SettingsPage() {
           className={`pb-2 px-1 text-[10px] tracking-widest uppercase font-bold transition-colors border-b-2`}
           style={{
             borderColor: activeTab === "sms" ? brandColor : "transparent",
-            color: activeTab === "sms" ? "white" : "var(--color-text-dim)"
+            color: activeTab === "sms" ? "white" : "var(--text-2)"
           }}
         >
           SMS Agent

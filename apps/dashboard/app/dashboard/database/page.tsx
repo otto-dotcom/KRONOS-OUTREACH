@@ -69,7 +69,7 @@ interface EmailState {
 
 function Dot({ on, color = "var(--color-k)" }: { on: boolean; color?: string }) {
   return (
-    <div className="w-2 h-2 rounded-none" style={{ backgroundColor: on ? color : "var(--color-border)" }} />
+    <div className="w-2 h-2 rounded-none" style={{ backgroundColor: on ? color : "rgba(255,255,255,0.12)" }} />
   );
 }
 
@@ -466,7 +466,7 @@ export default function DatabasePage() {
   useEffect(() => {
     if (!project) return;
     setLoading(true);
-    fetch(`/api/analytics/database?project=${project}`)
+    fetch(`/api/analytics/database?project=${project}`, { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
         if (data.error) { setError(data.error); return; }
