@@ -29,12 +29,12 @@ export async function POST(req: NextRequest) {
 
   const emails = body.emails as SendItem[];
   const project: Project = body.project === "helios" ? "helios" : "kronos";
-  log.api("/api/campaign/send", "POST", { count: emails.length, project });
-  sending = true;
 
-  for (const item of emails) {
-    log.sent(item.recordId, item.toEmail, item.toEmail, item.wasEdited, item.wasRegenerated);
-  }
+  log.api("/api/campaign/send", "POST", { count: emails.length, project });
+
+  // NOTE: Individual email logging happens inside sendPreviews (lib/outreach.ts)
+  // AFTER each send succeeds — not here before sends are attempted.
+  sending = true;
 
   try {
     const result = await sendPreviews(emails, project);
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    log.error("send_failed", err);
+    log.error("send_failed", err, { project });
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   } finally {

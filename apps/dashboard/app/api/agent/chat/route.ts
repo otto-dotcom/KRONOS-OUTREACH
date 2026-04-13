@@ -125,7 +125,7 @@ OTHER:
 ══════════════════════════════════════════════════
 DATABASE 2 — HELIOS (Italian Solar Intelligence)
 Base ID: appyqUHfwK33eisQu
-Sender: otto@heliosbusiness.it | Brand: green
+Sender: otto@heliosbusiness.com | Brand: green
 ══════════════════════════════════════════════════
 
 TABLE: Leads GSE (tbl07Ub0WeVHOnujP) — Italian solar installers
@@ -1030,7 +1030,7 @@ async function toolBrevoSendTransactional(toEmail: string, toName: string, subje
   if (!toEmail || !toEmail.includes("@")) return { error: "Invalid or missing to_email address" };
   if (!subject.trim()) return { error: "subject is required" };
   if (!htmlContent.trim()) return { error: "html_content is required" };
-  const senderEmail = project === "helios" ? "otto@heliosbusiness.it" : "otto@kronosbusiness.com";
+  const senderEmail = project === "helios" ? "otto@heliosbusiness.com" : "otto@kronosbusiness.com";
   const senderName = project === "helios" ? "Otto from HELIOS" : "Otto from KRONOS";
   try {
     log.info("tool_brevo_send_transactional", { project, toEmail, subject });
@@ -1221,7 +1221,7 @@ export async function POST(req: NextRequest) {
         "X-Title": "JARVIS Intelligence",
       },
       body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
+        model: "openai/gpt-4o",
         messages: msgs,
         tools: TOOLS,
         tool_choice: "auto",

@@ -1,16 +1,20 @@
 /**
- * KRONOS + HELIOS Outreach Pipeline
- * Airtable → OpenRouter (GPT-4o-mini) → Brevo → Airtable update
- * No n8n dependency. Project-aware: pass project="kronos"|"helios" to all public functions.
+ * KRONOS + HELIOS Outreach Pipeline — Orchestration Layer
+ * ────────────────────────────────────────────────────────
+ * Coordinates: DB reads (lib/db.ts) → AI generation → Email sends (lib/email.ts) → DB writes (lib/db.ts)
+ * This file has ZERO direct Airtable or Brevo fetch calls.
+ * Logging (lib/logger.ts) fires AFTER each action completes — never before.
  */
 
-const AIRTABLE_API = "https://api.airtable.com/v0";
+import * as db from "./db";
+import { sendEmail } from "./email";
+import { log } from "./logger";
+
+export type Project = db.Project;
+
 const OPENROUTER_API = "https://openrouter.ai/api/v1";
-const BREVO_API = "https://api.brevo.com/v3";
 
 // ─── PROJECT CONFIG ────────────────────────────────────────────────────────────
-
-export type Project = "kronos" | "helios";
 
 interface ProjectConfig {
   baseId: string;
@@ -99,7 +103,7 @@ HTML FORMAT (plain-text style — no images, no styled buttons, no decorative bo
 - Body paragraphs: <p style="margin:0 0 16px 0;">content</p>
 - CTA (plain text links, NOT buttons):
   <p style="margin:0 0 16px 0;"><a href="https://cal.com/helios/15min" style="color:#22C55E;">Book a 15-min call</a><br>Or review our work first: <a href="https://helios-solare.com" style="color:#22C55E;">helios-solare.com</a></p>
-- Signature: <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – HELIOS<br>Clean Solar Intelligence · Switzerland<br><a href="mailto:otto@heliosbusiness.it" style="color:#22C55E;text-decoration:none;">otto@heliosbusiness.it</a></p>
+- Signature: <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – HELIOS<br>Clean Solar Intelligence · Switzerland<br><a href="mailto:otto@heliosbusiness.com" style="color:#22C55E;text-decoration:none;">otto@heliosbusiness.com</a></p>
 
 Response MUST be ONLY valid JSON (no markdown fences): {"subject": "...", "emailBody": "..."}`;
 
@@ -114,7 +118,7 @@ function getProjectConfig(project: Project): ProjectConfig {
     if (!process.env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not set");
     if (!process.env.BREVO_API_KEY) throw new Error("BREVO_API_KEY not set");
 
-    const senderEmail = process.env.HELIOS_SENDER_EMAIL ?? "otto@heliosbusiness.it";
+    const senderEmail = process.env.HELIOS_SENDER_EMAIL ?? "otto@heliosbusiness.com";
     return {
       baseId,
       tableId,
@@ -167,20 +171,7 @@ function getProjectConfig(project: Project): ProjectConfig {
 
 // ─── TYPES ─────────────────────────────────────────────────────────────────────
 
-export interface AirtableRecord {
-  id: string;
-  fields: {
-    "FULL NAME"?: string;
-    EMAIL?: string;
-    "company name"?: string;
-    City?: string;
-    URL?: string;
-    Rank?: string | number;
-    score_reason?: string;
-    lead_status?: string;
-    [key: string]: unknown;
-  };
-}
+export type AirtableRecord = db.AirtableRecord;
 
 export interface EmailCopy {
   subject: string;
@@ -242,261 +233,7 @@ export interface SendItem {
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 
-async function fetchWithTimeout(url: string, init: RequestInit, ms = 15_000): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function fetchLeads(config: ProjectConfig, limit: number): Promise<AirtableRecord[]> {
-  const airtableKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${config.leadFilter}&maxRecords=${limit}`;
-
-  const res = await fetchWithTimeout(url, {
-    headers: { Authorization: `Bearer ${airtableKey}` },
-  });
-  if (!res.ok) throw new Error(`Airtable fetch failed: ${res.status} ${await res.text()}`);
-
-  const data = (await res.json()) as { records: AirtableRecord[] };
-  return data.records ?? [];
-}
-
-/** Fetch all leads marked as "Sent" for historical analysis. */
-export async function fetchSentArchive(limit = 100, project: Project = "kronos"): Promise<AirtableRecord[]> {
-  const config = getProjectConfig(project);
-  const airtableKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  const formula = encodeURIComponent(`{EMAIL STATUS} = "Sent"`);
-  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=Rank&sort[0][direction]=desc`;
-
-  const res = await fetchWithTimeout(url, {
-    headers: { Authorization: `Bearer ${airtableKey}` },
-  });
-  if (!res.ok) throw new Error(`Archive fetch failed: ${res.status} — ${await res.text().catch(() => "")}`);
-
-  const data = (await res.json()) as { records: AirtableRecord[] };
-  return data.records ?? [];
-}
-
-/** Fetch recent examples of human-edited emails for few-shot learning */
-async function fetchEditingExamples(config: ProjectConfig, limit = 3): Promise<string> {
-  const airtableKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  const formula = encodeURIComponent(`AND({ORIGINAL_SUBJECT} != "", {ORIGINAL_SUBJECT} != {EMAIL_SUBJECT})`);
-  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=Rank&sort[0][direction]=desc`;
-
-  try {
-    const res = await fetchWithTimeout(url, { headers: { Authorization: `Bearer ${airtableKey}` } });
-    if (!res.ok) return "";
-    const data = (await res.json()) as { records: AirtableRecord[] };
-    if (!data.records?.length) return "";
-
-    return data.records.map(r => {
-      const f = r.fields;
-      return `### EXAMPLE IMPROVEMENT:
-Original Subject: ${f.ORIGINAL_SUBJECT}
-Original Body: ${f.ORIGINAL_BODY}
-
-Final Sent Subject (PREFERRED): ${f.EMAIL_SUBJECT}
-Final Sent Body (PREFERRED): ${f["SENT MAIL"]}
----`;
-    }).join("\n\n");
-  } catch {
-    return "";
-  }
-}
-
-export async function generateEmailCopy(
-  record: AirtableRecord,
-  project: Project = "kronos",
-  extraConstraint?: string
-): Promise<EmailCopy> {
-  const f = record.fields;
-  const config = getProjectConfig(project);
-  const airtableKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-
-  // 1. Fetch dynamic directives from Settings table (project-specific key)
-  let systemPrompt = config.systemPrompt;
-  try {
-    const key = "email_prompt";
-    const settingsUrl = `${AIRTABLE_API}/${config.baseId}/Settings?filterByFormula={Key}='${key}'`;
-    const settingsRes = await fetchWithTimeout(settingsUrl, {
-      headers: { Authorization: `Bearer ${airtableKey}` },
-    });
-    if (settingsRes.ok) {
-      const settingsData = await settingsRes.json();
-      const dynamicPrompt = settingsData.records?.[0]?.fields?.Value;
-      if (dynamicPrompt) systemPrompt = dynamicPrompt;
-    }
-  } catch {
-    // fall through to static prompt
-  }
-
-  // 2. Few-shot learning from human edits
-  const examples = await fetchEditingExamples(config);
-  const feedbackContext = examples
-    ? `\n\nBELOW ARE EXAMPLES OF HOW A HUMAN EDITED PREVIOUS OUTPUTS. LEARN FROM THESE PREFERENCES:\n${examples}`
-    : "";
-
-  const userPrompt = [
-    `Lead:`,
-    `Name: ${f["FULL NAME"] ?? ""}`,
-    `Email: ${f.EMAIL ?? ""}`,
-    `Company: ${f["company name"] ?? ""}`,
-    `City: ${f.City ?? ""}`,
-    `URL: ${f.URL ?? ""}`,
-    `Rank: ${f.Rank ?? ""}`,
-    `Score Reason: ${f.score_reason ?? ""}`,
-    extraConstraint ? `\nExtra constraint: ${extraConstraint}` : "",
-    feedbackContext,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  const res = await fetchWithTimeout(`${OPENROUTER_API}/chat/completions`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "openai/gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  if (!res.ok) throw new Error(`OpenRouter failed: ${res.status} ${await res.text()}`);
-
-  const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
-  const content = data.choices?.[0]?.message?.content ?? "{}";
-  const copy = JSON.parse(content) as EmailCopy;
-
-  if (!copy.subject || !copy.emailBody) throw new Error("OpenRouter returned incomplete copy");
-  return copy;
-}
-
-async function sendEmail(toEmail: string, copy: EmailCopy, config: ProjectConfig, attempt = 0): Promise<void> {
-  const res = await fetchWithTimeout(`${BREVO_API}/smtp/email`, {
-    method: "POST",
-    headers: {
-      "api-key": process.env.BREVO_API_KEY ?? "",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: { name: config.senderName, email: config.senderEmail },
-      to: [{ email: toEmail }],
-      bcc: [{ email: config.bccEmail }],
-      subject: copy.subject,
-      htmlContent: copy.emailBody,
-      tags: [config.tag],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    if (res.status >= 500 && attempt < 2) {
-      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
-      return sendEmail(toEmail, copy, config, attempt + 1);
-    }
-    throw new Error(`Brevo failed (${res.status}): ${body}`);
-  }
-}
-
-// Airtable EMAIL STATUS values
-// KRONOS: singleSelect — trailing space is baked into the choice name
-// HELIOS: singleLineText — plain strings, no trailing spaces
-const STATUS_SENT = "Sent";
-
-function statusProcessing(project: Project): string {
-  return project === "helios" ? "Processing" : "Processing ";
-}
-function statusFailed(project: Project): string {
-  return project === "helios" ? "Failed" : "Failed ";
-}
-
-async function fetchEmailStatus(baseId: string, tableId: string, recordId: string): Promise<string | null> {
-  const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  try {
-    const res = await fetchWithTimeout(
-      `${AIRTABLE_API}/${baseId}/${tableId}/${recordId}?fields[]=EMAIL%20STATUS`,
-      { headers: { Authorization: `Bearer ${apiKey}` } }
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as { fields?: { "EMAIL STATUS"?: string } };
-    return data.fields?.["EMAIL STATUS"] ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function markProcessing(baseId: string, tableId: string, recordId: string, project: Project): Promise<void> {
-  const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ fields: { "EMAIL STATUS": statusProcessing(project) } }),
-  });
-  if (!res.ok) throw new Error(`markProcessing failed: ${res.status}`);
-}
-
-async function markFailed(baseId: string, tableId: string, recordId: string, project: Project): Promise<void> {
-  const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  try {
-    const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ fields: { "EMAIL STATUS": statusFailed(project) } }),
-    });
-    if (!res.ok) {
-      console.error(`markFailed CRITICAL: could not release lock for ${recordId} (${res.status})`);
-    }
-  } catch (err) {
-    console.error(`markFailed CRITICAL: network error releasing lock for ${recordId}`, err);
-  }
-}
-
-// HELIOS schema only has: EMAIL STATUS, EMAIL_SUBJECT, SENT MAIL
-// KRONOS also has: DATE_SENT, ORIGINAL_SUBJECT, ORIGINAL_BODY
-async function markSent(
-  baseId: string,
-  tableId: string,
-  recordId: string,
-  subject: string,
-  emailBody: string,
-  project: Project,
-  originalSubject?: string,
-  originalBody?: string
-): Promise<void> {
-  const apiKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
-  const fields: Record<string, unknown> = {
-    "EMAIL STATUS": STATUS_SENT,
-    EMAIL_SUBJECT: subject,
-    "SENT MAIL": emailBody,
-  };
-  // KRONOS-only fields (HELIOS table doesn't have these)
-  if (project !== "helios") {
-    fields["DATE_SENT"] = new Date().toISOString();
-    if (originalSubject && originalSubject !== subject) fields["ORIGINAL_SUBJECT"] = originalSubject;
-    if (originalBody && originalBody !== emailBody) fields["ORIGINAL_BODY"] = originalBody;
-  }
-
-  const res = await fetchWithTimeout(`${AIRTABLE_API}/${baseId}/${tableId}/${recordId}`, {
-    method: "PATCH",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ fields }),
-  });
-  if (!res.ok) throw new Error(`Airtable markSent failed: ${res.status} — ${await res.text().catch(() => "")}`);
-}
-
-function mapLeadFields(lead: AirtableRecord): EmailPreview["lead"] {
+function mapLeadFields(lead: db.AirtableRecord): EmailPreview["lead"] {
   const f = lead.fields;
   return {
     id: lead.id,
@@ -529,12 +266,82 @@ function mapLeadFields(lead: AirtableRecord): EmailPreview["lead"] {
   };
 }
 
+// ─── AI EMAIL GENERATION ───────────────────────────────────────────────────────
+
+export async function generateEmailCopy(
+  record: db.AirtableRecord,
+  project: Project = "kronos",
+  extraConstraint?: string
+): Promise<EmailCopy> {
+  const f = record.fields;
+  const config = getProjectConfig(project);
+
+  // 1. Try to load a dynamic system prompt override from Airtable Settings
+  let systemPrompt = config.systemPrompt;
+  const override = await db.fetchPromptOverride(config.baseId, "email_prompt");
+  if (override) systemPrompt = override;
+
+  // 2. Few-shot examples from human-edited emails
+  const examples = await db.fetchEditingExamples(config.baseId, config.tableId);
+  const feedbackContext = examples
+    ? `\n\nBELOW ARE EXAMPLES OF HOW A HUMAN EDITED PREVIOUS OUTPUTS. LEARN FROM THESE PREFERENCES:\n${examples}`
+    : "";
+
+  const userPrompt = [
+    `Lead:`,
+    `Name: ${f["FULL NAME"] ?? ""}`,
+    `Email: ${f.EMAIL ?? ""}`,
+    `Company: ${f["company name"] ?? ""}`,
+    `City: ${f.City ?? ""}`,
+    `URL: ${f.URL ?? ""}`,
+    `Rank: ${f.Rank ?? ""}`,
+    `Score Reason: ${f.score_reason ?? ""}`,
+    extraConstraint ? `\nExtra constraint: ${extraConstraint}` : "",
+    feedbackContext,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const res = await fetch(`${OPENROUTER_API}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "openai/gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!res.ok) throw new Error(`OpenRouter failed: ${res.status} ${await res.text()}`);
+
+  const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
+  const content = data.choices?.[0]?.message?.content ?? "{}";
+  const copy = JSON.parse(content) as EmailCopy;
+
+  if (!copy.subject || !copy.emailBody) throw new Error("OpenRouter returned incomplete copy");
+  return copy;
+}
+
 // ─── PUBLIC API ────────────────────────────────────────────────────────────────
+
+/** Fetch sent archive for analytics cross-reference. */
+export async function fetchSentArchive(limit = 100, project: Project = "kronos"): Promise<db.AirtableRecord[]> {
+  const config = getProjectConfig(project);
+  return db.fetchSentArchive(config.baseId, config.tableId, limit);
+}
 
 /** Generate email copy for all leads without sending. Returns previews for gallery review. */
 export async function previewOutreach(leadLimit = 10, project: Project = "kronos"): Promise<EmailPreview[]> {
   const config = getProjectConfig(project);
-  const leads = await fetchLeads(config, leadLimit);
+  const leads = await db.fetchLeads(config.baseId, config.tableId, config.leadFilter, leadLimit);
 
   const results = await Promise.all(
     leads.map(async (lead) => {
@@ -544,6 +351,7 @@ export async function previewOutreach(leadLimit = 10, project: Project = "kronos
         const copy = await generateEmailCopy(lead, project);
         return { recordId: lead.id, lead: leadFields, subject: copy.subject, emailBody: copy.emailBody };
       } catch (err) {
+        log.error("preview_generation_failed", err, { recordId: lead.id, project });
         return {
           recordId: lead.id,
           lead: leadFields,
@@ -557,7 +365,10 @@ export async function previewOutreach(leadLimit = 10, project: Project = "kronos
   return results.filter((p): p is EmailPreview => p !== null);
 }
 
-/** Send a pre-approved set of emails (from gallery review). */
+/**
+ * Send a pre-approved set of emails (from gallery review).
+ * Logging fires AFTER each action — never before.
+ */
 export async function sendPreviews(items: SendItem[], project: Project = "kronos"): Promise<OutreachResult> {
   const config = getProjectConfig(project);
   const result: OutreachResult = { sent: 0, failed: 0, skipped: 0, errors: [] };
@@ -572,7 +383,8 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
         return;
       }
 
-      const currentStatus = await fetchEmailStatus(config.baseId, config.tableId, item.recordId);
+      // Guard: skip if already sent or being processed
+      const currentStatus = await db.fetchEmailStatus(config.baseId, config.tableId, item.recordId);
       const normalizedStatus = currentStatus?.trim();
       if (normalizedStatus === "Sent" || normalizedStatus === "Processing") {
         result.skipped++;
@@ -580,8 +392,9 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
         return;
       }
 
+      // Claim the record (distributed soft-lock)
       try {
-        await markProcessing(config.baseId, config.tableId, item.recordId, project);
+        await db.markProcessing(config.baseId, config.tableId, item.recordId, project);
       } catch {
         result.skipped++;
         result.errors.push(`${item.toEmail}: could not claim record — skipped`);
@@ -589,11 +402,28 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
       }
 
       try {
-        await sendEmail(item.toEmail, { subject: item.subject, emailBody: item.emailBody }, config);
-        await markSent(config.baseId, config.tableId, item.recordId, item.subject, item.emailBody, project, item.originalSubject, item.originalBody);
+        // 1. Send email via Brevo
+        await sendEmail(
+          item.toEmail,
+          { subject: item.subject, emailBody: item.emailBody },
+          { senderName: config.senderName, senderEmail: config.senderEmail, bccEmail: config.bccEmail, tag: config.tag }
+        );
+
+        // 2. Log AFTER successful send (not before)
+        log.sent(item.recordId, item.toEmail, item.toEmail, item.wasEdited, item.wasRegenerated);
+
+        // 3. Update Airtable record
+        await db.markSent(
+          config.baseId, config.tableId, item.recordId,
+          item.subject, item.emailBody, project,
+          item.originalSubject, item.originalBody
+        );
+
         result.sent++;
       } catch (err) {
-        await markFailed(config.baseId, config.tableId, item.recordId, project);
+        // Release lock and log failure
+        log.error("send_item_failed", err, { recordId: item.recordId, toEmail: item.toEmail, project });
+        await db.markFailed(config.baseId, config.tableId, item.recordId, project);
         result.failed++;
         result.errors.push(`${item.toEmail}: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -607,7 +437,7 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
 export async function runOutreach(leadLimit = 10, project: Project = "kronos"): Promise<OutreachResult> {
   const config = getProjectConfig(project);
   const result: OutreachResult = { sent: 0, failed: 0, skipped: 0, errors: [] };
-  const leads = await fetchLeads(config, leadLimit);
+  const leads = await db.fetchLeads(config.baseId, config.tableId, config.leadFilter, leadLimit);
 
   const BATCH_SIZE = 5;
   for (let i = 0; i < leads.length; i += BATCH_SIZE) {
@@ -617,7 +447,7 @@ export async function runOutreach(leadLimit = 10, project: Project = "kronos"): 
       const email = lead.fields.EMAIL;
       if (!email) { result.skipped++; return; }
 
-      const currentStatus = await fetchEmailStatus(config.baseId, config.tableId, lead.id);
+      const currentStatus = await db.fetchEmailStatus(config.baseId, config.tableId, lead.id);
       const normalizedStatus = currentStatus?.trim();
       if (normalizedStatus === "Sent" || normalizedStatus === "Processing") {
         result.skipped++;
@@ -625,7 +455,7 @@ export async function runOutreach(leadLimit = 10, project: Project = "kronos"): 
       }
 
       try {
-        await markProcessing(config.baseId, config.tableId, lead.id, project);
+        await db.markProcessing(config.baseId, config.tableId, lead.id, project);
       } catch {
         result.skipped++;
         return;
@@ -633,11 +463,21 @@ export async function runOutreach(leadLimit = 10, project: Project = "kronos"): 
 
       try {
         const copy = await generateEmailCopy(lead, project);
-        await sendEmail(email, copy, config);
-        await markSent(config.baseId, config.tableId, lead.id, copy.subject, copy.emailBody, project);
+
+        await sendEmail(
+          email,
+          { subject: copy.subject, emailBody: copy.emailBody },
+          { senderName: config.senderName, senderEmail: config.senderEmail, bccEmail: config.bccEmail, tag: config.tag }
+        );
+
+        log.sent(lead.id, email, email, false, false);
+
+        await db.markSent(config.baseId, config.tableId, lead.id, copy.subject, copy.emailBody, project);
+
         result.sent++;
       } catch (err) {
-        await markFailed(config.baseId, config.tableId, lead.id, project);
+        log.error("run_outreach_item_failed", err, { recordId: lead.id, email, project });
+        await db.markFailed(config.baseId, config.tableId, lead.id, project);
         result.failed++;
         result.errors.push(`${email}: ${err instanceof Error ? err.message : String(err)}`);
       }
