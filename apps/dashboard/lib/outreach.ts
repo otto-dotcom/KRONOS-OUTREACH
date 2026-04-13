@@ -223,6 +223,7 @@ export interface OutreachResult {
 export interface SendItem {
   recordId: string;
   toEmail: string;
+  company?: string;
   subject: string;
   emailBody: string;
   originalSubject?: string;
@@ -410,7 +411,7 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
         );
 
         // 2. Log AFTER successful send (not before)
-        log.sent(item.recordId, item.toEmail, item.toEmail, item.wasEdited, item.wasRegenerated);
+        log.sent(item.recordId, item.company ?? item.toEmail, item.toEmail, item.wasEdited, item.wasRegenerated);
 
         // 3. Update Airtable record
         await db.markSent(
@@ -470,7 +471,8 @@ export async function runOutreach(leadLimit = 10, project: Project = "kronos"): 
           { senderName: config.senderName, senderEmail: config.senderEmail, bccEmail: config.bccEmail, tag: config.tag }
         );
 
-        log.sent(lead.id, email, email, false, false);
+        const company = String(lead.fields["company name"] ?? email);
+        log.sent(lead.id, company, email, false, false);
 
         await db.markSent(config.baseId, config.tableId, lead.id, copy.subject, copy.emailBody, project);
 

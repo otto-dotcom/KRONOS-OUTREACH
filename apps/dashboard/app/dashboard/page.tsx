@@ -883,6 +883,7 @@ function CampaignLauncher({ onSelectLead, project }: { onSelectLead?: (lead: Lea
       .map((e) => ({
         recordId: e.recordId,
         toEmail: e.lead.email,
+        company: e.lead.company,
         subject: e.subject,
         emailBody: e.emailBody,
         originalSubject: e.originalSubject,

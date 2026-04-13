@@ -188,6 +188,7 @@ function CompanyModal({
           emails: [{
             recordId: row.id,
             toEmail: row.email,
+            company: row.company,
             subject: email.subject,
             emailBody: email.body,
             originalSubject: email.subject,
