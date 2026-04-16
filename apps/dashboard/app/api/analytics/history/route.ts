@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
       id: rec.id,
       company: String(rec.fields["company name"] ?? "Unknown"),
       email: String(rec.fields.EMAIL ?? ""),
-      sentAt: String(rec.fields.last_modified ?? ""),
-      subject: String(rec.fields["EMAIL SUBJECT"] ?? ""),
+      sentAt: String(rec.fields.DATE_SENT ?? rec.fields.last_modified ?? ""),
+      subject: String(rec.fields.EMAIL_SUBJECT ?? rec.fields["EMAIL SUBJECT"] ?? ""),
       status: "Sent"
     }));
 

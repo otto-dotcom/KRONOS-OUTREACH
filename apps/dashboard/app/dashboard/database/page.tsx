@@ -58,6 +58,8 @@ interface EmailState {
   generating: boolean;
   subject: string;
   body: string;
+  originalSubject: string;
+  originalBody: string;
   generated: boolean;
   editingSubject: boolean;
   sending: boolean;
@@ -121,6 +123,8 @@ function CompanyModal({
     generating: false,
     subject: "",
     body: "",
+    originalSubject: "",
+    originalBody: "",
     generated: false,
     editingSubject: false,
     sending: false,
@@ -167,6 +171,8 @@ function CompanyModal({
         generated: true,
         subject: data.subject,
         body: data.emailBody,
+        originalSubject: data.subject,
+        originalBody: data.emailBody,
       }));
     } catch (err) {
       setEmail((e) => ({
@@ -190,9 +196,9 @@ function CompanyModal({
             toEmail: row.email,
             subject: email.subject,
             emailBody: email.body,
-            originalSubject: email.subject,
-            originalBody: email.body,
-            wasEdited: false,
+            originalSubject: email.originalSubject || email.subject,
+            originalBody: email.originalBody || email.body,
+            wasEdited: email.subject !== email.originalSubject || email.body !== email.originalBody,
             wasRegenerated: true,
           }],
           project,

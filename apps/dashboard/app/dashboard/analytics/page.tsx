@@ -30,39 +30,63 @@ export default function AnalyticsPage() {
 
   const { project } = useProject();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
   const [clickers, setClickers] = useState<Array<{ email: string; event: string; date: string; subject: string }>>([]);
+  const [dailyData, setDailyData] = useState<{ label: string; bars: { value: number; color: string }[] }[]>([]);
 
-  async function loadData() {
+  async function loadData(signal?: AbortSignal) {
     setLoading(true);
+    setError(null);
     try {
+      const proj = project ?? "kronos";
       const fetchUrl = (path: string) =>
-        fetch(`${path}?days=${days}&project=${project ?? "kronos"}`, { credentials: "include" });
+        fetch(`${path}?days=${days}&project=${proj}`, { credentials: "include", signal });
 
       const [statsRes, historyRes, leadsRes, eventsRes] = await Promise.all([
         fetchUrl(`/api/analytics/email`),
-        fetch(`/api/analytics/history?project=${project ?? "kronos"}`, { credentials: "include" }),
+        fetch(`/api/analytics/history?project=${proj}`, { credentials: "include", signal }),
         fetchUrl(`/api/analytics/leads`),
-        fetch(`/api/analytics/email/events?limit=40&project=${project ?? "kronos"}`, { credentials: "include" }),
+        fetch(`/api/analytics/email/events?limit=40&project=${proj}`, { credentials: "include", signal }),
       ]);
 
       const [statsData, historyData, leadsData, eventsData] = await Promise.all([
         statsRes.json(), historyRes.json(), leadsRes.json(), eventsRes.json(),
       ]);
 
-      if (statsRes.ok && leadsRes.ok) {
-        setStats({
-          total_leads: leadsData.total || 0,
-          sent_emails: statsData.totals?.delivered || 0,
-          open_rate:   parseFloat(statsData.openRate || "0"),
-          click_rate:  parseFloat(statsData.clickRate || "0"),
-          bounce_rate: statsData.totals?.delivered > 0
-            ? parseFloat(((statsData.totals.bounces / statsData.totals.delivered) * 100).toFixed(1))
-            : 0,
-        });
+      if (!statsRes.ok || !historyRes.ok || !leadsRes.ok || !eventsRes.ok) {
+        const parts = [
+          !statsRes.ok ? `email:${statsRes.status}` : null,
+          !historyRes.ok ? `history:${historyRes.status}` : null,
+          !leadsRes.ok ? `leads:${leadsRes.status}` : null,
+          !eventsRes.ok ? `events:${eventsRes.status}` : null,
+        ].filter(Boolean);
+        throw new Error(`Analytics unavailable (${parts.join(", ")})`);
       }
-      if (historyRes.ok) setHistory(historyData.history || []);
 
-      if (eventsRes.ok && Array.isArray(eventsData.events)) {
+      setStats({
+        total_leads: leadsData.total || 0,
+        sent_emails: statsData.totals?.delivered || 0,
+        open_rate:   parseFloat(statsData.openRate || "0"),
+        click_rate:  parseFloat(statsData.clickRate || "0"),
+        bounce_rate: statsData.totals?.delivered > 0
+          ? parseFloat(((statsData.totals.bounces / statsData.totals.delivered) * 100).toFixed(1))
+          : 0,
+      });
+      setHistory(historyData.history || []);
+
+      // Build real daily bar chart data from Brevo daily breakdown
+      if (Array.isArray(statsData.daily) && statsData.daily.length > 0) {
+        const slice = statsData.daily.slice(-14); // last 14 days
+        setDailyData(slice.map((d: { date: string; delivered: number; opens: number }) => ({
+          label: new Date(d.date).toLocaleDateString("en-CH", { day: "2-digit", month: "short" }),
+          bars: [
+            { value: d.delivered, color: "var(--accent)" },
+            { value: d.opens, color: "var(--success)" },
+          ],
+        })));
+      }
+
+      if (Array.isArray(eventsData.events)) {
         const clickEvents = eventsData.events
           .filter((item: any) => {
             const eventName = String(item.event || "").toLowerCase();
@@ -78,16 +102,35 @@ export default function AnalyticsPage() {
         setClickers(clickEvents);
       }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       console.error("Failed to load analytics:", err);
+      setError(err instanceof Error ? err.message : "Failed to load data");
     }
     setLoading(false);
   }
 
-  useEffect(() => { loadData(); }, [days, project]);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadData(controller.signal);
+    return () => controller.abort();
+  }, [days, project]);
 
   const opens  = Math.round(stats.sent_emails * (stats.open_rate  / 100));
   const clicks = Math.round(stats.sent_emails * (stats.click_rate / 100));
   const bounces = Math.round(stats.sent_emails * (stats.bounce_rate / 100));
+
+  /* ── Error ── */
+  if (error && !loading) {
+    return (
+      <div style={{ height: "60vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
+        <span style={{ fontSize: 13, color: "var(--danger)", fontWeight: 600 }}>Failed to load analytics</span>
+        <span style={{ fontSize: 12, color: "var(--text-3)" }}>{error}</span>
+        <button onClick={() => loadData()} style={{ padding: "8px 16px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-1)", fontSize: 12, cursor: "pointer" }}>
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   /* ── Loading ── */
   if (loading) {
@@ -138,7 +181,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── KPI row ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12 }}>
         <KpiCard
           label="Total Leads"
           value={stats.total_leads.toLocaleString()}
@@ -167,6 +210,14 @@ export default function AnalyticsPage() {
           deltaType={stats.click_rate >= 3 ? "up" : "neutral"}
           delta={`${stats.click_rate}%`}
         />
+        <KpiCard
+          label="Bounce Rate"
+          value={`${stats.bounce_rate}%`}
+          icon={<BarChart2 size={18} />}
+          iconVariant={stats.bounce_rate < 3 ? "success" : stats.bounce_rate < 8 ? "warning" : "danger"}
+          deltaType={stats.bounce_rate < 3 ? "up" : "down"}
+          delta={`${stats.bounce_rate}%`}
+        />
       </div>
 
       {/* ── Main grid ── */}
@@ -192,24 +243,25 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Weekly bar chart */}
+          {/* Daily bar chart — real data from Brevo */}
           <div style={{
             background: "var(--surface-1)", border: "1px solid var(--border)",
             borderRadius: 14, padding: "20px 22px",
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>Campaign Velocity</span>
-              <span style={{ fontSize: 11, color: "var(--text-3)" }}>Weekly distribution</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>Daily Send Volume</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: "var(--text-3)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, background: "var(--accent)", borderRadius: 2, display: "inline-block" }} /> Delivered</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 8, height: 8, background: "var(--success)", borderRadius: 2, display: "inline-block" }} /> Opened</span>
+              </div>
             </div>
-            <BarChart
-              height={140}
-              data={[
-                { label: "W1", bars: [{ value: Math.round(stats.sent_emails * 0.22), color: "var(--accent)" }] },
-                { label: "W2", bars: [{ value: Math.round(stats.sent_emails * 0.28), color: "var(--accent)" }] },
-                { label: "W3", bars: [{ value: Math.round(stats.sent_emails * 0.31), color: "var(--accent)" }] },
-                { label: "W4", bars: [{ value: Math.round(stats.sent_emails * 0.19), color: "var(--accent)" }] },
-              ]}
-            />
+            {dailyData.length > 0 ? (
+              <BarChart height={140} data={dailyData} />
+            ) : (
+              <div style={{ height: 140, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>No daily data for this period</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -318,6 +370,49 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      {/* ── Live event stream (real Brevo events) ── */}
+      {clickers.length > 0 && (
+        <div style={{
+          background: "var(--surface-1)", border: "1px solid var(--border)",
+          borderRadius: 14, overflow: "hidden",
+        }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>Live Event Stream</span>
+            <span className="pill pill-neutral">{clickers.length} recent events</span>
+          </div>
+          <div>
+            {/* Header */}
+            <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 80px", padding: "8px 20px", borderBottom: "1px solid var(--border)" }}>
+              {["Event", "Recipient", "Subject", "Date"].map(h => (
+                <span key={h} style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" }}>{h}</span>
+              ))}
+            </div>
+            {clickers.map((e, i) => {
+              const eventColor =
+                e.event.includes("CLICK") ? "var(--accent)" :
+                e.event.includes("OPEN") ? "var(--success)" :
+                e.event.includes("BOUNCE") ? "var(--danger)" : "var(--text-3)";
+              return (
+                <div key={i} className="trow" style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 80px", padding: "10px 20px", alignItems: "center" }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: eventColor, fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
+                    {e.event.replace("UNIQUEOPENED", "OPENED")}
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>
+                    {e.email}
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>
+                    {e.subject || "—"}
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
+                    {e.date ? new Date(e.date).toLocaleDateString("en-CH", { day: "2-digit", month: "short" }) : "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

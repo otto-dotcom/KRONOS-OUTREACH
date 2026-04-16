@@ -69,6 +69,13 @@ interface Message {
   content: string;
 }
 
+interface ToolEvent {
+  tool: string;
+  ok?: boolean;
+  round?: number;
+  ts: number;
+}
+
 /* ── Inline markdown renderer ──────────────────────────────────────────── */
 function renderInline(text: string, brandColor: string): React.ReactNode {
   // Split on **bold** patterns
@@ -363,17 +370,65 @@ function MessageRenderer({ content, brandColor, project }: {
   );
 }
 
-/* ── Loading Dots ──────────────────────────────────────────────────────── */
-function LoadingDots({ color }: { color: string }) {
+/* ── Tool name formatter ────────────────────────────────────────────────── */
+const TOOL_LABELS: Record<string, string> = {
+  airtable_get_leads:       "Fetching leads",
+  airtable_get_lead_by_email: "Looking up lead",
+  airtable_get_leads_stats: "Counting pipeline",
+  airtable_update_lead:     "Updating record",
+  airtable_create_lead:     "Creating record",
+  brevo_get_contacts:       "Fetching contacts",
+  brevo_get_contact:        "Looking up contact",
+  brevo_get_campaigns:      "Fetching campaigns",
+  brevo_get_smtp_events:    "Fetching SMTP events",
+  brevo_get_email_stats:    "Fetching email stats",
+  brevo_send_transactional: "Sending email",
+  brevo_get_aggregated_stats:"Fetching aggregates",
+  twilio_send_sms:          "Sending SMS",
+  obsidian_read:            "Reading memory",
+  obsidian_write:           "Writing memory",
+};
+
+function toolLabel(name: string): string {
+  return TOOL_LABELS[name] ?? name.replace(/_/g, " ");
+}
+
+/* ── Loading Indicator ──────────────────────────────────────────────────── */
+function LoadingDots({ color, currentTool, toolHistory }: {
+  color: string;
+  currentTool: string | null;
+  toolHistory: ToolEvent[];
+}) {
   return (
-    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl rounded-bl-sm bg-black/40 border border-white/10 w-fit">
-      <JarvisIcon size={14} color={color} />
-      <div className="flex gap-1.5">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: color, animationDelay: `${i * 0.15}s` }} />
-        ))}
+    <div className="space-y-2">
+      {/* Tool history log */}
+      {toolHistory.length > 0 && (
+        <div className="flex flex-col gap-0.5 pl-11">
+          {toolHistory.slice(-4).map((t, i) => (
+            <div key={i} className="flex items-center gap-2 text-[9px] font-mono tracking-wider">
+              <span className={t.ok === false ? "text-red-400" : "text-white/25"}>
+                {t.ok === false ? "✕" : "✓"}
+              </span>
+              <span className={t.ok === false ? "text-red-400/60" : "text-white/20"}>
+                {toolLabel(t.tool)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Active loading bubble */}
+      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl rounded-bl-sm bg-black/40 border border-white/10 w-fit">
+        <JarvisIcon size={14} color={color} />
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: color, animationDelay: `${i * 0.15}s` }} />
+          ))}
+        </div>
+        <span className="text-[10px] uppercase font-mono tracking-widest ml-1" style={{ color: currentTool ? color : undefined, opacity: currentTool ? 0.7 : 0.3 }}>
+          {currentTool ? toolLabel(currentTool) : "Processing"}
+        </span>
       </div>
-      <span className="text-[10px] uppercase font-mono tracking-widest text-white/30 ml-1">Processing</span>
     </div>
   );
 }
@@ -403,13 +458,16 @@ export default function AgentChat() {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currentTool, setCurrentTool] = useState<string | null>(null);
+  const [toolHistory, setToolHistory] = useState<ToolEvent[]>([]);
+  const [lastFailedInput, setLastFailedInput] = useState<{ text: string; msgs: Message[] } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, currentTool]);
 
   // Reset welcome message when project changes
   useEffect(() => {
@@ -418,6 +476,99 @@ export default function AgentChat() {
         role: "assistant",
         content: `Jarvis online. Intelligence layer active for **${project.toUpperCase()}**.\n\nSecure neural link established. I have access to Airtable leads, Brevo analytics, SMS via Twilio, and Obsidian memory. What needs to be done?`
       }]);
+      setToolHistory([]);
+      setLastFailedInput(null);
+    }
+  }, [project]);
+
+  const sendRequest = useCallback(async (text: string, priorMessages: Message[]) => {
+    const userMessage: Message = { role: "user", content: text };
+    const allMessages = [...priorMessages, userMessage];
+    setMessages(allMessages);
+    setInput("");
+    setIsLoading(true);
+    setCurrentTool(null);
+    setToolHistory([]);
+    setLastFailedInput(null);
+
+    try {
+      const res = await fetch("/api/agent/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ messages: allMessages, project }),
+      });
+
+      if (!res.ok || !res.body) {
+        const errText = await res.text().catch(() => "Unknown error");
+        throw new Error(errText || `HTTP ${res.status}`);
+      }
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buffer = "";
+      let gotContent = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += dec.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop()!;
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let event: Record<string, unknown>;
+          try { event = JSON.parse(line); } catch { continue; }
+
+          if (event.type === "tool_start") {
+            const tool = event.tool as string;
+            setCurrentTool(tool);
+            setToolHistory(prev => [...prev, { tool, round: event.round as number, ts: Date.now() }]);
+          } else if (event.type === "tool_end") {
+            setCurrentTool(null);
+            setToolHistory(prev => {
+              const copy = [...prev];
+              // Mark the last matching tool entry
+              for (let i = copy.length - 1; i >= 0; i--) {
+                if (copy[i].tool === event.tool && copy[i].ok === undefined) {
+                  copy[i] = { ...copy[i], ok: event.ok as boolean };
+                  break;
+                }
+              }
+              return copy;
+            });
+          } else if (event.type === "content") {
+            gotContent = true;
+            setMessages(prev => [...prev, { role: "assistant", content: event.text as string }]);
+          } else if (event.type === "limit") {
+            gotContent = true;
+            setMessages(prev => [...prev, {
+              role: "assistant",
+              content: "```ui-status\n{\"title\":\"Tool Limit\",\"status\":\"warn\",\"message\":\"Reached the maximum tool-call rounds. Try rephrasing or breaking the request into smaller steps.\"}\n```"
+            }]);
+          } else if (event.type === "error") {
+            throw new Error(event.message as string);
+          }
+        }
+      }
+
+      if (!gotContent) {
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "```ui-status\n{\"title\":\"No Response\",\"status\":\"warn\",\"message\":\"JARVIS returned no content. Try again or check API keys.\"}\n```"
+        }]);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setLastFailedInput({ text, msgs: priorMessages });
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: `\`\`\`ui-status\n${JSON.stringify({ title: "System Error", status: "error", message: msg })}\n\`\`\``
+      }]);
+    } finally {
+      setIsLoading(false);
+      setCurrentTool(null);
     }
   }, [project]);
 
@@ -425,32 +576,13 @@ export default function AgentChat() {
     e?.preventDefault();
     const text = overrideInput ?? input;
     if (!text.trim() || isLoading) return;
+    await sendRequest(text, messages);
+  }, [input, messages, isLoading, sendRequest]);
 
-    const userMessage: Message = { role: "user", content: text };
-    setMessages(prev => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    try {
-      const res = await fetch("/api/agent/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ messages: [...messages, userMessage], project }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      setMessages(prev => [...prev, { role: "assistant", content: data.content }]);
-    } catch (err) {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "```ui-status\n{\"title\":\"System Error\",\"status\":\"error\",\"message\":\"Unable to reach intelligence core. Verify API keys and network connection.\"}\n```"
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [input, messages, project, isLoading]);
+  const handleRetry = useCallback(() => {
+    if (!lastFailedInput || isLoading) return;
+    sendRequest(lastFailedInput.text, lastFailedInput.msgs);
+  }, [lastFailedInput, isLoading, sendRequest]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full max-w-5xl mx-auto">
@@ -541,7 +673,7 @@ export default function AgentChat() {
         {isLoading && (
           <div className="flex justify-start w-full">
             <div className="ml-11">
-              <LoadingDots color={brandColor} />
+              <LoadingDots color={brandColor} currentTool={currentTool} toolHistory={toolHistory} />
             </div>
           </div>
         )}
@@ -549,6 +681,19 @@ export default function AgentChat() {
 
       {/* Input Area */}
       <div className="relative">
+        {/* Retry bar */}
+        {lastFailedInput && !isLoading && (
+          <div className="flex items-center justify-between px-4 py-2.5 mb-2 rounded-xl border border-red-500/20 bg-red-500/5">
+            <span className="text-[10px] font-mono text-red-400/70 uppercase tracking-widest">Last request failed</span>
+            <button
+              onClick={handleRetry}
+              className="text-[10px] font-mono uppercase tracking-widest px-3 py-1 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+            >
+              ↺ Retry
+            </button>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div className="flex gap-2 overflow-x-auto mb-3 pb-1" style={{ scrollbarWidth: "none" }}>
           {QUICK_ACTIONS.map((action, i) => (

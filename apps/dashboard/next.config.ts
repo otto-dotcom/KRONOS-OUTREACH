@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -10,6 +11,17 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  async generateBuildId() {
+    return process.env.BUILD_ID ?? "kronos-dashboard";
+  },
+  experimental: {
+    staticGenerationMaxConcurrency: 1,
+    staticGenerationMinPagesPerWorker: 1,
+    staticGenerationRetryCount: 0,
+  },
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   async headers() {
     return [
       {

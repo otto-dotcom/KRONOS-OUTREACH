@@ -6,7 +6,7 @@ import { useProject } from "./ProjectContext";
 import { useState } from "react";
 import {
   LayoutDashboard, BarChart2, Database, MessageSquare,
-  Settings, Zap, LogOut, ChevronRight, ArrowLeftRight
+  Settings, Zap, LogOut, ChevronRight, ArrowLeftRight, TrendingDown,
 } from "lucide-react";
 
 /* ── Logos ───────────────────────────────────────────────────────────────── */
@@ -223,6 +223,7 @@ function BusinessSelector({ onSelect }: { onSelect: (p: "kronos" | "helios") => 
 /* ── Nav config ──────────────────────────────────────────────────────────── */
 const NAV = [
   { icon: LayoutDashboard, label: "Overview",    path: "/dashboard" },
+  { icon: TrendingDown,    label: "Funnel",      path: "/dashboard/funnel" },
   { icon: BarChart2,       label: "Analytics",   path: "/dashboard/analytics" },
   { icon: Database,        label: "Lead Base",   path: "/dashboard/database" },
   { icon: MessageSquare,   label: "JARVIS",      path: "/dashboard/chat" },

@@ -10,6 +10,24 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const AIRTABLE_API = "https://api.airtable.com/v0";
 const BREVO_API = "https://api.brevo.com/v3";
 
+function getAppBaseUrl(req?: NextRequest) {
+  const configured = process.env.PUBLIC_APP_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  if (configured) {
+    const trimmed = configured.replace(/\/$/, "");
+    return trimmed.startsWith("http://") || trimmed.startsWith("https://") ? trimmed : `https://${trimmed}`;
+  }
+
+  if (req) {
+    const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+    if (host) {
+      const proto = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+      return `${proto}://${host}`;
+    }
+  }
+
+  return "http://localhost:3000";
+}
+
 // ─── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are JARVIS — the unified Operational Intelligence Layer for KRONOS and HELIOS, managed by Otto.
@@ -679,16 +697,41 @@ const TOOLS = [
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 
-function airtableIds(project: string) {
+function airtableIds(project: string): { baseId: string; tableId: string } {
+  if (project === "helios") {
+    const baseId  = process.env.HELIOS_AIRTABLE_BASE_ID  ?? "";
+    const tableId = process.env.HELIOS_AIRTABLE_TABLE_ID ?? "";
+    if (!baseId || !tableId) throw new Error("HELIOS_AIRTABLE_BASE_ID / HELIOS_AIRTABLE_TABLE_ID not configured — refusing to fall back to KRONOS data");
+    return { baseId, tableId };
+  }
+  const baseId  = process.env.AIRTABLE_BASE_ID  ?? "";
+  const tableId = process.env.AIRTABLE_TABLE_ID ?? "";
+  if (!baseId || !tableId) throw new Error("AIRTABLE_BASE_ID / AIRTABLE_TABLE_ID not configured");
+  return { baseId, tableId };
+}
+
+// Project-aware Airtable filter formulas
+// KRONOS: singleSelect fields with trailing spaces on Processing/Skipped/Failed
+// HELIOS: singleLineText fields, no trailing spaces, no CAMPAIGN_STATUS field
+function projectFilters(project: string) {
   if (project === "helios") {
     return {
-      baseId: process.env.HELIOS_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID || "",
-      tableId: process.env.HELIOS_AIRTABLE_TABLE_ID || process.env.AIRTABLE_TABLE_ID || "",
+      total:    `{EMAIL} != ""`,
+      sent:     `{EMAIL STATUS} = "Sent"`,
+      ready:    `AND({EMAIL} != "", {EMAIL STATUS} != "Sent", {EMAIL STATUS} != "Processing", {Rank} >= 5)`,
+      priority: `AND({lead_status} = "priority", {EMAIL STATUS} != "Sent", {EMAIL STATUS} != "Processing")`,
+      failed:   `{EMAIL STATUS} = "Failed"`,
+      booked:   `OR({CALL STATUS} = "INTERESSATO", {CALL STATUS} = "DA CHIAMARE")`,
     };
   }
+  // KRONOS
   return {
-    baseId: process.env.AIRTABLE_BASE_ID || "",
-    tableId: process.env.AIRTABLE_TABLE_ID || "",
+    total:    `{EMAIL} != ""`,
+    sent:     `{EMAIL STATUS} = "Sent"`,
+    ready:    `AND({EMAIL} != "", {EMAIL STATUS} != "Sent", {EMAIL STATUS} != "Processing ", {EMAIL STATUS} != "Skipped ", {Rank} >= 5)`,
+    priority: `AND({lead_status} = "priority", {EMAIL STATUS} != "Sent", {EMAIL STATUS} != "Processing ")`,
+    failed:   `OR({EMAIL STATUS} = "Failed ", {CAMPAIGN_STATUS} = "Failed", {CAMPAIGN_STATUS} = "Bounced")`,
+    booked:   `OR({EMAIL STATUS} = "RESPOND", {EMAIL STATUS} = "CALL FIXED", {EMAIL STATUS} = "GOLD")`,
   };
 }
 
@@ -744,16 +787,18 @@ async function brevoPost(path: string, body: unknown) {
 // ─── TOOL IMPLEMENTATIONS ──────────────────────────────────────────────────────
 
 async function toolGetLeadsStats(project: string) {
-  const { baseId, tableId } = airtableIds(project);
-  if (!baseId || !tableId) return { error: `${project} Airtable not configured` };
+  let ids: { baseId: string; tableId: string };
+  try { ids = airtableIds(project); } catch (e) { return { error: String(e) }; }
+  const { baseId, tableId } = ids;
   try {
     log.info("tool_get_leads_stats", { project });
+    const f = projectFilters(project);
     const queries = [
-      { label: "total", f: `{EMAIL} != ""` },
-      { label: "sent", f: `{EMAIL STATUS} = "Sent"` },
-      { label: "ready", f: `AND({EMAIL} != "", {EMAIL STATUS} != "Sent", {EMAIL STATUS} != "Processing ", {EMAIL STATUS} != "Skipped ", {Rank} >= 5)` },
-      { label: "priority", f: `AND({lead_status} = "priority", {EMAIL STATUS} != "Sent", {EMAIL STATUS} != "Processing ")` },
-      { label: "failed", f: `OR({EMAIL STATUS} = "Failed ", {CAMPAIGN_STATUS} = "Failed", {CAMPAIGN_STATUS} = "Bounced")` },
+      { label: "total",    f: f.total },
+      { label: "sent",     f: f.sent },
+      { label: "ready",    f: f.ready },
+      { label: "priority", f: f.priority },
+      { label: "failed",   f: f.failed },
     ];
     const counts: Record<string, number> = {};
     // Paginate to get accurate counts for large tables (KRONOS has 880+ records)
@@ -781,8 +826,9 @@ async function toolGetLeadsStats(project: string) {
 }
 
 async function toolGetRecentSent(project: string, limit = 10) {
-  const { baseId, tableId } = airtableIds(project);
-  if (!baseId || !tableId) return { error: `${project} Airtable not configured` };
+  let ids: { baseId: string; tableId: string };
+  try { ids = airtableIds(project); } catch (e) { return { error: String(e) }; }
+  const { baseId, tableId } = ids;
   const cap = Math.min(limit, 25);
   try {
     log.info("tool_get_recent_sent", { project, limit: cap });
@@ -798,8 +844,9 @@ async function toolGetRecentSent(project: string, limit = 10) {
 }
 
 async function toolSearchLeads(project: string, query: string, limit = 10) {
-  const { baseId, tableId } = airtableIds(project);
-  if (!baseId || !tableId) return { error: `${project} Airtable not configured` };
+  let ids: { baseId: string; tableId: string };
+  try { ids = airtableIds(project); } catch (e) { return { error: String(e) }; }
+  const { baseId, tableId } = ids;
   const safe = query.replace(/"/g, "");
   const f = `OR(FIND(LOWER("${safe}"),LOWER({company name}))>0,FIND(LOWER("${safe}"),LOWER({FULL NAME}))>0,FIND(LOWER("${safe}"),LOWER({City}))>0,FIND(LOWER("${safe}"),LOWER({EMAIL}))>0)`;
   try {
@@ -816,8 +863,9 @@ async function toolSearchLeads(project: string, query: string, limit = 10) {
 }
 
 async function toolAirtableListRecords(project: string, filter?: string, sortField?: string, sortDir?: string, fields?: string[], limit = 20) {
-  const { baseId, tableId } = airtableIds(project);
-  if (!baseId || !tableId) return { error: `${project} Airtable not configured` };
+  let ids: { baseId: string; tableId: string };
+  try { ids = airtableIds(project); } catch (e) { return { error: String(e) }; }
+  const { baseId, tableId } = ids;
   try {
     log.info("tool_airtable_list_records", { project, filter, sortField, limit });
     const params = new URLSearchParams();
@@ -837,8 +885,9 @@ async function toolAirtableListRecords(project: string, filter?: string, sortFie
 }
 
 async function toolAirtableUpdateLead(project: string, recordId: string, fields: Record<string, unknown>) {
-  const { baseId, tableId } = airtableIds(project);
-  if (!baseId || !tableId) return { error: `${project} Airtable not configured` };
+  let ids: { baseId: string; tableId: string };
+  try { ids = airtableIds(project); } catch (e) { return { error: String(e) }; }
+  const { baseId, tableId } = ids;
   if (!recordId.startsWith("rec")) return { error: "record_id must start with 'rec'" };
   if (!fields || Object.keys(fields).length === 0) return { error: "fields object is empty — nothing to update" };
   try {
@@ -852,8 +901,9 @@ async function toolAirtableUpdateLead(project: string, recordId: string, fields:
 }
 
 async function toolAirtableCreateLead(project: string, fields: Record<string, unknown>) {
-  const { baseId, tableId } = airtableIds(project);
-  if (!baseId || !tableId) return { error: `${project} Airtable not configured` };
+  let ids: { baseId: string; tableId: string };
+  try { ids = airtableIds(project); } catch (e) { return { error: String(e) }; }
+  const { baseId, tableId } = ids;
   if (!fields["company name"] && !fields["EMAIL"]) return { error: "At minimum 'company name' or 'EMAIL' must be provided" };
   try {
     log.info("tool_airtable_create_lead", { project, fields });
@@ -895,11 +945,10 @@ async function toolGetBrevoLogs(email?: string, tag?: string) {
   }
 }
 
-async function toolGetDatabaseEngagement(project: string) {
-  const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
+async function toolGetDatabaseEngagement(project: string, baseUrl: string) {
   try {
     log.info("tool_get_database_engagement", { project });
-    const res = await fetch(`${base}/api/analytics/database?project=${project}`);
+    const res = await fetch(`${baseUrl}/api/analytics/database?project=${project}`);
     if (!res.ok) return { error: `Analytics API ${res.status}` };
     const data = await res.json();
     return {
@@ -1049,11 +1098,10 @@ async function toolBrevoSendTransactional(toEmail: string, toName: string, subje
   }
 }
 
-async function toolPreviewCampaign(project: string, leadLimit = 5) {
-  const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
+async function toolPreviewCampaign(project: string, baseUrl: string, leadLimit = 5) {
   try {
     log.info("tool_preview_campaign", { project, leadLimit });
-    const res = await fetch(`${base}/api/campaign/preview`, {
+    const res = await fetch(`${baseUrl}/api/campaign/preview`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ project, leadLimit: Math.min(leadLimit, 20) }),
@@ -1067,11 +1115,10 @@ async function toolPreviewCampaign(project: string, leadLimit = 5) {
   }
 }
 
-async function toolLaunchCampaign(project: string, leadLimit = 10) {
-  const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
+async function toolLaunchCampaign(project: string, baseUrl: string, leadLimit = 10) {
   try {
     log.info("tool_launch_campaign", { project, leadLimit });
-    const res = await fetch(`${base}/api/campaign/launch`, {
+    const res = await fetch(`${baseUrl}/api/campaign/launch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ project, leadLimit: Math.min(leadLimit, 50) }),
@@ -1086,11 +1133,10 @@ async function toolLaunchCampaign(project: string, leadLimit = 10) {
   }
 }
 
-async function toolUpdatePrompt(project: string, key: string, prompt: string) {
-  const base = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
+async function toolUpdatePrompt(project: string, key: string, prompt: string, baseUrl: string) {
   try {
     log.info("tool_update_prompt", { project, key, promptLength: prompt.length });
-    const res = await fetch(`${base}/api/settings?project=${project}`, {
+    const res = await fetch(`${baseUrl}/api/settings?project=${project}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [key]: prompt }),
@@ -1157,7 +1203,7 @@ async function toolReadLogs(limit = 20) {
 
 // ─── TOOL ROUTER ───────────────────────────────────────────────────────────────
 
-async function executeTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+async function executeTool(name: string, args: Record<string, unknown>, baseUrl: string): Promise<unknown> {
   const startMs = Date.now();
   let result: unknown;
 
@@ -1172,7 +1218,7 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
     // Brevo Analytics
     case "get_email_analytics":       result = await toolGetEmailAnalytics(Number(args.days ?? 30)); break;
     case "get_brevo_logs":            result = await toolGetBrevoLogs(args.email as string | undefined, args.tag as string | undefined); break;
-    case "get_database_engagement":   result = await toolGetDatabaseEngagement(String(args.project ?? "kronos")); break;
+    case "get_database_engagement":   result = await toolGetDatabaseEngagement(String(args.project ?? "kronos"), baseUrl); break;
     case "brevo_get_contact":         result = await toolBrevoGetContact(String(args.email ?? "")); break;
     case "brevo_list_contacts":       result = await toolBrevoListContacts(Number(args.limit ?? 25), Number(args.offset ?? 0), args.list_id as number | undefined); break;
     case "brevo_get_campaigns":       result = await toolBrevoGetCampaigns(Number(args.limit ?? 10), String(args.type ?? "classic")); break;
@@ -1180,10 +1226,10 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
     case "brevo_get_smtp_events":     result = await toolBrevoGetSmtpEvents(args.email as string | undefined, Number(args.limit ?? 50), args.start_date as string | undefined, args.end_date as string | undefined); break;
     case "brevo_send_transactional":  result = await toolBrevoSendTransactional(String(args.to_email ?? ""), String(args.to_name ?? ""), String(args.subject ?? ""), String(args.html_content ?? ""), String(args.project ?? "kronos")); break;
     // Campaign Ops
-    case "preview_campaign":          result = await toolPreviewCampaign(String(args.project ?? "kronos"), Number(args.leadLimit ?? 5)); break;
-    case "launch_campaign":           result = await toolLaunchCampaign(String(args.project ?? "kronos"), Number(args.leadLimit ?? 10)); break;
-    case "update_email_prompt":       result = await toolUpdatePrompt(String(args.project ?? "kronos"), "email_prompt", String(args.prompt ?? "")); break;
-    case "update_sms_prompt":         result = await toolUpdatePrompt(String(args.project ?? "kronos"), "sms_prompt", String(args.prompt ?? "")); break;
+    case "preview_campaign":          result = await toolPreviewCampaign(String(args.project ?? "kronos"), baseUrl, Number(args.leadLimit ?? 5)); break;
+    case "launch_campaign":           result = await toolLaunchCampaign(String(args.project ?? "kronos"), baseUrl, Number(args.leadLimit ?? 10)); break;
+    case "update_email_prompt":       result = await toolUpdatePrompt(String(args.project ?? "kronos"), "email_prompt", String(args.prompt ?? ""), baseUrl); break;
+    case "update_sms_prompt":         result = await toolUpdatePrompt(String(args.project ?? "kronos"), "sms_prompt", String(args.prompt ?? ""), baseUrl); break;
     case "send_sms":                  result = await toolSendSms(String(args.to ?? ""), String(args.body ?? ""), String(args.project ?? "kronos")); break;
     // Memory & System
     case "save_to_memory":            result = await toolSaveToMemory(String(args.project ?? "kronos"), String(args.company ?? ""), String(args.subject ?? ""), String(args.body ?? ""), args.notes as string | undefined); break;
@@ -1196,72 +1242,134 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
   return result;
 }
 
-// ─── POST HANDLER ──────────────────────────────────────────────────────────────
+// ─── STREAMING POST HANDLER ────────────────────────────────────────────────────
+// Emits NDJSON events so the client can show real-time tool progress.
+// Event shapes:
+//   { type: "tool_start", tool: string, round: number }
+//   { type: "tool_end",   tool: string, ok: boolean }
+//   { type: "content",    text: string }
+//   { type: "limit" }
+//   { type: "error",      message: string }
 
 export async function POST(req: NextRequest) {
-  if (!OPENROUTER_API_KEY) return NextResponse.json({ error: "OPENROUTER_API_KEY not configured" }, { status: 500 });
+  if (!OPENROUTER_API_KEY) {
+    return NextResponse.json({ error: "OPENROUTER_API_KEY not configured" }, { status: 500 });
+  }
 
   const body = await req.json() as { messages: Array<{ role: string; content: string }>; project?: string };
   const project = body.project ?? "kronos";
+  const appBaseUrl = getAppBaseUrl(req);
 
   log.api("/api/agent/chat", "POST", { project, messageCount: body.messages.length });
 
-  let msgs: unknown[] = [
-    { role: "system", content: SYSTEM_PROMPT + `\n\nActive context: project="${project}". Default all tool calls to this project unless Otto specifies otherwise.` },
-    ...body.messages,
-  ];
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+  const writer = writable.getWriter();
+  const enc = new TextEncoder();
 
-  for (let round = 0; round < 6; round++) {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://kronos-outreach.vercel.app",
-        "X-Title": "JARVIS Intelligence",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-4o-mini",
-        messages: msgs,
-        tools: TOOLS,
-        tool_choice: "auto",
-        temperature: 0.3,
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      log.error("openrouter_api_error", new Error(errText), { project });
-      return NextResponse.json({ error: `OpenRouter: ${errText}` }, { status: 500 });
+  const send = async (event: Record<string, unknown>) => {
+    try {
+      await writer.write(enc.encode(JSON.stringify(event) + "\n"));
+    } catch {
+      // writer may be closed if client disconnected
     }
+  };
 
-    const data = await res.json() as {
-      choices: Array<{
-        message: {
-          role: string;
-          content: string | null;
-          tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
+  // Run the agentic loop asynchronously so the Response can be returned immediately
+  (async () => {
+    try {
+      let msgs: unknown[] = [
+        { role: "system", content: SYSTEM_PROMPT + `\n\nActive context: project="${project}". Default all tool calls to this project unless Otto specifies otherwise.` },
+        ...body.messages,
+      ];
+
+      for (let round = 0; round < 6; round++) {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://kronos-outreach.vercel.app",
+            "X-Title": "JARVIS Intelligence",
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-4o-mini",
+            messages: msgs,
+            tools: TOOLS,
+            tool_choice: "auto",
+            temperature: 0.3,
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          log.error("openrouter_api_error", new Error(errText), { project });
+          await send({ type: "error", message: `OpenRouter error (${res.status}) — check API key or try again.` });
+          return;
+        }
+
+        const data = await res.json() as {
+          choices: Array<{
+            message: {
+              role: string;
+              content: string | null;
+              tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }>;
+            };
+          }>;
         };
-      }>;
-    };
-    const msg = data.choices[0].message;
 
-    if (!msg.tool_calls?.length) {
-      return NextResponse.json({ content: msg.content ?? "No response generated.", role: "assistant" });
+        const msg = data.choices[0]?.message;
+        if (!msg) {
+          await send({ type: "error", message: "Empty response from AI model." });
+          return;
+        }
+
+        if (!msg.tool_calls?.length) {
+          await send({ type: "content", text: msg.content ?? "No response generated." });
+          return;
+        }
+
+        msgs.push({ role: "assistant", content: msg.content, tool_calls: msg.tool_calls });
+
+        // Execute all tool calls in this round, streaming progress events
+        const results = await Promise.all(
+          msg.tool_calls.map(async (tc) => {
+            await send({ type: "tool_start", tool: tc.function.name, round: round + 1 });
+
+            let args: Record<string, unknown> = {};
+            try {
+              args = JSON.parse(tc.function.arguments);
+            } catch {
+              log.error("tool_args_parse_error", new Error(`Bad JSON for ${tc.function.name}`), { raw: tc.function.arguments });
+              await send({ type: "tool_end", tool: tc.function.name, ok: false });
+              return { role: "tool", tool_call_id: tc.id, name: tc.function.name, content: JSON.stringify({ error: "Malformed tool arguments" }) };
+            }
+
+            const result = await executeTool(tc.function.name, args, appBaseUrl);
+            const hasError = !!(result as Record<string, unknown>)?.error;
+            log.info("tool_execution_complete", { tool: tc.function.name, hasError, project });
+            await send({ type: "tool_end", tool: tc.function.name, ok: !hasError });
+
+            return { role: "tool", tool_call_id: tc.id, name: tc.function.name, content: JSON.stringify(result) };
+          })
+        );
+
+        msgs = [...msgs, ...results];
+      }
+
+      await send({ type: "limit" });
+    } catch (err) {
+      log.error("agent_stream_error", err, { project });
+      await send({ type: "error", message: err instanceof Error ? err.message : "Unknown error in JARVIS core." });
+    } finally {
+      await writer.close();
     }
+  })();
 
-    msgs.push({ role: "assistant", content: msg.content, tool_calls: msg.tool_calls });
-
-    const results = await Promise.all(
-      msg.tool_calls.map(async (tc) => {
-        let args: Record<string, unknown> = {};
-        try { args = JSON.parse(tc.function.arguments); } catch { /**/ }
-        const result = await executeTool(tc.function.name, args);
-        return { role: "tool", tool_call_id: tc.id, name: tc.function.name, content: JSON.stringify(result) };
-      })
-    );
-    msgs = [...msgs, ...results];
-  }
-
-  return NextResponse.json({ content: "Reached tool call limit — please rephrase your request.", role: "assistant" });
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "application/x-ndjson",
+      "Cache-Control": "no-cache",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }

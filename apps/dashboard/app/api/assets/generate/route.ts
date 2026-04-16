@@ -18,16 +18,10 @@ export async function POST(req: Request) {
         console.log(`[Asset Gen API] Generating KRONOS Asset for prompt: ${engineeredPrompt}`);
 
         if (!KIE_API_KEY) {
-            console.warn('Missing KIE_API_KEY. Returning mock KRONOS pixel asset url.');
-            // Mock generation delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
             return NextResponse.json({
-                success: true,
-                data: {
-                    url: 'https://kronosautomations.it/mock-pixel-asset.png',
-                    prompt_used: engineeredPrompt
-                }
-            });
+                error: "Image generation is disabled until KIE_API_KEY is configured.",
+                status: "unavailable",
+            }, { status: 501 });
         }
 
         const response = await fetch(KIE_AI_URL, {

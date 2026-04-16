@@ -4,6 +4,8 @@
  * No n8n dependency. Project-aware: pass project="kronos"|"helios" to all public functions.
  */
 
+import { log } from "./logger";
+
 const AIRTABLE_API = "https://api.airtable.com/v0";
 const OPENROUTER_API = "https://openrouter.ai/api/v1";
 const BREVO_API = "https://api.brevo.com/v3";
@@ -59,7 +61,7 @@ HTML FORMAT (plain-text style — no images, no styled buttons, no decorative bo
 - Body paragraphs: <p style="margin:0 0 16px 0;">content</p>
 - CTA (plain text links, NOT buttons):
   <p style="margin:0 0 16px 0;"><a href="https://cal.com/kronosautomations/15min" style="color:#FF6B00;">Book a 15-min call</a><br>Or review our work first: <a href="https://kronosautomations.com" style="color:#FF6B00;">kronosautomations.com</a></p>
-- Signature: <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – KRONOS Automations<br>AI Automation Consulting · Switzerland<br><a href="mailto:otto@kronosbusiness.com" style="color:#FF6B00;text-decoration:none;">otto@kronosbusiness.com</a></p>
+- Signature: <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – KRONOS Automations<br>AI Automation Consulting · Switzerland<br>otto@kronosbusiness.com</p>
 
 Response MUST be ONLY valid JSON (no markdown fences): {"subject": "...", "emailBody": "..."}`;
 
@@ -99,7 +101,7 @@ HTML FORMAT (plain-text style — no images, no styled buttons, no decorative bo
 - Body paragraphs: <p style="margin:0 0 16px 0;">content</p>
 - CTA (plain text links, NOT buttons):
   <p style="margin:0 0 16px 0;"><a href="https://cal.com/helios/15min" style="color:#22C55E;">Book a 15-min call</a><br>Or review our work first: <a href="https://helios-solare.com" style="color:#22C55E;">helios-solare.com</a></p>
-- Signature: <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – HELIOS<br>Clean Solar Intelligence · Switzerland<br><a href="mailto:otto@heliosbusiness.it" style="color:#22C55E;text-decoration:none;">otto@heliosbusiness.it</a></p>
+- Signature: <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – HELIOS<br>Clean Solar Intelligence · Switzerland<br>otto@heliosbusiness.it</p>
 
 Response MUST be ONLY valid JSON (no markdown fences): {"subject": "...", "emailBody": "..."}`;
 
@@ -270,7 +272,20 @@ export async function fetchSentArchive(limit = 100, project: Project = "kronos")
   const config = getProjectConfig(project);
   const airtableKey = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   const formula = encodeURIComponent(`{EMAIL STATUS} = "Sent"`);
-  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=Rank&sort[0][direction]=desc`;
+  const fields = [
+    "EMAIL STATUS",
+    "EMAIL_SUBJECT",
+    "DATE_SENT",
+    "SENT MAIL",
+    "FULL NAME",
+    "company name",
+    "EMAIL",
+    "City",
+    "Rank",
+  ]
+    .map((f) => `fields[]=${encodeURIComponent(f)}`)
+    .join("&");
+  const url = `${AIRTABLE_API}/${config.baseId}/${config.tableId}?filterByFormula=${formula}&maxRecords=${limit}&sort[0][field]=Rank&sort[0][direction]=desc&${fields}`;
 
   const res = await fetchWithTimeout(url, {
     headers: { Authorization: `Bearer ${airtableKey}` },
@@ -306,6 +321,107 @@ Final Sent Body (PREFERRED): ${f["SENT MAIL"]}
   } catch {
     return "";
   }
+}
+
+function stripCodeFences(value: string): string {
+  return value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+}
+
+function countLinks(html: string): number {
+  return (html.match(/<a\s/gi) ?? []).length;
+}
+
+function countWords(html: string): number {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean).length;
+}
+
+function containsBannedPhrases(subject: string, body: string): boolean {
+  const text = `${subject} ${body}`.toLowerCase();
+  const banned = [
+    "automate",
+    "automation",
+    "streamline",
+    "efficiency",
+    "leverage",
+    "results",
+    "roi",
+    "save time",
+    "quick question",
+    "following up",
+    "touching base",
+    "reach out",
+    "free consultation",
+    "schedule a call",
+    "game-changer",
+    "solution",
+    "solutions",
+    "growth",
+    "scale",
+    "boost",
+    "seamless",
+    "innovative",
+    "cutting-edge",
+    "synergy",
+  ];
+
+  return banned.some((phrase) => text.includes(phrase));
+}
+
+function isValidEmailAddress(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function buildFallbackEmailCopy(record: AirtableRecord, project: Project): EmailCopy {
+  const f = record.fields;
+  const name = String(f["FULL NAME"] ?? "").trim();
+  const company = String(f["company name"] ?? "").trim();
+  const city = String(f.City ?? "").trim();
+  const recipient = name || company || city || "there";
+  const ctaLink = project === "helios" ? "https://cal.com/helios/15min" : "https://cal.com/kronosautomations/15min";
+  const siteLink = project === "helios" ? "https://helios-solare.com" : "https://kronosautomations.com";
+  const sender = project === "helios" ? "Otto from HELIOS" : "Otto from KRONOS";
+  const brandLine = project === "helios"
+    ? "Clean Solar Intelligence"
+    : "AI lead generation and outreach systems";
+  const subject = project === "helios"
+    ? `${company || city || "Solar"} pipeline audit`
+    : `${company || city || "Agency"} lead flow`;
+
+  const body = [
+    `<div style="font-family:Georgia,serif;font-size:15px;line-height:1.8;color:#111111;max-width:580px;">`,
+    `<p style="margin:0 0 16px 0;">Hello ${recipient},</p>`,
+    `<p style="margin:0 0 16px 0;">I looked at ${company || city || "your business"} and the usual pattern is clear: the pipeline gets noisy, the next step gets harder to track, and it becomes difficult to trust what happens after first contact.</p>`,
+    `<p style="margin:0 0 16px 0;">${project === "helios"
+      ? "HELIOS helps map where leads drop, tighten the handoff, and keep the process clean from inquiry to booked work."
+      : "KRONOS helps Swiss agencies keep acquisition, handoff, and reporting tight so outreach stays consistent and measurable."}</p>`,
+    `<p style="margin:0 0 16px 0;"><a href="${ctaLink}" style="color:${project === "helios" ? "#22C55E" : "#FF6B00"};">Book a 15-min call</a><br>Or review our work first: <a href="${siteLink}" style="color:${project === "helios" ? "#22C55E" : "#FF6B00"};">${siteLink.replace("https://", "")}</a></p>`,
+    `<p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">${sender}<br>${brandLine}<br>${project === "helios" ? "otto@heliosbusiness.it" : "otto@kronosbusiness.com"}</p>`,
+    `</div>`,
+  ].join("");
+
+  return { subject, emailBody: body };
+}
+
+function validateEmailCopy(copy: EmailCopy, record: AirtableRecord): { ok: boolean; issues: string[] } {
+  const issues: string[] = [];
+  const subject = copy.subject?.trim() ?? "";
+  const body = copy.emailBody?.trim() ?? "";
+
+  if (!subject) issues.push("missing subject");
+  if (!body) issues.push("missing body");
+  if (subject.length > 50) issues.push(`subject too long (${subject.length})`);
+  if (subject.trimStart().startsWith("I ")) issues.push("subject starts with I");
+  if (subject === subject.toUpperCase() && /[A-Z]/.test(subject)) issues.push("subject all caps");
+  if (countLinks(body) > 2) issues.push(`too many links (${countLinks(body)})`);
+  if (countWords(body) > 150) issues.push(`body too long (${countWords(body)} words)`);
+  if (containsBannedPhrases(subject, body)) issues.push("contains banned language");
+
+  return { ok: issues.length === 0, issues };
 }
 
 export async function generateEmailCopy(
@@ -377,10 +493,34 @@ export async function generateEmailCopy(
 
   const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
   const content = data.choices?.[0]?.message?.content ?? "{}";
-  const copy = JSON.parse(content) as EmailCopy;
+  let parsed: EmailCopy | null = null;
 
-  if (!copy.subject || !copy.emailBody) throw new Error("OpenRouter returned incomplete copy");
-  return copy;
+  try {
+    parsed = JSON.parse(stripCodeFences(content)) as EmailCopy;
+  } catch {
+    parsed = null;
+  }
+
+  if (!parsed?.subject || !parsed?.emailBody) {
+    return buildFallbackEmailCopy(record, project);
+  }
+
+  const normalized: EmailCopy = {
+    subject: String(parsed.subject).replace(/\s+/g, " ").trim(),
+    emailBody: String(parsed.emailBody).trim(),
+  };
+
+  const validation = validateEmailCopy(normalized, record);
+  if (!validation.ok) {
+    console.warn("Email copy rejected, using fallback", {
+      recordId: record.id,
+      project,
+      issues: validation.issues,
+    });
+    return buildFallbackEmailCopy(record, project);
+  }
+
+  return normalized;
 }
 
 async function sendEmail(toEmail: string, copy: EmailCopy, config: ProjectConfig, attempt = 0): Promise<void> {
@@ -538,7 +678,7 @@ export async function previewOutreach(leadLimit = 10, project: Project = "kronos
 
   const results = await Promise.all(
     leads.map(async (lead) => {
-      if (!lead.fields.EMAIL) return null;
+      if (!lead.fields.EMAIL || !isValidEmailAddress(String(lead.fields.EMAIL))) return null;
       const leadFields = mapLeadFields(lead);
       try {
         const copy = await generateEmailCopy(lead, project);
@@ -567,7 +707,7 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
     const batch = items.slice(i, i + BATCH_SIZE);
 
     await Promise.all(batch.map(async (item) => {
-      if (!item.toEmail || !item.subject || !item.emailBody) {
+      if (!item.toEmail || !isValidEmailAddress(item.toEmail) || !item.subject || !item.emailBody) {
         result.skipped++;
         return;
       }
@@ -591,9 +731,22 @@ export async function sendPreviews(items: SendItem[], project: Project = "kronos
       try {
         await sendEmail(item.toEmail, { subject: item.subject, emailBody: item.emailBody }, config);
         await markSent(config.baseId, config.tableId, item.recordId, item.subject, item.emailBody, project, item.originalSubject, item.originalBody);
+        log.info("email_sent", {
+          project,
+          recordId: item.recordId,
+          toEmail: item.toEmail,
+          subject: item.subject,
+          wasEdited: item.wasEdited,
+          wasRegenerated: item.wasRegenerated,
+        });
         result.sent++;
       } catch (err) {
         await markFailed(config.baseId, config.tableId, item.recordId, project);
+        log.error("email_send_failed", err, {
+          project,
+          recordId: item.recordId,
+          toEmail: item.toEmail,
+        });
         result.failed++;
         result.errors.push(`${item.toEmail}: ${err instanceof Error ? err.message : String(err)}`);
       }
@@ -615,7 +768,7 @@ export async function runOutreach(leadLimit = 10, project: Project = "kronos"): 
 
     await Promise.all(batch.map(async (lead) => {
       const email = lead.fields.EMAIL;
-      if (!email) { result.skipped++; return; }
+      if (!email || !isValidEmailAddress(String(email))) { result.skipped++; return; }
 
       const currentStatus = await fetchEmailStatus(config.baseId, config.tableId, lead.id);
       const normalizedStatus = currentStatus?.trim();
@@ -635,9 +788,20 @@ export async function runOutreach(leadLimit = 10, project: Project = "kronos"): 
         const copy = await generateEmailCopy(lead, project);
         await sendEmail(email, copy, config);
         await markSent(config.baseId, config.tableId, lead.id, copy.subject, copy.emailBody, project);
+        log.info("email_sent", {
+          project,
+          recordId: lead.id,
+          toEmail: email,
+          subject: copy.subject,
+        });
         result.sent++;
       } catch (err) {
         await markFailed(config.baseId, config.tableId, lead.id, project);
+        log.error("email_send_failed", err, {
+          project,
+          recordId: lead.id,
+          toEmail: email,
+        });
         result.failed++;
         result.errors.push(`${email}: ${err instanceof Error ? err.message : String(err)}`);
       }

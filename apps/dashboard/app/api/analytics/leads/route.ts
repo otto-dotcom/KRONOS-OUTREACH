@@ -5,13 +5,15 @@ export const runtime = "edge";
 const AIRTABLE_API = "https://api.airtable.com/v0";
 
 function getAirtableIds(project: string): { base: string; table: string } {
-  let base = process.env.AIRTABLE_BASE_ID ?? "";
-  let table = process.env.AIRTABLE_TABLE_ID ?? "";
   if (project === "helios") {
-    base = process.env.HELIOS_AIRTABLE_BASE_ID || base;
-    table = process.env.HELIOS_AIRTABLE_TABLE_ID || table;
+    const base  = process.env.HELIOS_AIRTABLE_BASE_ID  ?? "";
+    const table = process.env.HELIOS_AIRTABLE_TABLE_ID ?? "";
+    if (!base || !table) throw new Error("HELIOS_AIRTABLE_BASE_ID / HELIOS_AIRTABLE_TABLE_ID not configured");
+    return { base, table };
   }
-  if (!base || !table) throw new Error("AIRTABLE_BASE_ID / AIRTABLE_TABLE_ID not set");
+  const base  = process.env.AIRTABLE_BASE_ID  ?? "";
+  const table = process.env.AIRTABLE_TABLE_ID ?? "";
+  if (!base || !table) throw new Error("AIRTABLE_BASE_ID / AIRTABLE_TABLE_ID not configured");
   return { base, table };
 }
 
@@ -22,6 +24,8 @@ interface AirtableRecord {
     "company name"?: string;
     City?: string;
     EMAIL?: string;
+    Phone?: string;
+    Category?: string;
     Rank?: number;
     lead_status?: string;
     "EMAIL STATUS"?: string;
@@ -85,6 +89,8 @@ export async function GET(req: NextRequest) {
     const records = await fetchAll(apiKey, base, table);
 
     let priority = 0, medium = 0, low = 0, sent = 0, pending = 0;
+    let scored = 0, eligible = 0, booked = 0;
+    const EXCLUDE_CATS = new Set(["Financial Services", "Investment Management", "Banking"]);
 
     for (const r of records) {
       const ls = r.fields.lead_status;
@@ -93,8 +99,23 @@ export async function GET(req: NextRequest) {
       else if (ls === "low") low++;
 
       const es = r.fields["EMAIL STATUS"];
+      const rank = r.fields.Rank ?? 0;
+      const hasEmail = !!r.fields.EMAIL;
+      const url = r.fields.URL ?? "";
+      const cat = r.fields.Category ?? "";
+
+      if (rank > 0) scored++;
       if (es === "Sent") sent++;
-      else if (r.fields.EMAIL && (r.fields.Rank ?? 0) >= 5) pending++;
+      else if (hasEmail && rank >= 5) pending++;
+
+      // Eligible = has email, rank >= 5, swiss domain or no URL, not finance
+      const isSwiss = url === "" || url.includes(".ch");
+      const isFinance = EXCLUDE_CATS.has(cat);
+      if (hasEmail && rank >= 5 && isSwiss && !isFinance) eligible++;
+
+      // Booked = any terminal positive status
+      const BOOKED = new Set(["RESPOND", "CALL FIXED", "GOLD"]);
+      if (es && BOOKED.has(es)) booked++;
     }
 
     const topLeads = records
@@ -109,8 +130,8 @@ export async function GET(req: NextRequest) {
         rank: r.fields.Rank ?? 0,
         emailStatus: r.fields["EMAIL STATUS"] ?? "Pending",
         email: r.fields.EMAIL ?? "",
-        phone: (r.fields as any).Phone ?? "",
-        category: (r.fields as any).Category ?? "",
+        phone: r.fields.Phone ?? "",
+        category: r.fields.Category ?? "",
         url: r.fields.URL ?? "",
         scoreReason: r.fields.score_reason ?? "",
         leadStatus: r.fields.lead_status ?? "low",
@@ -132,7 +153,7 @@ export async function GET(req: NextRequest) {
       }));
 
     return NextResponse.json(
-      { total: records.length, by_status: { priority, medium, low }, by_email: { sent, pending }, top_leads: topLeads },
+      { total: records.length, scored, eligible, booked, by_status: { priority, medium, low }, by_email: { sent, pending }, top_leads: topLeads },
       { headers: { "Cache-Control": "s-maxage=300, stale-while-revalidate=60" } }
     );
   } catch (err: unknown) {

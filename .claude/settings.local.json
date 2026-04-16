@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(git push)",
-      "Bash(vercel --prod --yes)"
+      "Bash(vercel --prod --yes)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(grep -v \"//\")",
+      "Bash(npx vercel:*)",
+      "mcp__airtable__list_tables_for_base",
+      "Bash(npx tsc:*)",
+      "Bash(grep -v \"^$\")",
+      "mcp__airtable__get_table_schema"
     ],
     "deny": [],
     "ask": []

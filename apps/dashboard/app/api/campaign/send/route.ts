@@ -32,10 +32,6 @@ export async function POST(req: NextRequest) {
   log.api("/api/campaign/send", "POST", { count: emails.length, project });
   sending = true;
 
-  for (const item of emails) {
-    log.sent(item.recordId, item.toEmail, item.toEmail, item.wasEdited, item.wasRegenerated);
-  }
-
   try {
     const result = await sendPreviews(emails, project);
     log.info("send_complete", {

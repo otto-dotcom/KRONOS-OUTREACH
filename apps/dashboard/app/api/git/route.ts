@@ -18,6 +18,16 @@ function sanitizeCommitMessage(raw: string): string {
 }
 
 export async function POST(req: Request) {
+  if (process.env.ENABLE_GIT_API !== "true") {
+    return NextResponse.json(
+      {
+        error: "Git automation is disabled by default.",
+        hint: "Set ENABLE_GIT_API=true only if you explicitly want the server to commit and push changes.",
+      },
+      { status: 403 },
+    );
+  }
+
   try {
     const body = await req.json();
     const message = sanitizeCommitMessage(body.message ?? "");

@@ -316,35 +316,52 @@ function OverviewHero() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({ totalLeads: 0, emails: 0, opens: 0, clicks: 0, sms: 0 });
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!project) return;
+    const controller = new AbortController();
+
     async function loadSummary() {
       setLoading(true);
+      setSummaryError(null);
       try {
         const [emailRes, leadsRes, smsRes] = await Promise.all([
-          fetch(`/api/analytics/email?days=7&project=${project ?? "kronos"}`, { credentials: "include" }),
-          fetch(`/api/analytics/leads?project=${project ?? "kronos"}`, { credentials: "include" }),
-          fetch(`/api/analytics/sms?days=7&project=${project ?? "kronos"}`, { credentials: "include" }),
+          fetch(`/api/analytics/email?days=7&project=${project}`, { credentials: "include", signal: controller.signal }),
+          fetch(`/api/analytics/leads?project=${project}`, { credentials: "include", signal: controller.signal }),
+          fetch(`/api/analytics/sms?days=7&project=${project}`, { credentials: "include", signal: controller.signal }),
         ]);
 
         const [emailData, leadsData, smsData] = await Promise.all([
           emailRes.json(), leadsRes.json(), smsRes.json(),
         ]);
 
+        if (!emailRes.ok || !leadsRes.ok || !smsRes.ok) {
+          const parts = [
+            !emailRes.ok ? `email:${emailRes.status}` : null,
+            !leadsRes.ok ? `leads:${leadsRes.status}` : null,
+            !smsRes.ok ? `sms:${smsRes.status}` : null,
+          ].filter(Boolean);
+          throw new Error(`Analytics unavailable (${parts.join(", ")})`);
+        }
+
         setSummary({
           totalLeads: leadsData.total || 0,
-          emails: emailData.totals?.delivered || 0,
-          opens: Math.round((emailData.openRate || 0) * ((emailData.totals?.delivered || 0) / 100)),
-          clicks: Math.round((emailData.clickRate || 0) * ((emailData.totals?.delivered || 0) / 100)),
-          sms: smsData.total || 0,
+          emails:     emailData.totals?.delivered     ?? 0,
+          opens:      emailData.totals?.unique_opens  ?? emailData.totals?.opens  ?? 0,
+          clicks:     emailData.totals?.unique_clicks ?? emailData.totals?.clicks ?? 0,
+          sms:        smsData.total || 0,
         });
       } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
         console.error("Failed to load overview summary:", err);
+        setSummaryError(err instanceof Error ? err.message : "Failed to load overview summary");
       }
       setLoading(false);
     }
 
     loadSummary();
+    return () => controller.abort();
   }, [project]);
 
   return (
@@ -375,6 +392,11 @@ function OverviewHero() {
             </div>
           ))}
         </div>
+        {summaryError && (
+          <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[11px] text-amber-200">
+            {summaryError}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -1270,7 +1292,7 @@ const EMAIL_TEMPLATE_HTML = `<div style="font-family:Georgia,serif;font-size:15p
   <p style="margin:0 0 16px 0;">[Problem — one concrete operational pain point.]</p>
   <p style="margin:0 0 16px 0;">[Solution — KRONOS as automation consulting partner.]</p>
   <p style="margin:0 0 16px 0;"><a href="https://cal.com/kronosautomations/15min" style="color:#FF6B00;">Book a 15-min call</a><br>Or review our work first: <a href="https://kronosautomations.com" style="color:#FF6B00;">kronosautomations.com</a></p>
-  <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – KRONOS Automations<br>AI Automation Consulting · Switzerland<br><a href="mailto:otto@kronosbusiness.com" style="color:#FF6B00;text-decoration:none;">otto@kronosbusiness.com</a></p>
+  <p style="margin-top:24px;padding-top:14px;border-top:1px solid #e0e0e0;font-size:13px;color:#555555;line-height:1.6;">Otto – KRONOS Automations<br>AI Automation Consulting · Switzerland<br>otto@kronosbusiness.com</p>
 </div>`;
 
 function EmailTemplatePreview() {

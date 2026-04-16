@@ -302,6 +302,116 @@ export function ProgressStat({ label, value, max, color = "var(--accent)" }: {
   );
 }
 
+/* ── Funnel chart ────────────────────────────────────────────────────────── */
+export function FunnelChart({ stages }: {
+  stages: { label: string; value: number; sublabel?: string }[];
+}) {
+  const max = stages[0]?.value ?? 1;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {stages.map((stage, i) => {
+        const prev = stages[i - 1]?.value ?? stage.value;
+        const pct = max > 0 ? (stage.value / max) * 100 : 0;
+        const drop = i > 0 && prev > 0 ? ((prev - stage.value) / prev * 100) : 0;
+        // opacity fades: 1.0 → 0.55 across stages
+        const opacity = 1 - (i / Math.max(stages.length - 1, 1)) * 0.45;
+
+        return (
+          <div key={stage.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Label */}
+            <div style={{ width: 88, flexShrink: 0, textAlign: "right" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-2)", whiteSpace: "nowrap" }}>
+                {stage.label}
+              </span>
+            </div>
+
+            {/* Bar track */}
+            <div style={{ flex: 1, height: 28, background: "var(--surface-2)", borderRadius: 6, overflow: "hidden", position: "relative" }}>
+              <div style={{
+                width: `${Math.max(pct, stage.value > 0 ? 0.5 : 0)}%`,
+                height: "100%",
+                background: `rgba(249,115,22,${opacity})`,
+                borderRadius: 6,
+                transition: "width 0.8s cubic-bezier(0.4,0,0.2,1)",
+                position: "relative",
+              }}>
+                {/* Shimmer line */}
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0, height: 1,
+                  background: `rgba(255,255,255,${opacity * 0.2})`,
+                }} />
+              </div>
+            </div>
+
+            {/* Count */}
+            <div style={{ width: 52, flexShrink: 0, textAlign: "right" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-1)", fontFamily: "var(--font-mono)" }}>
+                {stage.value.toLocaleString()}
+              </span>
+            </div>
+
+            {/* Drop-off badge */}
+            <div style={{ width: 72, flexShrink: 0 }}>
+              {i > 0 && drop > 0 ? (
+                <span style={{
+                  fontSize: 10, fontWeight: 600, fontFamily: "var(--font-mono)",
+                  color: drop > 80 ? "#EF4444" : drop > 50 ? "#F59E0B" : "var(--text-3)",
+                }}>
+                  −{drop.toFixed(0)}%
+                </span>
+              ) : i === 0 ? (
+                <span style={{ fontSize: 10, color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>baseline</span>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Mini funnel strip (horizontal) ─────────────────────────────────────── */
+export function MiniFunnelStrip({ stages, onClick }: {
+  stages: { label: string; value: number }[];
+  onClick?: () => void;
+}) {
+  const max = stages[0]?.value ?? 1;
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "stretch", gap: 2,
+        background: "var(--surface-2)", border: "1px solid var(--border)",
+        borderRadius: 10, padding: "10px 14px", cursor: onClick ? "pointer" : "default",
+        transition: "border-color 0.15s",
+      }}
+      onMouseEnter={e => onClick && ((e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)")}
+      onMouseLeave={e => onClick && ((e.currentTarget as HTMLElement).style.borderColor = "var(--border)")}
+    >
+      {stages.map((s, i) => {
+        const pct = max > 0 ? (s.value / max) * 100 : 0;
+        const opacity = 1 - (i / Math.max(stages.length - 1, 1)) * 0.5;
+        return (
+          <div key={s.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{ width: "100%", height: 6, background: "var(--surface-3)", borderRadius: 3, overflow: "hidden" }}>
+              <div style={{
+                width: `${pct}%`, height: "100%",
+                background: `rgba(249,115,22,${opacity})`,
+                borderRadius: 3, transition: "width 0.7s ease",
+              }} />
+            </div>
+            <span style={{ fontSize: 9, color: "var(--text-3)", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
+              {s.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Swiss badge ─────────────────────────────────────────────────────────── */
 export function SwissBadge() {
   return (
