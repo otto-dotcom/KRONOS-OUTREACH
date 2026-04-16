@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireProjectFromQuery } from "@/lib/project-scope";
 
 interface TwilioMessage {
   status: string;
   date_sent: string;
   direction: string;
+  from: string;
   to: string;
   body: string;
   error_code: number | null;
@@ -20,6 +22,21 @@ export async function GET(req: NextRequest) {
 
   if (!sid || !token) {
     return NextResponse.json({ error: "Twilio credentials not configured" }, { status: 500 });
+  }
+
+  const project = requireProjectFromQuery(req.nextUrl.searchParams.get("project"));
+  if (!project) {
+    return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
+  }
+
+  const senderNumber = project === "helios"
+    ? process.env.HELIOS_TWILIO_FROM
+    : process.env.KRONOS_TWILIO_FROM;
+  if (!senderNumber) {
+    return NextResponse.json(
+      { error: `Missing sender mapping for ${project}. Configure ${project === "helios" ? "HELIOS_TWILIO_FROM" : "KRONOS_TWILIO_FROM"}.` },
+      { status: 500 },
+    );
   }
 
   const days = Math.min(Math.max(Number(req.nextUrl.searchParams.get("days")) || 30, 1), 365);
@@ -48,9 +65,11 @@ export async function GET(req: NextRequest) {
     const allMessages: TwilioMessage[] = data.messages || [];
 
     // Only count outbound messages
-    const messages = allMessages.filter(
-      (m: TwilioMessage) => m.direction === "outbound-api" || m.direction === "outbound-call"
-    );
+    const messages = allMessages.filter((m: TwilioMessage) => {
+      const outbound = m.direction === "outbound-api" || m.direction === "outbound-call";
+      const fromMatches = (m.from ?? "").trim() === senderNumber;
+      return outbound && fromMatches;
+    });
 
     const totals = { sent: 0, delivered: 0, failed: 0, undelivered: 0, queued: 0 };
     const dailyMap: Record<string, { sent: number; delivered: number; failed: number }> = {};
@@ -114,6 +133,7 @@ export async function GET(req: NextRequest) {
       : "0";
 
     return NextResponse.json({
+      project,
       totals,
       deliveryRate,
       total: messages.length,

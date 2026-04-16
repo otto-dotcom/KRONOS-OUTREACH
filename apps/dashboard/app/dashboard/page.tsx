@@ -519,7 +519,7 @@ function EmailCard({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          project: project ?? "kronos",
+          project,
           company: email.lead.company,
           subject: email.subject,
           body: email.emailBody,
@@ -1155,7 +1155,8 @@ function LeadsAnalytics({ onSelectLead }: { onSelectLead: (lead: LeadInfo) => vo
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/analytics/leads?project=${project ?? "kronos"}`, { credentials: "include" });
+      if (!project) throw new Error("Project scope is not selected.");
+      const res = await fetch(`/api/analytics/leads?project=${project}`, { credentials: "include" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setData(json);
@@ -1450,7 +1451,8 @@ function EmailAnalytics() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/analytics/email?days=${days}&project=${project ?? "kronos"}`, { credentials: "include" });
+      if (!project) throw new Error("Project scope is not selected.");
+      const res = await fetch(`/api/analytics/email?days=${days}&project=${project}`, { credentials: "include" });
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json.error);
@@ -1548,7 +1550,8 @@ function SmsAnalytics() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/analytics/sms?days=${days}&project=${project ?? "kronos"}`, { credentials: "include" });
+      if (!project) throw new Error("Project scope is not selected.");
+      const res = await fetch(`/api/analytics/sms?days=${days}&project=${project}`, { credentials: "include" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setData(json);
@@ -1679,7 +1682,7 @@ function DashboardPageInner() {
   return (
     <div className="space-y-6">
       <OverviewHero />
-      <CampaignLauncher onSelectLead={setSelectedLead} project={project ?? "kronos"} />
+      {project ? <CampaignLauncher onSelectLead={setSelectedLead} project={project} /> : null}
       <LeadsAnalytics onSelectLead={setSelectedLead} />
       <div id="analytics-panel" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <EmailAnalytics />

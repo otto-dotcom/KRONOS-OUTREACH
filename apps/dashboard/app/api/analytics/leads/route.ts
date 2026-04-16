@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireProjectFromQuery } from "@/lib/project-scope";
 
 export const runtime = "edge";
 
@@ -82,7 +83,10 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const project = searchParams.get("project") ?? "kronos";
+  const project = requireProjectFromQuery(searchParams.get("project"));
+  if (!project) {
+    return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
+  }
   const { base, table } = getAirtableIds(project);
 
   try {

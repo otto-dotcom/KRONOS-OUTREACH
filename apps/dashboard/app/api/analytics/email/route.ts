@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireProjectFromQuery } from "@/lib/project-scope";
 
 export const runtime = "nodejs";
 
@@ -9,7 +10,10 @@ export async function GET(req: NextRequest) {
   }
 
   const days = Math.min(Math.max(Number(req.nextUrl.searchParams.get("days")) || 7, 1), 365);
-  const project = req.nextUrl.searchParams.get("project") ?? "kronos";
+  const project = requireProjectFromQuery(req.nextUrl.searchParams.get("project"));
+  if (!project) {
+    return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
+  }
   const tag = project === "helios" ? "HELIOS_OUTREACH" : "KRONOS_OUTREACH";
   
   const endDate = new Date();

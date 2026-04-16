@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendPreviews, SendItem, type Project } from "@/lib/outreach";
 import { log } from "@/lib/logger";
+import { requireProjectFromBody } from "@/lib/project-scope";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -28,7 +29,10 @@ export async function POST(req: NextRequest) {
   }
 
   const emails = body.emails as SendItem[];
-  const project: Project = body.project === "helios" ? "helios" : "kronos";
+  const project = requireProjectFromBody(body as Record<string, unknown>) as Project | null;
+  if (!project) {
+    return NextResponse.json({ error: "Missing or invalid project in body. Use project=kronos|helios." }, { status: 400 });
+  }
   log.api("/api/campaign/send", "POST", { count: emails.length, project });
   sending = true;
 

@@ -38,7 +38,10 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const proj = project ?? "kronos";
+      if (!project) {
+        throw new Error("Project scope is not selected.");
+      }
+      const proj = project;
       const fetchUrl = (path: string) =>
         fetch(`${path}?days=${days}&project=${proj}`, { credentials: "include", signal });
 

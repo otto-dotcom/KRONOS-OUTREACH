@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-type Project = "kronos" | "helios";
+import { requireProjectFromQuery } from "@/lib/project-scope";
 
 export const runtime = "nodejs";
 
@@ -10,7 +9,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "BREVO_API_KEY not configured" }, { status: 500 });
   }
 
-  const project = (req.nextUrl.searchParams.get("project") as Project) ?? "kronos";
+  const project = requireProjectFromQuery(req.nextUrl.searchParams.get("project"));
+  if (!project) {
+    return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
+  }
   const tag = project === "helios" ? "HELIOS_OUTREACH" : "KRONOS_OUTREACH";
   const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get("limit")) || 20, 1), 100);
 

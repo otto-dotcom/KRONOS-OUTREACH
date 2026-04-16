@@ -75,7 +75,10 @@ export default function FunnelPage() {
     setLoading(true);
     setError(null);
     try {
-      const proj = project ?? "kronos";
+      if (!project) {
+        throw new Error("Project scope is not selected.");
+      }
+      const proj = project;
       const [leadsRes, emailRes] = await Promise.all([
         fetch(`/api/analytics/leads?project=${proj}`, { credentials: "include", signal }),
         fetch(`/api/analytics/email?days=365&project=${proj}`, { credentials: "include", signal }),

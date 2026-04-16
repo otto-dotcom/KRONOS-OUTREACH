@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSentArchive, Project } from "@/lib/outreach";
+import { requireProjectFromQuery } from "@/lib/project-scope";
 
 export const runtime = "nodejs";
 
@@ -51,7 +52,10 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const project = (searchParams.get("project") as Project) ?? "kronos";
+  const project = requireProjectFromQuery(searchParams.get("project")) as Project | null;
+  if (!project) {
+    return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
+  }
   const tag = project === "helios" ? "HELIOS_OUTREACH" : "KRONOS_OUTREACH";
 
   try {

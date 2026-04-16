@@ -14,11 +14,12 @@ export default function AutomationsPage() {
     setError(null);
     setLastResult(null);
     try {
+      if (!project) throw new Error("Project scope is not selected.");
       const res = await fetch("/api/campaign/launch", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project: project ?? "kronos", leadLimit: 10 }),
+        body: JSON.stringify({ project, leadLimit: 10 }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to trigger");

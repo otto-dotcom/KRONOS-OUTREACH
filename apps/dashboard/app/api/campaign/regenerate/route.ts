@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateEmailCopy, AirtableRecord, type Project } from "@/lib/outreach";
 import { log } from "@/lib/logger";
+import { requireProjectFromBody } from "@/lib/project-scope";
 
 export const maxDuration = 60;
 
@@ -20,7 +21,10 @@ export async function POST(req: NextRequest) {
   }
 
   const mode = body.mode === "plain" ? "plain" : "standard";
-  const project: Project = body.project === "helios" ? "helios" : "kronos";
+  const project = requireProjectFromBody(body as Record<string, unknown>) as Project | null;
+  if (!project) {
+    return NextResponse.json({ error: "Missing or invalid project in body. Use project=kronos|helios." }, { status: 400 });
+  }
   log.api("/api/campaign/regenerate", "POST", { recordId: body.recordId, mode, project });
   log.regen(body.recordId, String(body.leadData["company name"] ?? ""), mode);
 

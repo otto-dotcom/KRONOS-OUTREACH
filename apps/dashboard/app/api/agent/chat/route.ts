@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/logger";
+import { parseProject, type Project } from "@/lib/project-scope";
 import * as fs from "fs/promises";
 import * as path from "path";
 
@@ -735,6 +736,14 @@ function projectFilters(project: string) {
   };
 }
 
+function enforceProjectScope(args: Record<string, unknown>, activeProject: Project): Project {
+  const requested = parseProject(args.project);
+  if (requested && requested !== activeProject) {
+    throw new Error(`Project override blocked: active=${activeProject}, requested=${requested}`);
+  }
+  return activeProject;
+}
+
 async function airtableGet(url: string) {
   const key = process.env.AIRTABLE_API_KEY ?? process.env.AIRTABLE_PAT ?? "";
   const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` } });
@@ -1075,7 +1084,7 @@ async function toolBrevoGetSmtpEvents(email?: string, limit = 50, startDate?: st
   }
 }
 
-async function toolBrevoSendTransactional(toEmail: string, toName: string, subject: string, htmlContent: string, project = "kronos") {
+async function toolBrevoSendTransactional(toEmail: string, toName: string, subject: string, htmlContent: string, project: Project) {
   if (!toEmail || !toEmail.includes("@")) return { error: "Invalid or missing to_email address" };
   if (!subject.trim()) return { error: "subject is required" };
   if (!htmlContent.trim()) return { error: "html_content is required" };
@@ -1153,9 +1162,11 @@ async function toolSendSms(to: string, body: string, project: string) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   if (!accountSid || !authToken) return { error: "Twilio credentials not configured" };
+  const from = project === "helios" ? process.env.HELIOS_TWILIO_FROM : process.env.KRONOS_TWILIO_FROM;
+  if (!from) return { error: `Missing ${project === "helios" ? "HELIOS_TWILIO_FROM" : "KRONOS_TWILIO_FROM"}` };
   try {
     log.info("tool_send_sms", { project, to, bodyLength: body.length });
-    const params = new URLSearchParams({ To: to, From: "+12135836915", Body: body });
+    const params = new URLSearchParams({ To: to, From: from, Body: body });
     const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
       method: "POST",
       headers: {
@@ -1203,36 +1214,42 @@ async function toolReadLogs(limit = 20) {
 
 // ─── TOOL ROUTER ───────────────────────────────────────────────────────────────
 
-async function executeTool(name: string, args: Record<string, unknown>, baseUrl: string): Promise<unknown> {
+async function executeTool(name: string, args: Record<string, unknown>, baseUrl: string, activeProject: Project): Promise<unknown> {
   const startMs = Date.now();
   let result: unknown;
+  let scopedProject: Project;
+  try {
+    scopedProject = enforceProjectScope(args, activeProject);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Project scope violation" };
+  }
 
   switch (name) {
     // Pipeline
-    case "get_leads_stats":           result = await toolGetLeadsStats(String(args.project ?? "kronos")); break;
-    case "get_recent_sent":           result = await toolGetRecentSent(String(args.project ?? "kronos"), Number(args.limit ?? 10)); break;
-    case "search_leads":              result = await toolSearchLeads(String(args.project ?? "kronos"), String(args.query ?? ""), Number(args.limit ?? 10)); break;
-    case "airtable_list_records":     result = await toolAirtableListRecords(String(args.project ?? "kronos"), args.filter as string | undefined, args.sort_field as string | undefined, args.sort_dir as string | undefined, args.fields as string[] | undefined, Number(args.limit ?? 20)); break;
-    case "airtable_update_lead":      result = await toolAirtableUpdateLead(String(args.project ?? "kronos"), String(args.record_id ?? ""), args.fields as Record<string, unknown> ?? {}); break;
-    case "airtable_create_lead":      result = await toolAirtableCreateLead(String(args.project ?? "kronos"), args.fields as Record<string, unknown> ?? {}); break;
+    case "get_leads_stats":           result = await toolGetLeadsStats(scopedProject); break;
+    case "get_recent_sent":           result = await toolGetRecentSent(scopedProject, Number(args.limit ?? 10)); break;
+    case "search_leads":              result = await toolSearchLeads(scopedProject, String(args.query ?? ""), Number(args.limit ?? 10)); break;
+    case "airtable_list_records":     result = await toolAirtableListRecords(scopedProject, args.filter as string | undefined, args.sort_field as string | undefined, args.sort_dir as string | undefined, args.fields as string[] | undefined, Number(args.limit ?? 20)); break;
+    case "airtable_update_lead":      result = await toolAirtableUpdateLead(scopedProject, String(args.record_id ?? ""), args.fields as Record<string, unknown> ?? {}); break;
+    case "airtable_create_lead":      result = await toolAirtableCreateLead(scopedProject, args.fields as Record<string, unknown> ?? {}); break;
     // Brevo Analytics
     case "get_email_analytics":       result = await toolGetEmailAnalytics(Number(args.days ?? 30)); break;
     case "get_brevo_logs":            result = await toolGetBrevoLogs(args.email as string | undefined, args.tag as string | undefined); break;
-    case "get_database_engagement":   result = await toolGetDatabaseEngagement(String(args.project ?? "kronos"), baseUrl); break;
+    case "get_database_engagement":   result = await toolGetDatabaseEngagement(scopedProject, baseUrl); break;
     case "brevo_get_contact":         result = await toolBrevoGetContact(String(args.email ?? "")); break;
     case "brevo_list_contacts":       result = await toolBrevoListContacts(Number(args.limit ?? 25), Number(args.offset ?? 0), args.list_id as number | undefined); break;
     case "brevo_get_campaigns":       result = await toolBrevoGetCampaigns(Number(args.limit ?? 10), String(args.type ?? "classic")); break;
     case "brevo_get_campaign_report": result = await toolBrevoGetCampaignReport(Number(args.campaign_id ?? 0)); break;
     case "brevo_get_smtp_events":     result = await toolBrevoGetSmtpEvents(args.email as string | undefined, Number(args.limit ?? 50), args.start_date as string | undefined, args.end_date as string | undefined); break;
-    case "brevo_send_transactional":  result = await toolBrevoSendTransactional(String(args.to_email ?? ""), String(args.to_name ?? ""), String(args.subject ?? ""), String(args.html_content ?? ""), String(args.project ?? "kronos")); break;
+    case "brevo_send_transactional":  result = await toolBrevoSendTransactional(String(args.to_email ?? ""), String(args.to_name ?? ""), String(args.subject ?? ""), String(args.html_content ?? ""), scopedProject); break;
     // Campaign Ops
-    case "preview_campaign":          result = await toolPreviewCampaign(String(args.project ?? "kronos"), baseUrl, Number(args.leadLimit ?? 5)); break;
-    case "launch_campaign":           result = await toolLaunchCampaign(String(args.project ?? "kronos"), baseUrl, Number(args.leadLimit ?? 10)); break;
-    case "update_email_prompt":       result = await toolUpdatePrompt(String(args.project ?? "kronos"), "email_prompt", String(args.prompt ?? ""), baseUrl); break;
-    case "update_sms_prompt":         result = await toolUpdatePrompt(String(args.project ?? "kronos"), "sms_prompt", String(args.prompt ?? ""), baseUrl); break;
-    case "send_sms":                  result = await toolSendSms(String(args.to ?? ""), String(args.body ?? ""), String(args.project ?? "kronos")); break;
+    case "preview_campaign":          result = await toolPreviewCampaign(scopedProject, baseUrl, Number(args.leadLimit ?? 5)); break;
+    case "launch_campaign":           result = await toolLaunchCampaign(scopedProject, baseUrl, Number(args.leadLimit ?? 10)); break;
+    case "update_email_prompt":       result = await toolUpdatePrompt(scopedProject, "email_prompt", String(args.prompt ?? ""), baseUrl); break;
+    case "update_sms_prompt":         result = await toolUpdatePrompt(scopedProject, "sms_prompt", String(args.prompt ?? ""), baseUrl); break;
+    case "send_sms":                  result = await toolSendSms(String(args.to ?? ""), String(args.body ?? ""), scopedProject); break;
     // Memory & System
-    case "save_to_memory":            result = await toolSaveToMemory(String(args.project ?? "kronos"), String(args.company ?? ""), String(args.subject ?? ""), String(args.body ?? ""), args.notes as string | undefined); break;
+    case "save_to_memory":            result = await toolSaveToMemory(scopedProject, String(args.company ?? ""), String(args.subject ?? ""), String(args.body ?? ""), args.notes as string | undefined); break;
     case "read_logs":                 result = await toolReadLogs(Number(args.limit ?? 20)); break;
     default: result = { error: `Unknown tool: ${name}` };
   }
@@ -1256,8 +1273,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "OPENROUTER_API_KEY not configured" }, { status: 500 });
   }
 
-  const body = await req.json() as { messages: Array<{ role: string; content: string }>; project?: string };
-  const project = body.project ?? "kronos";
+  let body: { messages: Array<{ role: string; content: string }>; project?: string };
+  try {
+    body = await req.json() as { messages: Array<{ role: string; content: string }>; project?: string };
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const project = parseProject(body.project);
+  if (!project) {
+    return NextResponse.json({ error: "Missing or invalid project in body. Use project=kronos|helios." }, { status: 400 });
+  }
+  if (!Array.isArray(body.messages)) {
+    return NextResponse.json({ error: "messages must be an array" }, { status: 400 });
+  }
   const appBaseUrl = getAppBaseUrl(req);
 
   log.api("/api/agent/chat", "POST", { project, messageCount: body.messages.length });
@@ -1344,7 +1372,7 @@ export async function POST(req: NextRequest) {
               return { role: "tool", tool_call_id: tc.id, name: tc.function.name, content: JSON.stringify({ error: "Malformed tool arguments" }) };
             }
 
-            const result = await executeTool(tc.function.name, args, appBaseUrl);
+            const result = await executeTool(tc.function.name, args, appBaseUrl, project);
             const hasError = !!(result as Record<string, unknown>)?.error;
             log.info("tool_execution_complete", { tool: tc.function.name, hasError, project });
             await send({ type: "tool_end", tool: tc.function.name, ok: !hasError });

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSentArchive, Project } from "@/lib/outreach";
+import { requireProjectFromQuery } from "@/lib/project-scope";
 
 export async function GET(req: NextRequest) {
   try {
-    const project = (req.nextUrl.searchParams.get("project") as Project) ?? "kronos";
+    const project = requireProjectFromQuery(req.nextUrl.searchParams.get("project")) as Project | null;
+    if (!project) {
+      return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
+    }
     const archive = await fetchSentArchive(50, project);
     const history = archive.map((rec) => ({
       id: rec.id,

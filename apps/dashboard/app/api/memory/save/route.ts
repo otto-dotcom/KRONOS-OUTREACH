@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { log } from "@/lib/logger";
+import { requireProjectFromQuery } from "@/lib/project-scope";
 import * as fs from "fs/promises";
 import * as path from "path";
 
@@ -98,11 +99,9 @@ ${(notes ?? "Manually saved from email review page.").slice(0, 2000)}
  * List saved memory entries for a project
  */
 export async function GET(req: NextRequest) {
-  const project = req.nextUrl.searchParams.get("project") ?? "kronos";
+  const project = requireProjectFromQuery(req.nextUrl.searchParams.get("project"));
 
-  if (!ALLOWED_PROJECTS.has(project)) {
-    return NextResponse.json({ error: "Invalid project" }, { status: 400 });
-  }
+  if (!project || !ALLOWED_PROJECTS.has(project)) return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
 
   const memoryDir = safeMemoryPath(project);
   if (!memoryDir) {

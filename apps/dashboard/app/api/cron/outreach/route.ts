@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runOutreach } from "@/lib/outreach";
+import { parseProject } from "@/lib/project-scope";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -28,9 +29,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await runOutreach(10);
+    const cronProject = parseProject(process.env.CRON_PROJECT);
+    if (!cronProject) {
+      return NextResponse.json({ error: "CRON_PROJECT must be set to kronos or helios" }, { status: 500 });
+    }
+
+    const result = await runOutreach(10, cronProject);
     console.log("[cron/outreach]", result);
-    return NextResponse.json({ ok: true, ...result });
+    return NextResponse.json({ ok: true, project: cronProject, ...result });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[cron/outreach] fatal:", message);

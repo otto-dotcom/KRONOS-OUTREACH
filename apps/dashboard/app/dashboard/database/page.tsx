@@ -563,11 +563,11 @@ export default function DatabasePage() {
   return (
     <>
       {/* Company modal */}
-      {selected && (
+      {selected && project && (
         <CompanyModal 
           row={selected} 
           onClose={() => setSelected(null)} 
-          project={project || "kronos"}
+          project={project}
           brandColor={brandColor}
         />
       )}

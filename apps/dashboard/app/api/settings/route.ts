@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireProjectFromQuery } from "@/lib/project-scope";
 
 const AIRTABLE_API = "https://api.airtable.com/v0";
 
@@ -18,10 +19,8 @@ function getAirtableConfig(project: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const project = req.nextUrl.searchParams.get("project") ?? "kronos";
-  if (!new Set(["kronos", "helios"]).has(project)) {
-    return NextResponse.json({ error: "Invalid project" }, { status: 400 });
-  }
+  const project = requireProjectFromQuery(req.nextUrl.searchParams.get("project"));
+  if (!project) return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
   const { baseId, apiKey } = getAirtableConfig(project);
   
   if (!baseId || !apiKey) {
@@ -61,12 +60,10 @@ const ALLOWED_PROJECTS = new Set(["kronos", "helios"]);
 const MAX_PROMPT_LENGTH = 8000;
 
 export async function POST(req: NextRequest) {
-  const project = req.nextUrl.searchParams.get("project") ?? "kronos";
+  const project = requireProjectFromQuery(req.nextUrl.searchParams.get("project"));
 
   // Validate project scope
-  if (!ALLOWED_PROJECTS.has(project)) {
-    return NextResponse.json({ error: "Invalid project" }, { status: 400 });
-  }
+  if (!project || !ALLOWED_PROJECTS.has(project)) return NextResponse.json({ error: "Missing or invalid project. Use ?project=kronos|helios" }, { status: 400 });
 
   const { baseId, apiKey } = getAirtableConfig(project);
 
