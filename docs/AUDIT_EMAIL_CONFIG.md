@@ -1,13 +1,16 @@
 # KRONOS Email Configuration Audit
 **Date:** 2026-04-20  
 **Scope:** KRONOS Outreach Email Workflow, Settings Architecture, Model Tuning  
-**Status:** Complete Audit Report
+**Status:** Complete Audit Report  
+**Airtable Schema:** appLriEwWldpPTMPg (Swiss Real Estate)
+
+> **Note:** This audit documents the current KRONOS configuration. Field names (e.g., "EMAIL STATUS" vs "STATUS", "Rank" vs "Score") are schema-specific to your Airtable base. Adjust all references to match your actual Airtable field names.
 
 ---
 
 ## Executive Summary
 
-The KRONOS email outreach system is production-ready with well-structured configuration management. This audit documents:
+The KRONOS email outreach system is well-structured with comprehensive configuration management. This audit documents:
 - **Workflow Architecture**: 11-node n8n workflow with AI-driven email generation
 - **Settings Management**: Airtable-based configuration table with copy/backup requirements
 - **Model Tuning**: GPT-4o-mini with Swiss RE-specific prompt engineering
