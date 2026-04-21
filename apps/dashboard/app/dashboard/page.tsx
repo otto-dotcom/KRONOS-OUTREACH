@@ -162,8 +162,8 @@ function RankMeter({ rank }: { rank: number | string }) {
 function SidebarItem({ label, value, glow }: { label: string; value: string; glow?: boolean }) {
   return (
     <div className={`p-4 border-l-2 ${glow ? "border-l-k bg-k/5" : "border-l-white/10"}`}>
-      <div className="text-[7px] tracking-[0.2em] text-[#555] uppercase font-pixel mb-1">{label}</div>
-      <div className={`text-[9px] font-pixel tracking-widest uppercase ${glow ? "text-k" : "text-[#AAA]"}`}>{value}</div>
+      <div className="text-[7px] tracking-[0.2em] text-[var(--text-2)] uppercase font-pixel mb-1">{label}</div>
+      <div className={`text-[9px] font-pixel tracking-widest uppercase ${glow ? "text-k" : "text-[var(--text-2)]"}`}>{value}</div>
     </div>
   );
 }
@@ -172,8 +172,8 @@ function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
   const initials = (lead.name || "UN").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
-      <div className="card w-full max-w-6xl h-fit max-h-[92vh] flex flex-col md:flex-row overflow-hidden relative">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="lead-modal-title">
+      <div className="card w-full max-h-[92vh] flex flex-col md:flex-row overflow-hidden relative" style={{ maxWidth: "min(1200px, 95vw)" }}>
         
         {/* Sidebar: Profile Summary */}
         <div className="w-full md:w-80 border-r border-white/5 p-10 flex flex-col shrink-0">
@@ -181,13 +181,13 @@ function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
             <div className="w-20 h-20 border border-primary/20 flex items-center justify-center text-2xl font-bold text-primary mb-6">
               {initials}
             </div>
-            <h2 className="text-xl font-bold text-white mb-2 tracking-tight uppercase">{lead.company || "X_AGENCY"}</h2>
-            <p className="text-[#666] text-[10px] tracking-[0.2em] font-medium uppercase">{lead.name || "UNKNOWN_OP"}</p>
+            <h2 id="lead-modal-title" className="text-xl font-bold text-white mb-2 tracking-tight uppercase">{lead.company || "X_AGENCY"}</h2>
+            <p className="text-[var(--text-2)] text-[10px] tracking-[0.2em] font-medium uppercase">{lead.name || "UNKNOWN_OP"}</p>
           </div>
           
           <div className="space-y-8 flex-1">
             <div className="flex flex-col items-center p-6 border border-white/5 bg-white/5">
-              <span className="text-[8px] tracking-[0.2em] text-[#444] uppercase mb-4 font-bold">Intensity</span>
+              <span className="text-[8px] tracking-[0.2em] text-[var(--text-3)] uppercase mb-4 font-bold">Intensity</span>
               <RankMeter rank={lead.rank} />
               <div className="flex items-baseline gap-2 mt-4">
                 <span className="text-3xl font-cinzel text-k">{lead.rank}</span>
@@ -202,9 +202,9 @@ function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
             </div>
           </div>
 
-          <button 
-            onClick={onClose} 
-            className="mt-10 py-4 bg-white/5 border border-white/10 text-[9px] tracking-[0.3em] text-[#666] hover:text-white hover:border-white transition-all font-bold uppercase"
+          <button
+            onClick={onClose}
+            className="mt-10 py-4 bg-white/5 border border-white/10 text-[9px] tracking-[0.3em] text-[var(--text-2)] hover:text-white hover:border-white transition-all font-bold uppercase focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
           >
             Close Terminal
           </button>
@@ -222,8 +222,8 @@ function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
                </p>
                {lead.headline && (
                  <div className="mt-8 pt-6 border-t border-white/5">
-                   <span className="text-[8px] tracking-[0.2em] text-[#444] font-bold uppercase block mb-2">Context</span>
-                   <p className="text-[11px] text-[#666] leading-relaxed">{lead.headline}</p>
+                   <span className="text-[8px] tracking-[0.2em] text-[var(--text-3)] font-bold uppercase block mb-2">Context</span>
+                   <p className="text-[11px] text-[var(--text-2)] leading-relaxed">{lead.headline}</p>
                  </div>
                )}
             </div>
@@ -239,10 +239,10 @@ function LeadModal({ lead, onClose }: { lead: LeadInfo; onClose: () => void }) {
                   <DetailRow label="Direct Phone" value={lead.phone || "N/A"} />
                   <div className="flex gap-4 pt-2">
                     {lead.linkedin && (
-                      <a href={lead.linkedin} target="_blank" rel="noreferrer" className="text-[10px] text-[#0077b5] border border-[#0077b5]/30 px-3 py-1 hover:bg-[#0077b5]/10 transition-all font-bold">LINKEDIN</a>
+                      <a href={lead.linkedin} target="_blank" rel="noreferrer" className="text-[10px] text-[#3B82F6] border border-[#3B82F6]/30 px-3 py-1 hover:bg-[#3B82F6]/10 transition-all font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">LINKEDIN</a>
                     )}
                     {lead.instagram && (
-                      <a href={lead.instagram} target="_blank" rel="noreferrer" className="text-[10px] text-[#e1306c] border border-[#e1306c]/30 px-3 py-1 hover:bg-[#e1306c]/10 transition-all font-bold">INSTAGRAM</a>
+                      <a href={lead.instagram} target="_blank" rel="noreferrer" className="text-[10px] text-[#EC4899] border border-[#EC4899]/30 px-3 py-1 hover:bg-[#EC4899]/10 transition-all font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">INSTAGRAM</a>
                     )}
                   </div>
                 </div>

@@ -1,0 +1,195 @@
+{
+  "workflow_name": "HELIOS_OUTREACH_EMAIL",
+  "version": "1.0",
+  "last_updated": "2026-04-20",
+  "audit_document": "docs/AUDIT_EMAIL_CONFIG_HELIOS.md",
+  "project": "Italian Solar Energy Outreach",
+  "settings": {
+    "airtable": {
+      "baseId": "appyqUHfwK33eisQu",
+      "tableId": "tbl07Ub0WeVHOnujP",
+      "filterFormula": "AND({EMAIL} != \"\", {STATUS} != \"Sent\", {STATUS} != \"Processing\", {Score} >= 7)",
+      "defaultLeadLimit": 5,
+      "scoreThreshold": 7,
+      "notes": "Higher threshold (7) than KRONOS (5) due to competitive Italian solar market",
+      "requiredFields": [
+        "FULL NAME",
+        "EMAIL",
+        "company name",
+        "Region",
+        "Score",
+        "Company Type",
+        "STATUS",
+        "EMAIL_SUBJECT",
+        "SENT MAIL"
+      ],
+      "statusValues": {
+        "pending": "Not yet processed",
+        "processing": "Currently being handled",
+        "sent": "Outreach complete",
+        "failed": "Error in delivery"
+      }
+    },
+    "brevo": {
+      "senderEmail": "otto@heliosbusiness.it",
+      "senderName": "Otto - HELIOS",
+      "tag": "HELIOS_OUTREACH",
+      "apiUrl": "https://api.brevo.com/v3/smtp/email",
+      "bccEmail": "otto@heliosbusiness.it",
+      "contentType": "application/json",
+      "warmupPlan": {
+        "week1": "5 emails/day",
+        "week2": "10 emails/day",
+        "week3": "20 emails/day",
+        "rationale": "New .it domain requires gradual warm-up for deliverability"
+      },
+      "complianceNotes": {
+        "agcom": "AGCOM email regulation compliance required",
+        "unsubscribe": "Mandatory unsubscribe link for bulk emails",
+        "company_registration": "Consider adding Italian company number in signature"
+      }
+    },
+    "openrouter": {
+      "baseURL": "https://openrouter.ai/api/v1",
+      "model": "openai/gpt-4o-mini",
+      "rationale": "Handles Italian text well; cost-effective for volume"
+    },
+    "llm_tuning": {
+      "temperature": {
+        "current": 0.5,
+        "rationale": "Consistency for technical solar market (higher than KRONOS's optional 0.6)",
+        "testing": "Monitor first 20 emails; if < 10% open rate, increase to 0.6"
+      },
+      "maxTokens": {
+        "current": 300,
+        "rationale": "Enforce 4-5 sentence constraint (same as KRONOS)"
+      },
+      "outputFormat": "JSON structured {subject, emailBody}",
+      "languageHandling": "Italian-first if lead is Italy-based; bilingual support"
+    },
+    "lead_filtering": {
+      "minScore": 7,
+      "statusExclusions": [
+        "Sent",
+        "Processing"
+      ],
+      "emailRequired": true,
+      "companyType": [
+        "Installer",
+        "Distributor",
+        "Energy Firm"
+      ],
+      "notes": "Company Type affects tone (installer = technical, distributor = business, energy firm = enterprise)"
+    },
+    "workflow_defaults": {
+      "leadLimit": 5,
+      "errorAlertEmail": "consulting@kronosautomations.com",
+      "calendarLink": "https://cal.com/otto-helios/15min",
+      "webhookPath": "helios-outreach",
+      "langPriority": "Italian for Italian leads, English fallback"
+    },
+    "email_prompt": {
+      "version": "1.0",
+      "lastModified": "2026-04-20",
+      "systemMessage": "You are a cold email specialist writing on behalf of HELIOS Energy Solutions.",
+      "targetMarket": "Italian solar installation companies and energy firms",
+      "contentProtocol": {
+        "hook": "Reference specific achievement or project in their region (Italian context)",
+        "problem": "Lead generation cost, seasonal revenue, long sales cycles",
+        "solution": "Automate first contact so installers focus on closing deals, not hunting",
+        "cta": "Low-friction close with calendar link"
+      },
+      "toneRequirements": {
+        "style": "Professional, warm, conversational",
+        "forbidden": [
+          "buzzwords: scalable/sinergico/infrastruttura",
+          "ALL CAPS",
+          "exclamation marks"
+        ]
+      },
+      "languageNotes": {
+        "primary": "Italian for Italy-based leads",
+        "secondary": "English with Italian greeting",
+        "greetings": {
+          "italian": "Gentile {Name},",
+          "english": "Hello {Name},"
+        }
+      },
+      "htmlBranding": {
+        "logoUrl": "https://heliosenergy.it/logo.png",
+        "accentColor": "#FFA500",
+        "ctaLink": "https://cal.com/otto-helios/15min",
+        "signature": "Otto - HELIOS Energy Solutions"
+      }
+    }
+  },
+  "data_isolation": {
+    "critical": "HELIOS and KRONOS must have ZERO data crossover",
+    "kronos_base": "appLriEwWldpPTMPg (Switzerland)",
+    "helios_base": "appyqUHfwK33eisQu (Italy)",
+    "enforcement": "Every n8n workflow must query only its own base ID"
+  },
+  "credentials_mapping": {
+    "status": "REQUIRED - Must map before deployment",
+    "airtable": {
+      "node": "Get Leads from Airtable + Update Airtable nodes (HELIOS)",
+      "credentialType": "airtableTokenApi",
+      "baseId": "appyqUHfwK33eisQu",
+      "action": "Create separate credential for HELIOS Airtable"
+    },
+    "openrouter": {
+      "node": "OpenRouter Email (llm-email)",
+      "credentialType": "openAiApi",
+      "action": "Use existing credential or create HELIOS-specific one"
+    },
+    "brevo": {
+      "node": "Send Email via Brevo + Error Alert nodes",
+      "credentialType": "httpHeaderAuth",
+      "action": "Create separate credential for HELIOS Brevo API key"
+    }
+  },
+  "setup_checklist": {
+    "airtable_prepared": [
+      "HELIOS base exists (appyqUHfwK33eisQu)",
+      "Leads table created with required fields",
+      "Settings table created (Key, Value)",
+      "Minimum 5 leads with Score >= 7"
+    ],
+    "brevo_configured": [
+      "otto@heliosbusiness.it verified in Brevo",
+      "SPF/DKIM/DMARC configured for heliosbusiness.it",
+      "API key created with SMTP permission",
+      "Warm-up plan: 5→10→20 emails over 3 weeks"
+    ],
+    "n8n_workflow": [
+      "HELIOS_OUTREACH_EMAIL.json created or imported",
+      "All credentials mapped (separate from KRONOS)",
+      "Airtable base/table IDs verified",
+      "Email sender: otto@heliosbusiness.it"
+    ],
+    "testing": [
+      "Dry run with leadLimit: 1",
+      "Test send to internal email",
+      "Verify Brevo delivery",
+      "Check Airtable STATUS update",
+      "Test error handling"
+    ]
+  },
+  "key_differences_from_kronos": {
+    "score_threshold": "7 (vs KRONOS 5)",
+    "target_audience": "Solar installers (vs KRONOS RE agencies)",
+    "language": "Italian/English bilingual (vs KRONOS English)",
+    "email_domain": "heliosbusiness.it (vs KRONOS kronosbusiness.com)",
+    "problem_hook": "Lead gen cost, seasonality (vs KRONOS warm leads)",
+    "calendar_link": "cal.com/otto-helios/15min (vs KRONOS othman-zraidi)",
+    "brevo_tag": "HELIOS_OUTREACH (vs KRONOS KRONOS_OUTREACH)",
+    "warm_up": "Required 3-week ramp (vs KRONOS immediate)"
+  },
+  "deployment_notes": {
+    "data_isolation_critical": "VERIFY workflow uses appyqUHfwK33eisQu ONLY",
+    "domain_setup": "SPF/DKIM/DMARC must be configured for heliosbusiness.it",
+    "warm_up_mandatory": "Cannot skip warm-up; new .it domain has lower initial reputation",
+    "monitoring": "Monitor bounce rate closely (target < 5%)",
+    "first_run": "Start with leadLimit: 1, then 5, then full batch"
+  }
+}

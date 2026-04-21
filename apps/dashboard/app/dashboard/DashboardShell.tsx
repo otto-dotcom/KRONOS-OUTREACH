@@ -3,16 +3,16 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useProject } from "./ProjectContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard, BarChart2, Database, MessageSquare,
-  Settings, Zap, LogOut, ChevronRight, ArrowLeftRight, TrendingDown,
+  Settings, Zap, LogOut, ChevronRight, ArrowLeftRight, TrendingDown, Calendar,
 } from "lucide-react";
 
 /* ── Logos ───────────────────────────────────────────────────────────────── */
 function KronosLogo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }} aria-label="KRONOS Dashboard">
       <rect x="10" y="2" width="12" height="2" fill="#F97316" />
       <rect x="8"  y="4" width="2"  height="2" fill="#F97316" />
       <rect x="22" y="4" width="2"  height="2" fill="#F97316" />
@@ -43,7 +43,7 @@ function KronosLogo({ size = 28 }: { size?: number }) {
 
 function HeliosLogo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }}>
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" style={{ imageRendering: "pixelated" }} aria-label="HELIOS Dashboard">
       <circle cx="16" cy="16" r="6"   fill="#16A34A" />
       <rect x="15" y="4"  width="2" height="6" fill="#16A34A" />
       <rect x="15" y="22" width="2" height="6" fill="#16A34A" />
@@ -226,6 +226,7 @@ const NAV = [
   { icon: TrendingDown,    label: "Funnel",      path: "/dashboard/funnel" },
   { icon: BarChart2,       label: "Analytics",   path: "/dashboard/analytics" },
   { icon: Database,        label: "Lead Base",   path: "/dashboard/database" },
+  { icon: Calendar,        label: "Agenda",      path: "/dashboard/agenda" },
   { icon: MessageSquare,   label: "JARVIS",      path: "/dashboard/chat" },
   { icon: Zap,             label: "Automations", path: "/dashboard/automations" },
   { icon: Settings,        label: "Settings",    path: "/dashboard/settings" },
@@ -238,6 +239,8 @@ function NavItem({ icon: Icon, label, path, active }: {
   return (
     <Link
       href={path}
+      aria-label={label}
+      aria-current={active ? "page" : undefined}
       style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "9px 12px", borderRadius: 10,
@@ -260,6 +263,13 @@ function NavItem({ icon: Icon, label, path, active }: {
           (e.currentTarget as HTMLElement).style.color = "var(--text-3)";
         }
       }}
+      onFocus={e => {
+        (e.currentTarget as HTMLElement).style.outline = "2px solid var(--accent)";
+        (e.currentTarget as HTMLElement).style.outlineOffset = "2px";
+      }}
+      onBlur={e => {
+        (e.currentTarget as HTMLElement).style.outline = "none";
+      }}
     >
       {/* Active bar */}
       {active && (
@@ -279,6 +289,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const router   = useRouter();
   const pathname = usePathname();
   const { project, setProject } = useProject();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) setSidebarOpen(false);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
@@ -293,7 +316,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const activeLabel = NAV.find(n => pathname === n.path)?.label ?? "Overview";
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)", position: "relative" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)", position: "relative", marginLeft: !isMobile && sidebarOpen ? 200 : 0, transition: "margin-left 0.3s ease" }}>
 
       {/* ── Global ambient orbs ───────────────────────────────────────────── */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
@@ -329,14 +352,18 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
       <aside style={{
-        width: 200, display: "flex", flexDirection: "column",
+        width: sidebarOpen ? 200 : 0, display: "flex", flexDirection: "column",
         paddingTop: 16, paddingBottom: 16, gap: 0, flexShrink: 0,
         background: "rgba(9,9,11,0.80)",
         backdropFilter: "blur(24px) saturate(160%)",
         WebkitBackdropFilter: "blur(24px) saturate(160%)",
         borderRight: "1px solid rgba(255,255,255,0.07)",
-        zIndex: 50, position: "relative",
-      }}>
+        zIndex: 50, position: "fixed",
+        left: 0, top: 0, bottom: 0,
+        overflowY: "auto", overflowX: "hidden",
+        transition: "width 0.3s ease",
+        ...(isMobile && { position: "fixed" }),
+      }} className="custom-scrollbar">
         {/* Top shine line */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)", pointerEvents: "none" }} />
 
@@ -418,8 +445,24 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           borderBottom: "1px solid rgba(255,255,255,0.06)",
           flexShrink: 0,
         }}>
-          {/* Breadcrumb */}
+          {/* Hamburger + Breadcrumb */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 32, height: 32, border: "none", cursor: "pointer",
+                  background: "rgba(255,255,255,0.05)", borderRadius: 8,
+                  color: "var(--text-1)", transition: "background 0.15s",
+                }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"}
+              >
+                {sidebarOpen ? "✕" : "☰"}
+              </button>
+            )}
             <span style={{ fontSize: 12, color: "var(--text-3)" }}>KRONOS-OUTREACH</span>
             <ChevronRight size={12} style={{ color: "var(--text-3)" }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)" }}>{activeLabel}</span>

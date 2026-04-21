@@ -1,0 +1,188 @@
+{
+  "workflow_name": "KRONOS_OUTREACH_EMAIL",
+  "version": "2.0",
+  "last_updated": "2026-04-20",
+  "audit_document": "docs/AUDIT_EMAIL_CONFIG.md",
+  "settings": {
+    "airtable": {
+      "baseId": "appLriEwWldpPTMPg",
+      "tableId": "tblLZkFo7Th7uyfWB",
+      "filterFormula": "AND({EMAIL} != \"\", {EMAIL STATUS} != \"Sent\", {EMAIL STATUS} != \"Processing \", {Rank} >= 5)",
+      "defaultLeadLimit": 5,
+      "requiredFields": [
+        "FULL NAME",
+        "EMAIL",
+        "company name",
+        "City",
+        "URL",
+        "Rank",
+        "score_reason",
+        "EMAIL STATUS",
+        "EMAIL_SUBJECT",
+        "SENT MAIL"
+      ],
+      "statusValues": {
+        "pending": "Not yet processed",
+        "processing": "Currently being handled",
+        "sent": "Outreach complete",
+        "failed": "Error in delivery"
+      }
+    },
+    "brevo": {
+      "senderEmail": "otto@kronosbusiness.com",
+      "senderName": "Otto from KRONOS",
+      "tag": "KRONOS_OUTREACH",
+      "apiUrl": "https://api.brevo.com/v3/smtp/email",
+      "bccEmail": "otto@kronosbusiness.com",
+      "contentType": "application/json"
+    },
+    "openrouter": {
+      "baseURL": "https://openrouter.ai/api/v1",
+      "model": "openai/gpt-4o-mini",
+      "modelAlternatives": {
+        "current": "openai/gpt-4o-mini (fast, cost-effective)",
+        "upgrade": "openai/gpt-4o (higher quality, ~10x cost)"
+      }
+    },
+    "llm_tuning": {
+      "temperature": {
+        "current": 0.7,
+        "recommended": 0.5,
+        "rationale": "Lower temperature for consistency in bulk emails",
+        "tuning_note": "Monitor open rates; if < 15%, increase to 0.6"
+      },
+      "maxTokens": {
+        "current": null,
+        "recommended": 300,
+        "rationale": "Enforce 4-5 sentence constraint (~150-180 tokens per email)"
+      },
+      "topP": {
+        "current": 1.0,
+        "note": "Default OpenAI setting"
+      },
+      "presencePenalty": {
+        "current": 0,
+        "note": "Default OpenAI setting"
+      },
+      "outputFormat": "JSON structured {subject, emailBody}"
+    },
+    "lead_filtering": {
+      "minRank": 5,
+      "statusExclusions": [
+        "Sent",
+        "Processing "
+      ],
+      "emailRequired": true,
+      "notes": "Note: 'Processing ' has trailing space in Airtable filter"
+    },
+    "workflow_defaults": {
+      "leadLimit": 5,
+      "errorAlertEmail": "consulting@kronosautomations.com",
+      "calendarLink": "https://cal.com/othman-zraidi-o24jj1/15min",
+      "webhookPath": "kronos-outreach"
+    },
+    "email_prompt": {
+      "version": "2.0",
+      "lastModified": "2026-04-20",
+      "systemMessage": "You are a cold email specialist writing on behalf of KRONOS Automations. KRONOS helps Swiss real estate agencies automate their lead follow-up and mandate acquisition.",
+      "contentProtocol": {
+        "hook": "Specific observation about their business using agency name or city. NEVER start with 'I noticed you are active in [city]'.",
+        "problem": "One pain - losing warm leads, advisors wasting time on unqualified contacts, inconsistent mandate pipeline.",
+        "solution": "One sentence. KRONOS automates first contact so consultants only deal with ready-to-move clients.",
+        "cta": "Low-friction close with the booking link."
+      },
+      "toneRequirements": {
+        "style": "Direct, professional, conversational",
+        "forbidden": [
+          "buzzwords: scalable/synergy/leverage/infrastructure/optimize",
+          "ALL CAPS",
+          "exclamation marks"
+        ]
+      },
+      "subjectLineRules": {
+        "maxChars": 50,
+        "preferred": "lowercase",
+        "patterns": [
+          "{Name} - quick question",
+          "{AgencyName} | mandate pipeline gap"
+        ],
+        "forbidden": [
+          "Scalable",
+          "Infrastructure",
+          "INITIALIZE",
+          "all-caps"
+        ]
+      },
+      "htmlBranding": {
+        "logoUrl": "https://kronosautomations.com/logo.png",
+        "containerMaxWidth": "550px",
+        "borderColor": "#1A1A1A",
+        "accentColor": "#FF6B00",
+        "fontFamily": "Inter, sans-serif",
+        "ctaLink": "https://cal.com/othman-zraidi-o24jj1/15min",
+        "signature": "Otto - KRONOS Automations | otto@kronosbusiness.com"
+      }
+    }
+  },
+  "credentials_mapping": {
+    "status": "REQUIRED - Must map before deployment",
+    "airtable": {
+      "node": "Get Leads from Airtable + Update Airtable nodes",
+      "credentialType": "airtableTokenApi",
+      "placeholder": "YOUR_AIRTABLE_CREDENTIAL_ID",
+      "action": "Map to actual n8n Airtable credential ID"
+    },
+    "openrouter": {
+      "node": "OpenRouter Email (llm-email)",
+      "credentialType": "openAiApi",
+      "placeholder": "YOUR_OPENROUTER_CREDENTIAL_ID",
+      "action": "Map to actual n8n OpenRouter credential ID"
+    },
+    "brevo": {
+      "node": "Send Email via Brevo + Error Alert nodes",
+      "credentialType": "httpHeaderAuth",
+      "placeholder": "YOUR_BREVO_CREDENTIAL_ID",
+      "action": "Map to actual n8n Brevo API key credential ID"
+    }
+  },
+  "pre_deployment_checklist": {
+    "credentials": [
+      "Airtable credential ID mapped",
+      "OpenRouter credential ID mapped",
+      "Brevo credential ID mapped"
+    ],
+    "airtable_schema": [
+      "Leads table exists with required fields",
+      "Settings table exists (Key, Value)",
+      "Filter formula tested",
+      "Minimum 5 leads in Rank >= 5"
+    ],
+    "brevo_config": [
+      "API key valid and has SMTP permission",
+      "Sender email verified in Brevo",
+      "Tag KRONOS_OUTREACH configured"
+    ],
+    "openrouter_config": [
+      "API key valid with gpt-4o-mini access",
+      "Rate limits sufficient for batch size"
+    ],
+    "settings_table": [
+      "email_system_prompt key populated",
+      "airtable_config key populated",
+      "brevo_config key populated",
+      "copy_directives key populated"
+    ],
+    "testing": [
+      "Send test email to internal inbox",
+      "Verify logo renders",
+      "Verify CTA link works",
+      "Test error handling"
+    ]
+  },
+  "deployment_notes": {
+    "activation": "Workflow is currently 'active: false' - activate after credentials mapped",
+    "first_run": "Recommend testing with leadLimit: 1 before full batches",
+    "monitoring": "Check Brevo analytics tag 'KRONOS_OUTREACH' for delivery status",
+    "rollback": "Workflow inactive by default; deactivate if issues detected"
+  }
+}
