@@ -6,7 +6,7 @@ import { useProject } from "./ProjectContext";
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard, BarChart2, Database, MessageSquare,
-  Settings, Zap, LogOut, ChevronRight, ArrowLeftRight, TrendingDown,
+  Settings, Zap, LogOut, ChevronRight, ArrowLeftRight, TrendingDown, Calendar,
 } from "lucide-react";
 
 /* ── Logos ───────────────────────────────────────────────────────────────── */
@@ -226,6 +226,7 @@ const NAV = [
   { icon: TrendingDown,    label: "Funnel",      path: "/dashboard/funnel" },
   { icon: BarChart2,       label: "Analytics",   path: "/dashboard/analytics" },
   { icon: Database,        label: "Lead Base",   path: "/dashboard/database" },
+  { icon: Calendar,        label: "Agenda",      path: "/dashboard/agenda" },
   { icon: MessageSquare,   label: "JARVIS",      path: "/dashboard/chat" },
   { icon: Zap,             label: "Automations", path: "/dashboard/automations" },
   { icon: Settings,        label: "Settings",    path: "/dashboard/settings" },
