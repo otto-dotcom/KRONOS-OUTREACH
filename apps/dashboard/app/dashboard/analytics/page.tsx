@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── KPI row ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
         <KpiCard
           label="Total Leads"
           value={stats.total_leads.toLocaleString()}
@@ -224,7 +224,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── Main grid ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }} className="grid-cols-1 lg:grid-cols-[1fr_340px]">
 
         {/* ── Left: funnel + chart ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
