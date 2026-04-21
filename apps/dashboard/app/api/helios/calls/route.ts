@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * GET /api/helios/calls
- * Retrieve scheduled calls for HELIOS project
- * Linked to PROX ATTIVITà field in HELIOS Airtable
+ * Retrieve all scheduled calls for a HELIOS lead
+ * Linked to Call Agenda table in Airtable
  */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const project = searchParams.get("project");
+    const leadId = searchParams.get("leadId");
 
     if (project !== "helios") {
       return NextResponse.json(
@@ -17,33 +18,55 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // TODO: Fetch from HELIOS Airtable
-    // Base: appyqUHfwK33eisQu
-    // Table: Call Agenda (or similar)
-    // Filter by date range, link to PROX ATTIVITà field
+    if (!leadId) {
+      return NextResponse.json(
+        { error: "Missing leadId parameter" },
+        { status: 400 }
+      );
+    }
 
-    const calls = [
+    const apiKey = process.env.HELIOS_AIRTABLE_API_KEY;
+    const baseId = process.env.HELIOS_AIRTABLE_BASE_ID || "appyqUHfwK33eisQu";
+    const callsTable = process.env.HELIOS_AIRTABLE_CALLS_TABLE || "tblPKqoBVCTALCmlC";
+
+    if (!apiKey) {
+      console.error("[API] Missing HELIOS_AIRTABLE_API_KEY");
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    // Fetch calls from Airtable, filtered by lead link
+    const response = await fetch(
+      `https://api.airtable.com/v0/${baseId}/${callsTable}?filterByFormula=FIND("${leadId}",CONCATENATE({Lead Link}))&sort[0][field]=Call Date&sort[0][direction]=desc&maxRecords=100`,
       {
-        id: "rec_demo_001",
-        leadId: "rec_lead_001",
-        company: "SolarTech Italia",
-        contact: "Marco Rossi",
-        email: "marco@solartech.it",
-        phone: "+39 02 1234 5678",
-        scheduledDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-        scheduledTime: "10:00",
-        duration: 30,
-        purpose: "Initial product qualification",
-        notes: "Interested in lead gen automation",
-        outcomeStatus: "scheduled",
-        proximityScore: 8,
-        activities: ["site_visit", "demo_requested"],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ];
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`[API] Airtable error: ${response.status}`, await response.text());
+      throw new Error(`Airtable API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    const calls = data.records.map((record: any) => ({
+      id: record.id,
+      leadId: leadId,
+      callDate: record.fields["Call Date"],
+      outcome: record.fields["Call Outcome"],
+      notes: record.fields["Call Notes"] || "",
+      duration: record.fields["Duration Minutes"] || 0,
+      nextFollowupOverride: record.fields["Next Follow-up Override"],
+      createdBy: record.fields["Created By"],
+      createdAt: record.fields["Created At"],
+    }));
 
     return NextResponse.json({ calls, success: true });
   } catch (error) {

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 /**
  * POST /api/helios/calls/schedule
  * Schedule a new call for a HELIOS lead
- * Automatically links to PROX ATTIVITà field based on lead data
+ * Creates record in Call Agenda table + updates Leads GSE
  */
 export async function POST(req: NextRequest) {
   try {
@@ -11,13 +11,10 @@ export async function POST(req: NextRequest) {
     const {
       project,
       leadId,
-      company,
-      contact,
-      email,
-      phone,
-      scheduledDateTime,
-      purpose,
-      notes,
+      callOutcome,
+      callNotes = "",
+      durationMinutes = 0,
+      nextFollowupOverride = null,
     } = body;
 
     if (project !== "helios") {
@@ -27,43 +24,135 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!leadId || !scheduledDateTime) {
+    if (!leadId || !callOutcome) {
       return NextResponse.json(
-        { error: "Missing required fields: leadId, scheduledDateTime" },
+        { error: "Missing required fields: leadId, callOutcome" },
         { status: 400 }
       );
     }
 
-    // TODO: Create record in HELIOS Airtable
-    // Base: appyqUHfwK33eisQu
-    // Table: Call Agenda
-    // Fields:
-    //   - Lead Link (link to Leads table)
-    //   - Company, Contact, Email, Phone
-    //   - Scheduled Date/Time
-    //   - Purpose, Notes
-    //   - Status: "scheduled"
-    //   - PROX ATTIVITà: Calculate from lead proximity data
+    const apiKey = process.env.HELIOS_AIRTABLE_API_KEY;
+    const baseId = process.env.HELIOS_AIRTABLE_BASE_ID || "appyqUHfwK33eisQu";
+    const callsTable = process.env.HELIOS_AIRTABLE_CALLS_TABLE || "tblPKqoBVCTALCmlC";
+    const leadsTable = "tbl07Ub0WeVHOnujP";
 
-    const callRecord = {
-      id: `rec_${Date.now()}`,
-      leadId,
-      company,
-      contact,
-      email,
-      phone,
-      scheduledDate: scheduledDateTime.split("T")[0],
-      scheduledTime: scheduledDateTime.split("T")[1],
-      purpose: purpose || "Call",
-      notes,
-      outcomeStatus: "scheduled",
-      proximityScore: 0, // TODO: Calculate from lead data
-      activities: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    // Create call record in Call Agenda
+    const callDate = new Date().toISOString();
+    const callId = `call_${Date.now()}`;
+
+    // Auto-schedule PROX ATTIVITÀ based on outcome
+    let proxAttivita = nextFollowupOverride;
+    if (!proxAttivita) {
+      const nextDay = new Date();
+      if (callOutcome === "callback" || callOutcome === "interested") {
+        nextDay.setDate(nextDay.getDate() + 1);
+        nextDay.setHours(10, 0, 0, 0);
+      } else if (callOutcome === "voicemail" || callOutcome === "no-answer") {
+        nextDay.setDate(nextDay.getDate() + 3);
+        nextDay.setHours(9, 0, 0, 0);
+      } else if (callOutcome === "wrong-number") {
+        nextDay.setDate(nextDay.getDate() + 7);
+        nextDay.setHours(9, 0, 0, 0);
+      }
+      proxAttivita = callOutcome !== "not-interested" ? nextDay.toISOString() : null;
+    }
+
+    // Outcome to CALL STATUS mapping
+    const outcomeToStatus: Record<string, string> = {
+      connected: "DA SEGUIRE",
+      voicemail: "DA CHIAMARE",
+      "no-answer": "DA CHIAMARE",
+      callback: "DA SEGUIRE",
+      interested: "INTERESSATO",
+      "not-interested": "CHIAMATO NON INTERESSATO",
+      "wrong-number": "DA RICONTATTARE",
     };
 
-    return NextResponse.json({ call: callRecord, success: true }, { status: 201 });
+    const newCallStatus = outcomeToStatus[callOutcome] || "DA SEGUIRE";
+
+    // Create call record in Airtable
+    const createCallResponse = await fetch(
+      `https://api.airtable.com/v0/${baseId}/${callsTable}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          records: [
+            {
+              fields: {
+                ID: callId,
+                "Lead Link": [leadId],
+                "Call Date": callDate,
+                "Call Outcome": callOutcome,
+                "Call Notes": callNotes,
+                "Duration Minutes": durationMinutes,
+                ...(proxAttivita && { "Next Follow-up Override": proxAttivita }),
+                "Created By": "api@kronos.local",
+                "Created At": callDate,
+              },
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!createCallResponse.ok) {
+      console.error(`[API] Airtable call creation error: ${createCallResponse.status}`);
+      throw new Error(`Failed to create call record`);
+    }
+
+    const callData = await createCallResponse.json();
+    const createdCallId = callData.records[0].id;
+
+    // Update Leads GSE with new CALL STATUS and PROX ATTIVITÀ
+    const updateLeadResponse = await fetch(
+      `https://api.airtable.com/v0/${baseId}/${leadsTable}/${leadId}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fields: {
+            "CALL STATUS": newCallStatus,
+            ...(proxAttivita && { "PROX ATTIVITÀ": proxAttivita }),
+          },
+        }),
+      }
+    );
+
+    if (!updateLeadResponse.ok) {
+      console.warn(`[API] Warning: Lead update failed, but call was created`);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        call: {
+          id: createdCallId,
+          leadId,
+          callDate,
+          outcome: callOutcome,
+          notes: callNotes,
+          duration: durationMinutes,
+          nextFollowupOverride: proxAttivita,
+          updatedLeadStatus: newCallStatus,
+          updatedProxAttivita: proxAttivita,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("[API] POST /api/helios/calls/schedule failed:", error);
     return NextResponse.json(
